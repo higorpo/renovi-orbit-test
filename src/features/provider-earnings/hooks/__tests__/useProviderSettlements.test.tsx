@@ -88,6 +88,8 @@ describe("useProviderSettlements", () => {
       pageSize: 20,
       movementStatus: null,
       recordType: "CREDIT",
+      settlingFrom: null,
+      settlingTo: null,
     });
     expect(result.current.items).toEqual([sampleItem]);
     expect(result.current.hasNextPage).toBe(false);
@@ -172,6 +174,31 @@ describe("useProviderSettlements", () => {
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+
+  it("passes settling date range to the API", async () => {
+    listProviderSettlements.mockResolvedValue({
+      data: makePage(),
+      error: null,
+    });
+
+    const { result } = renderHook(
+      () =>
+        useProviderSettlements({
+          filterId: "all",
+          settlingFrom: "2026-08-01",
+          settlingTo: "2026-08-12",
+        }),
+      { wrapper: wrapperFor(createClient()) },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(listProviderSettlements).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settlingFrom: "2026-08-01",
+        settlingTo: "2026-08-12",
+      }),
+    );
   });
 
   it("does not fetch when enabled is false", async () => {

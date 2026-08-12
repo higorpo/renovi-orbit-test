@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addCalendarDaysIso,
+  addCalendarMonthsIso,
   extractDateOnlyIso,
   formatCalendarDate,
   formatLongDatePtBr,
@@ -31,6 +32,12 @@ describe("calendarDate", () => {
     expect(addCalendarDaysIso("2026-06-24", 1)).toBe("2026-06-25");
     expect(addCalendarDaysIso("2026-06-30", 1)).toBe("2026-07-01");
     expect(addCalendarDaysIso("2026-01-31", 1)).toBe("2026-02-01");
+  });
+
+  it("adds calendar months and clamps the day", () => {
+    expect(addCalendarMonthsIso("2026-08-12", -3)).toBe("2026-05-12");
+    expect(addCalendarMonthsIso("2026-08-12", -6)).toBe("2026-02-12");
+    expect(addCalendarMonthsIso("2026-03-31", -1)).toBe("2026-02-28");
   });
 
   it("returns today as local ISO date", () => {

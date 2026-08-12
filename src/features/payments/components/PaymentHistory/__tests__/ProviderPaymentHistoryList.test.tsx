@@ -51,7 +51,7 @@ describe("ProviderPaymentHistoryList", () => {
     });
 
     renderList();
-    expect(screen.getByText(/Nenhuma cobrança ainda/i)).toBeInTheDocument();
+    expect(screen.getByText(/Nenhuma cobrança neste período/i)).toBeInTheDocument();
   });
 
   it("renders agreed amount and net when they differ", () => {

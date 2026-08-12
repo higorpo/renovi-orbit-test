@@ -4,9 +4,23 @@ import {
 } from "@/features/payments";
 import { useProviderSettlements } from "@/features/provider-earnings";
 
-export function useEarningsLedgerSummary() {
-  const receivablesQuery = useProviderPaymentHistory();
-  const settlementsQuery = useProviderSettlements({ filterId: "all" });
+export type UseEarningsLedgerSummaryParams = {
+  receivedFrom?: string | null;
+  receivedTo?: string | null;
+  settlingFrom?: string | null;
+  settlingTo?: string | null;
+};
+
+export function useEarningsLedgerSummary(params: UseEarningsLedgerSummaryParams = {}) {
+  const receivablesQuery = useProviderPaymentHistory({
+    receivedFrom: params.receivedFrom,
+    receivedTo: params.receivedTo,
+  });
+  const settlementsQuery = useProviderSettlements({
+    filterId: "all",
+    settlingFrom: params.settlingFrom,
+    settlingTo: params.settlingTo,
+  });
   const summary = summarizeProviderReceivables(receivablesQuery.data ?? []);
 
   return {

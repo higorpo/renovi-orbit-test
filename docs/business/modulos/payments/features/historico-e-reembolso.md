@@ -24,7 +24,7 @@
 | Cliente / Prestador | Cancelar serviço | Detalhe do serviço (`ServiceDetailPage` → `ServiceDetailActionsBar`) | `ContractedServiceCancelAction` |
 
 - **Rota própria:** nenhuma — seções do hub Configurações (`settings`). Na página do cliente, o histórico divide espaço com cartões via Tabs (aba irmã **Formas de pagamento**); o título da página (“Pagamentos”) fica no `SettingsSectionHeader`. No prestador, o título da página é **Ganhos**; a lista de captura **não** tem header próprio. As listas **não** repetem título de seção.
-- **Deep links / query params:** cliente — aba padrão = Formas de pagamento (Histórico só ao selecionar a aba). Prestador — `view=charges` abre Cobranças; default da página Ganhos = Depósitos. Rota legado `/dashboard/settings/receivables` faz `Navigate replace` para `/dashboard/settings/earnings?view=charges`.
+- **Deep links / query params:** cliente — aba padrão = Formas de pagamento (Histórico só ao selecionar a aba). Prestador — `view=charges` abre Cobranças; default da página Ganhos = Depósitos. Query `period=3m` | `period=6m` (default **Este mês** omite o param) convive com `view` e filtra `received_at` na lista de captura. Rota legado `/dashboard/settings/receivables` faz `Navigate replace` para `/dashboard/settings/earnings?view=charges`.
 - **Guards:** hub Configurações e detalhe de serviço sob dashboard autenticado; views de histórico filtram por `auth.uid()` (ou admin).
 
 Evidência: `src/router.tsx` (`settings/payments`, `settings/earnings`, `settings/receivables` redirect); `ClientPaymentsPage.tsx` (Tabs); `ProviderEarningsSectionPage.tsx`; `ProviderReceivablesPage.tsx`; `ServiceDetailActionsBar.tsx` (`ContractedServiceCancelAction` quando há contrato e papel client/provider).
@@ -109,6 +109,7 @@ flowchart TD
 13. Motivos enviados à Edge: cliente `CLIENT_INITIATED`; prestador `PROVIDER_INITIATED` (default API se omitido: `CLIENT_INITIATED`).
 14. Janela comunicada ao usuário para aparecer na fatura: **30–60 dias** (`EXPECTED_REFUND_DAYS = "30-60"`).
 15. Recaptura longe pós-reagendamento (`FAR_RESCHEDULE_RECAPTURE`) é **distinta** de cancelamento ToS — ver [integracao-pagamento-pos-aceite](../../service-reschedule/features/integracao-pagamento-pos-aceite.md).
+16. Na aba Cobranças de Ganhos, a lista do prestador filtra `received_at` pelo período da página host (Este mês / 3 meses / 6 meses) via `listProviderPaymentReceivables` (`.gte` + `.lt` fim do dia `-03:00`). O histórico do cliente em Pagamentos **não** tem filtro de data. Sem paginação nova da view.
 
 ## 8. Campos e dados
 
@@ -218,7 +219,8 @@ Cancelamento pós-commit / side effects → `contracted_services.status = CANCEL
 
 | Artefato | Papel |
 |----------|-------|
-| React Query `["payment-history","client"\|"provider"]` | `staleTime` 30s |
+| React Query `["payment-history","client"]` | `staleTime` 30s |
+| React Query `["payment-history","provider", receivedFrom, receivedTo]` | `staleTime` 30s; from/to = range do período em Ganhos (`YYYY-MM-DD` ou `null`) |
 | React Query lifecycle / schedule / chats | invalidados em `useProcessRefund.onSuccess` |
 | Preferences / draft | não usados nesta feature |
 
@@ -245,12 +247,12 @@ Cancelamento pós-commit / side effects → `contracted_services.status = CANCEL
 |---------|---------------|
 | Fonte | SELECT nas views (sem RPC paginada) |
 | Ordenação | Cliente: `paid_at` desc; Prestador: `received_at` desc |
-| Filtros UI | Nenhum (todos os estados pós-captura elegíveis na view) |
+| Filtros UI | Cliente: nenhum. Prestador (Ganhos): período da página host — `listProviderPaymentReceivables` com `.gte('received_at', from)` e `.lt('received_at', '{to}T23:59:59.999-03:00')` (filtro no servidor na view existente; **sem** paginação nova) |
 | Busca textual | Não |
-| Paginação | **Não** — lista completa no cliente (totais do ledger Cobranças = soma client-side de `amountReceivedAtCapture` via `summarizeProviderReceivables`; sem RPC nova) |
+| Paginação | **Não** — lista completa no cliente dos registros que passam no filtro (totais do ledger Cobranças = soma client-side de `amountReceivedAtCapture` via `summarizeProviderReceivables`; sem RPC nova) |
 | Loading | Skeleton Prestway (sem spinner textual) |
 | Empty (cliente) | Painel dashed: “Nenhum pagamento ainda” + copy de apoio |
-| Empty (prestador) | Painel dashed: “Nenhuma cobrança ainda” + “Quando um cliente pagar um serviço seu, o valor combinado aparece aqui.”; **sem** parágrafo educativo, **sem** link para Ganhos, **sem** `ProviderSettlementDisclosure` por card |
+| Empty (prestador) | Painel dashed: “Nenhuma cobrança neste período” + “Quando um cliente pagar um serviço seu neste período, o valor combinado aparece aqui.”; linha de contagem vazia “Nenhum registrado”; **sem** parágrafo educativo, **sem** link para Ganhos, **sem** `ProviderSettlementDisclosure` por card |
 | Erro (cliente) | Mensagem de load fail + **Tentar novamente** |
 | Erro (prestador) | “Não foi possível carregar o histórico de cobranças.” + **Tentar novamente** |
 
@@ -288,7 +290,7 @@ Cancelamento pós-commit / side effects → `contracted_services.status = CANCEL
 8. `supportUrl` é anexado ao `Error` em falhas, mas o toast de `ContractedServiceCancelAction` exibe só `error.message` (URL não aparece na UI atual).
 9. Rate limit fail-closed: se o limiter falhar, a Edge rejeita (não “abre” o limite).
 10. Título da superfície fica no `SettingsSectionHeader` da página host (cliente: Pagamentos; prestador: Ganhos); `ClientPaymentHistoryList` / `ProviderPaymentHistoryList` / `SavedCardsList` não repetem H2/título de seção.
-11. Copy da lista do prestador usa **“cobranças”** (não “recebimentos”): contagem “N cobranças” / empty “Nenhuma cobrança ainda”; loading `aria-label="Carregando cobranças"`.
+11. Copy da lista do prestador usa **“cobranças”** (não “recebimentos”): contagem “N cobranças” / empty “Nenhuma cobrança neste período”; loading `aria-label="Carregando cobranças"`.
 
 ## 18. Riscos
 
@@ -308,7 +310,7 @@ Cancelamento pós-commit / side effects → `contracted_services.status = CANCEL
 | UI histórico | `src/features/payments/components/PaymentHistory/*` |
 | UI cancel | `src/features/payments/components/ContractedServiceCancelAction.tsx` |
 | Hooks | `useClientPaymentHistory.ts`, `useProviderPaymentHistory.ts`, `useProcessRefund.ts`, `usePaymentScheduleLifecycle.ts` |
-| API | `api/history.api.ts`, `api/refund.api.ts`, `api/charges.api.ts` (lifecycle) |
+| API | `api/history.api.ts` (`listProviderPaymentReceivables` aceita `receivedFrom`/`receivedTo`), `api/refund.api.ts`, `api/charges.api.ts` (lifecycle) |
 | Utils | `clientPaymentHistoryAmounts.ts`, `summarizeProviderReceivables.ts`, `formatPaymentHistoryState.ts`, `contractedServiceCancellation.ts`, `mapCancellationError.ts`, `formatPostChargeCancelSuccessMessage.ts` |
 | Tipos | `types/paymentHistory.types.ts` |
 | Conta | `src/features/settings/components/sections/ClientPaymentsPage.tsx` (Tabs), `ProviderEarningsSectionPage.tsx` (aba Cobranças), `ProviderReceivablesPage.tsx` (redirect legado) |

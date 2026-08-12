@@ -16,9 +16,13 @@ const useServiceDetailModalMock = vi.hoisted(() =>
     background: null,
   })),
 );
-vi.mock("@/features/auth", () => ({
-  useAuth: vi.fn(),
-}));
+vi.mock("@/features/auth", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/auth")>();
+  return {
+    ...actual,
+    useAuth: vi.fn(),
+  };
+});
 
 vi.mock("@/hooks/useBreakpoint", () => ({
   useBreakpointMd: vi.fn(),

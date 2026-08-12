@@ -83,6 +83,7 @@ export {
 export type {
   ListClientPaymentTransactionsResult,
   ListProviderPaymentReceivablesResult,
+  ListProviderPaymentReceivablesParams,
 } from "./history.api";
 
 export { processContractedServiceRefund } from "./refund.api";

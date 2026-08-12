@@ -14,7 +14,7 @@
 O shell (`DashboardLayout`) monta:
 
 1. Menu a partir de `getDashboardMenu(role)` (definição completa do papel).
-2. Chrome desktop (logo + `DesktopNav`) ou mobile (`MobileTabHeader` / `MobileStackHeader` / `MobileBottomNav` conforme `resolveMobileChrome`) — **omitido** quando `useProviderKycBlocksNav()` é `true`.
+2. Chrome desktop (logo + `DesktopNav`) ou mobile (`MobileTabHeader` / `MobileStackHeader` / `MobileBottomNav` conforme `resolveMobileChrome`) — nav **omitida** quando `useProviderKycBlocksNav()` é `true`. O mark Prestway no header desktop e no `MobileTabHeader` usa paleta do papel (`resolveAudienceTheme`), não a variante institucional mista (`inst`).
 3. Conteúdo: `ProviderKycGate` envolve slots do prestador + outlet; slot de Meus Serviços do **cliente** fica **fora** do gate.
 4. Sheet de detalhe de serviço (`ServiceDetailSheet`) quando a navegação usa modal routing.
 5. Sem bottom nav: `main` **sem** `pb-20`.
@@ -31,9 +31,9 @@ Páginas filhas podem ser **reais** (features) ou **placeholder** (`DashboardFak
 
 | Perfil | No shell |
 |--------|----------|
-| `client` | Menu cliente; Configurações → `/dashboard/settings`; sem jobs/calendar |
-| `provider` | Menu prestador quando KYC `ACTIVE`; jobs e calendar (fora do menu); Ganhos no hub Configurações; gate KYC + allowlist `/dashboard/settings*`; chrome oculto se loading/não-`ACTIVE` |
-| Outros / guest | Bloqueados pelo `ProtectedRoute` pai do dashboard |
+| `client` | Menu cliente; Configurações → `/dashboard/settings`; sem jobs/calendar; logo azul (`PrestwayIcon` variant `client`) |
+| `provider` | Menu prestador quando KYC `ACTIVE`; jobs e calendar (fora do menu); Ganhos no hub Configurações; gate KYC + allowlist `/dashboard/settings*`; chrome oculto se loading/não-`ACTIVE`; logo laranja (variant `provider`) |
+| Outros / guest | Bloqueados pelo `ProtectedRoute` pai do dashboard. Sem `profile` / `admin`: `resolveAudienceTheme` cai em paleta cliente (azul), igual a `html[data-audience]` |
 
 ## 5. Principais fluxos
 
@@ -48,6 +48,7 @@ Páginas filhas podem ser **reais** (features) ou **placeholder** (`DashboardFak
 - **Bottom nav mobile:** primeiros N itens de `allItems` (`CLIENT_MAIN_COUNT = 4`, `PROVIDER_MAIN_COUNT = 5`); com essas contagens iguais ao tamanho de `allItems`, não há item extra no overflow — quando o chrome está visível.
 - **KYC:** bloqueio de **conteúdo** (gate) + ocultação do **chrome** (`useProviderKycBlocksNav`) e allowlist são do módulo [provider-kyc](../provider-kyc/features/gate-e-acesso-operacional.md); o shell hospeda gate e consome o hook.
 - **Fallback de papel:** se `profile` ainda sem `role`, o layout trata como `"client"` (`profile?.role ?? "client"`).
+- **Logo no chrome:** `logoVariant = resolveAudienceTheme(role)` no `PrestwayIcon` (`layout="full"`) do header desktop e do `MobileTabHeader` (prop; default `"client"`). Cliente e fallback (profile null / `admin`) = azul; prestador = laranja. Não usa `variant="inst"`. `html[data-audience]` continua o mesmo mapeamento via `syncAudienceTheme` no `AuthProvider`. O `MobileStackHeader` não exibe o mark.
 
 ## 7. Entidades
 
@@ -57,7 +58,7 @@ Nenhuma persistência própria do shell. Lê `profile.role` via `useAuth`. Conta
 
 | Módulo / feature | Como o shell integra |
 |------------------|----------------------|
-| **auth** | `useAuth`, `ProtectedRoute` |
+| **auth** | `useAuth`, `ProtectedRoute`, `resolveAudienceTheme` (paleta do logo) |
 | **provider-kyc** | `ProviderKycGate` + `useProviderKycBlocksNav` (conteúdo + chrome) |
 | **my-services** | `ClientMyServicesPersistentSlot`, `ProviderMyServicesPersistentSlot` |
 | **provider-jobs** | `ProviderJobsPersistentSlot` |
@@ -81,7 +82,9 @@ Nenhuma persistência própria do shell. Lê `profile.role` via `useAuth`. Conta
 - `src/layouts/DashboardLayout/dashboardMenu.ts`
 - `src/layouts/DashboardLayout/DashboardFakePage.tsx`
 - `src/layouts/DashboardLayout/mobileNavigation.config.ts`
-- `src/layouts/DashboardLayout/DesktopNav.tsx`, `MobileBottomNav.tsx`, `MobileTabHeader.tsx` (`hideMenu`), `MobileStackHeader.tsx`
+- `src/layouts/DashboardLayout/DesktopNav.tsx`, `MobileBottomNav.tsx`, `MobileTabHeader.tsx` (`hideMenu`, `logoVariant`), `MobileNav.tsx` (repassa `logoVariant`), `MobileStackHeader.tsx`
+- `src/features/auth/utils/audienceTheme.ts` (`resolveAudienceTheme`)
+- `src/components/brand/PrestwayIcon.tsx`
 - `src/features/provider-kyc/` (`ProviderKycGate`, `useProviderKycBlocksNav`, `PROVIDER_KYC_ALLOWED_PATH_PREFIX`)
 - `src/router.tsx` (filhos de `path: 'dashboard'`)
 - Feature: [placeholders-e-menu.md](./features/placeholders-e-menu.md)

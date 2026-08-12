@@ -5,8 +5,13 @@ import type { SettlementFilterId } from "../types/settlements.types";
 import { EarningsFilterTabs } from "./EarningsFilterTabs";
 import { SettlementMovementsList } from "./SettlementMovementsList";
 
+export type EarningsPageProps = {
+  settlingFrom?: string | null;
+  settlingTo?: string | null;
+};
+
 /** Bank-settlement list (Previsto / Liquidado). Hosted inside the Ganhos hub. */
-export function EarningsPage() {
+export function EarningsPage({ settlingFrom = null, settlingTo = null }: EarningsPageProps) {
   const [filterId, setFilterId] = useState<SettlementFilterId>(DEFAULT_SETTLEMENT_FILTER_ID);
   const {
     items,
@@ -16,7 +21,7 @@ export function EarningsPage() {
     isFetchingNextPage,
     fetchNextPage,
     refetch,
-  } = useProviderSettlements({ filterId });
+  } = useProviderSettlements({ filterId, settlingFrom, settlingTo });
 
   const hasFilters = filterId !== DEFAULT_SETTLEMENT_FILTER_ID;
 

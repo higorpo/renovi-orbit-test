@@ -76,4 +76,11 @@ describe("ProviderEarningsSectionPage", () => {
     fireEvent.click(screen.getByRole("tab", { name: /Cobranças/i }));
     expect(screen.getByText("Lista de cobranças")).toBeInTheDocument();
   });
+
+  it("switches period chips", () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "3 meses" }));
+    expect(screen.getByRole("button", { name: "3 meses" })).toHaveAttribute("aria-pressed", "true");
+  });
 });

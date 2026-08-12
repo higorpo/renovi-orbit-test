@@ -19,8 +19,16 @@ function ProviderPaymentHistorySkeleton() {
   );
 }
 
-export function ProviderPaymentHistoryList() {
-  const historyQuery = useProviderPaymentHistory();
+export type ProviderPaymentHistoryListProps = {
+  receivedFrom?: string | null;
+  receivedTo?: string | null;
+};
+
+export function ProviderPaymentHistoryList({
+  receivedFrom,
+  receivedTo,
+}: ProviderPaymentHistoryListProps = {}) {
+  const historyQuery = useProviderPaymentHistory({ receivedFrom, receivedTo });
   const receivables = historyQuery.data ?? [];
 
   if (historyQuery.isLoading) {
@@ -68,10 +76,10 @@ export function ProviderPaymentHistoryList() {
             <Wallet className="h-6 w-6" strokeWidth={1.75} />
           </div>
           <p className="font-display text-base font-semibold tracking-tight text-ink">
-            Nenhuma cobrança ainda
+            Nenhuma cobrança neste período
           </p>
           <p className="mt-1 max-w-xs text-sm leading-relaxed text-body">
-            Quando um cliente pagar um serviço seu, o valor combinado aparece aqui.
+            Quando um cliente pagar um serviço seu neste período, o valor combinado aparece aqui.
           </p>
         </div>
       ) : (

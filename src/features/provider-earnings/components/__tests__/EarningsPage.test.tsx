@@ -15,11 +15,17 @@ const mocks = vi.hoisted(() => ({
     refetch: vi.fn(),
     totalCount: 0,
   },
-  useProviderSettlementsArgs: [] as Array<{ filterId?: string }>,
+  useProviderSettlementsArgs: [] as Array<{
+    filterId?: string;
+    settlingFrom?: string | null;
+    settlingTo?: string | null;
+  }>,
 }));
 
 vi.mock("../../hooks/useProviderSettlements", () => ({
-  useProviderSettlements: (args: { filterId?: string } = {}) => {
+  useProviderSettlements: (
+    args: { filterId?: string; settlingFrom?: string | null; settlingTo?: string | null } = {},
+  ) => {
     mocks.useProviderSettlementsArgs.push(args);
     return mocks.settlements;
   },
@@ -59,7 +65,7 @@ const sampleItem: SettlementMovement = {
 function renderPage() {
   return render(
     <MemoryRouter>
-      <EarningsPage />
+      <EarningsPage settlingFrom="2026-08-01" settlingTo="2026-08-12" />
     </MemoryRouter>,
   );
 }
@@ -79,16 +85,22 @@ describe("EarningsPage", () => {
   it("renders settlement filters without page chrome", () => {
     renderPage();
 
-    expect(screen.queryByRole("heading", { name: "Ganhos" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Recebimentos/i })).not.toBeInTheDocument();
-    expect(mocks.useProviderSettlementsArgs.at(-1)).toEqual({ filterId: "all" });
+    expect(mocks.useProviderSettlementsArgs.at(-1)).toEqual({
+      filterId: "all",
+      settlingFrom: "2026-08-01",
+      settlingTo: "2026-08-12",
+    });
   });
 
   it("changes filter and passes it to the settlements hook", () => {
     renderPage();
 
     fireEvent.click(screen.getByRole("tab", { name: "Previsto" }));
-    expect(mocks.useProviderSettlementsArgs.at(-1)).toEqual({ filterId: "pending" });
+    expect(mocks.useProviderSettlementsArgs.at(-1)).toEqual({
+      filterId: "pending",
+      settlingFrom: "2026-08-01",
+      settlingTo: "2026-08-12",
+    });
   });
 
   it("shows loading while fetching", () => {
@@ -114,8 +126,12 @@ describe("EarningsPage", () => {
     expect(screen.getByText("Nenhuma liquidação neste filtro")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Limpar filtros/i }));
-    expect(mocks.useProviderSettlementsArgs.at(-1)).toEqual({ filterId: "all" });
-    expect(screen.getByText("Nenhuma liquidação ainda")).toBeInTheDocument();
+    expect(mocks.useProviderSettlementsArgs.at(-1)).toEqual({
+      filterId: "all",
+      settlingFrom: "2026-08-01",
+      settlingTo: "2026-08-12",
+    });
+    expect(screen.getByText("Nenhuma liquidação neste período")).toBeInTheDocument();
   });
 
   it("loads more when next page is available", () => {

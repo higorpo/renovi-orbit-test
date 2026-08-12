@@ -89,13 +89,28 @@ export async function listClientPaymentTransactions(): Promise<ListClientPayment
   };
 }
 
-export async function listProviderPaymentReceivables(): Promise<ListProviderPaymentReceivablesResult> {
-  const { data, error } = await supabase
+export type ListProviderPaymentReceivablesParams = {
+  receivedFrom?: string | null;
+  receivedTo?: string | null;
+};
+
+export async function listProviderPaymentReceivables(
+  params: ListProviderPaymentReceivablesParams = {},
+): Promise<ListProviderPaymentReceivablesResult> {
+  let query = supabase
     .from("provider_payment_receivables_v")
     .select(
       "schedule_id, contracted_service_id, amount_received_at_capture, net_amount_received, received_at, refunded_amount, refunded_at, state, is_disputed, created_at",
-    )
-    .order("received_at", { ascending: false });
+    );
+
+  if (params.receivedFrom) {
+    query = query.gte("received_at", params.receivedFrom);
+  }
+  if (params.receivedTo) {
+    query = query.lt("received_at", `${params.receivedTo}T23:59:59.999-03:00`);
+  }
+
+  const { data, error } = await query.order("received_at", { ascending: false });
 
   if (error) {
     logger.error("provider_payment_history_fetch_error", { error: error.message });

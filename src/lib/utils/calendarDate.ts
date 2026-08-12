@@ -109,6 +109,19 @@ export function addCalendarDaysIso(isoDate: string, days: number): string {
   return toLocalDateOnlyIso(parsed);
 }
 
+/** Shifts a civil date by whole months, clamping the day to the target month. */
+export function addCalendarMonthsIso(isoDate: string, months: number): string {
+  const parsed = parseIsoDate(isoDate);
+  if (!parsed) return isoDate;
+
+  const day = parsed.getDate();
+  parsed.setDate(1);
+  parsed.setMonth(parsed.getMonth() + months);
+  const lastDay = new Date(parsed.getFullYear(), parsed.getMonth() + 1, 0).getDate();
+  parsed.setDate(Math.min(day, lastDay));
+  return toLocalDateOnlyIso(parsed);
+}
+
 export function startOfLocalDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }

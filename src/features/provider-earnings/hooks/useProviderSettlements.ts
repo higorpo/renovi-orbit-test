@@ -9,21 +9,27 @@ const STALE_TIME_MS = 30_000;
 
 export interface UseProviderSettlementsParams {
   filterId?: SettlementFilterId;
+  settlingFrom?: string | null;
+  settlingTo?: string | null;
   enabled?: boolean;
 }
 
 export function useProviderSettlements(params: UseProviderSettlementsParams = {}) {
   const filterId = params.filterId ?? "all";
+  const settlingFrom = params.settlingFrom ?? null;
+  const settlingTo = params.settlingTo ?? null;
   const filter = getSettlementFilterConfig(filterId);
 
   const query = useInfiniteQuery({
-    queryKey: providerSettlementsQueryKey(filterId),
+    queryKey: providerSettlementsQueryKey(filterId, settlingFrom, settlingTo),
     queryFn: async ({ pageParam }) => {
       const result = await listProviderSettlements({
         page: pageParam as number,
         pageSize: PAGE_SIZE,
         movementStatus: filter.movementStatus,
         recordType: filter.recordType,
+        settlingFrom,
+        settlingTo,
       });
       if (result.error || !result.data) {
         throw new Error(result.error ?? "Erro ao carregar ganhos");

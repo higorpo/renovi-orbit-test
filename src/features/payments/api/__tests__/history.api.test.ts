@@ -16,12 +16,16 @@ vi.mock("@/lib/logger", () => ({
   logger: { error: vi.fn() },
 }));
 
-function createOrderChain<T>(result: { data: T; error: { message: string } | null }) {
+function createFilterChain<T>(result: { data: T; error: { message: string } | null }) {
   return {
     select: vi.fn().mockReturnThis(),
+    gte: vi.fn().mockReturnThis(),
+    lt: vi.fn().mockReturnThis(),
     order: vi.fn().mockResolvedValue(result),
   };
 }
+
+const createOrderChain = createFilterChain;
 
 describe("listClientPaymentTransactions", () => {
   beforeEach(() => {
@@ -151,5 +155,18 @@ describe("listProviderPaymentReceivables", () => {
       data: [],
       error: null,
     });
+  });
+
+  it("applies received_at range on the server", async () => {
+    const chain = createFilterChain({ data: [], error: null });
+    mockFrom.mockReturnValue(chain);
+
+    await listProviderPaymentReceivables({
+      receivedFrom: "2026-08-01",
+      receivedTo: "2026-08-12",
+    });
+
+    expect(chain.gte).toHaveBeenCalledWith("received_at", "2026-08-01");
+    expect(chain.lt).toHaveBeenCalledWith("received_at", "2026-08-12T23:59:59.999-03:00");
   });
 });

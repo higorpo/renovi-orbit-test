@@ -12,11 +12,12 @@ function wrapper(initialEntry: string) {
 }
 
 describe("useEarningsViewParam", () => {
-  it("defaults to deposits", () => {
+  it("defaults to deposits and the current month", () => {
     const { result } = renderHook(() => useEarningsViewParam(), {
       wrapper: wrapper("/dashboard/settings/earnings"),
     });
     expect(result.current.view).toBe("deposits");
+    expect(result.current.period).toBe("month");
   });
 
   it("reads charges from the query string", () => {
@@ -26,7 +27,7 @@ describe("useEarningsViewParam", () => {
     expect(result.current.view).toBe("charges");
   });
 
-  it("writes charges and clears the param when returning to deposits", () => {
+  it("writes charges and period without dropping the other param", () => {
     const { result } = renderHook(() => useEarningsViewParam(), {
       wrapper: wrapper("/dashboard/settings/earnings"),
     });
@@ -35,10 +36,26 @@ describe("useEarningsViewParam", () => {
       result.current.setView("charges");
     });
     expect(result.current.view).toBe("charges");
+    expect(result.current.period).toBe("month");
+
+    act(() => {
+      result.current.setPeriod("3m");
+    });
+    expect(result.current.view).toBe("charges");
+    expect(result.current.period).toBe("3m");
 
     act(() => {
       result.current.setView("deposits");
     });
     expect(result.current.view).toBe("deposits");
+    expect(result.current.period).toBe("3m");
+  });
+
+  it("reads period from the query string", () => {
+    const { result } = renderHook(() => useEarningsViewParam(), {
+      wrapper: wrapper("/dashboard/settings/earnings?view=charges&period=6m"),
+    });
+    expect(result.current.view).toBe("charges");
+    expect(result.current.period).toBe("6m");
   });
 });

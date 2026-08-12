@@ -267,6 +267,18 @@ export class SettingsPage {
     await this.page.getByLabel("Histórico de cobranças").waitFor({ state: "visible", timeout: 10_000 });
   }
 
+  getEsteMesButton() {
+    return this.page.getByRole("button", { name: "Este mês" });
+  }
+
+  getTresMesesButton() {
+    return this.page.getByRole("button", { name: "3 meses" });
+  }
+
+  getSeisMesesButton() {
+    return this.page.getByRole("button", { name: "6 meses" });
+  }
+
   getPedidosTab() {
     return this.page.getByRole("tab", { name: "Pedidos" });
   }

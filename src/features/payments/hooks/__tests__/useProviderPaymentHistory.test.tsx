@@ -49,6 +49,30 @@ describe("useProviderPaymentHistory", () => {
       expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.[0]?.scheduleId).toBe("sched-1");
+    expect(historyApi.listProviderPaymentReceivables).toHaveBeenCalledWith({
+      receivedFrom: null,
+      receivedTo: null,
+    });
+  });
+
+  it("forwards the received_at range", async () => {
+    vi.spyOn(historyApi, "listProviderPaymentReceivables").mockResolvedValue({
+      data: [],
+      error: null,
+    });
+
+    const { result } = renderHook(
+      () => useProviderPaymentHistory({ receivedFrom: "2026-08-01", receivedTo: "2026-08-12" }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(historyApi.listProviderPaymentReceivables).toHaveBeenCalledWith({
+      receivedFrom: "2026-08-01",
+      receivedTo: "2026-08-12",
+    });
   });
 
   it("surfaces API errors", async () => {

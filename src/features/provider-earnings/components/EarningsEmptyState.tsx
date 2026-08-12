@@ -22,9 +22,9 @@ export function EarningsEmptyState({ hasFilters, onClearFilters }: EarningsEmpty
   return (
     <EmptyState
       icon={Wallet}
-      title="Nenhuma liquidação ainda"
-      description="Quando houver depósitos previstos ou liquidados na sua conta, eles aparecem aqui."
-      ariaLabel="Nenhuma liquidação"
+      title="Nenhuma liquidação neste período"
+      description="Quando houver depósitos previstos ou liquidados neste período, eles aparecem aqui."
+      ariaLabel="Nenhuma liquidação neste período"
     />
   );
 }

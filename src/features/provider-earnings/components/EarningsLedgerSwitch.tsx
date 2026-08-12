@@ -1,8 +1,13 @@
-import { ArrowRight, Banknote, Landmark } from "lucide-react";
-import { TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Banknote, Landmark } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { cn } from "@/lib/utils";
+import {
+  EARNINGS_PERIOD_TABS,
+  type EarningsPeriod,
+} from "../constants/earningsPeriod";
 import { EARNINGS_VIEW, type EarningsView } from "../constants/earningsView";
 import { PROVIDER_SETTLEMENT_COMPLETION_NOTE } from "../utils/providerSettlementDisclosure";
 
@@ -20,8 +25,29 @@ export type EarningsLedgerSummary = {
 export type EarningsLedgerSwitchProps = {
   view: EarningsView;
   summary: EarningsLedgerSummary;
+  period: EarningsPeriod;
   onViewChange?: (view: EarningsView) => void;
+  onPeriodChange?: (period: EarningsPeriod) => void;
 };
+
+const ledgerTabClassName = cn(
+  "flex min-h-11 w-full min-w-0 flex-col items-start justify-start gap-0",
+  "whitespace-normal rounded-lg px-3 py-3 text-left text-sm font-medium",
+  "transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+  "data-[state=active]:bg-canvas data-[state=active]:text-ink data-[state=active]:shadow-sm",
+  "data-[state=inactive]:text-body",
+);
+
+function LedgerIcon({ icon: Icon }: { icon: LucideIcon }) {
+  return (
+    <span
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-audience-soft text-audience"
+      aria-hidden
+    >
+      <Icon className="h-4 w-4" strokeWidth={2} />
+    </span>
+  );
+}
 
 function LedgerAmount({
   isLoading,
@@ -33,56 +59,70 @@ function LedgerAmount({
   children: string;
 }) {
   if (isLoading) {
-    return <Skeleton className="mt-2 h-8 w-36 rounded-md" />;
+    return <Skeleton className="mt-2 h-7 w-28 rounded-md" />;
   }
   if (isError) {
-    return <p className="mt-2 font-display text-lg font-semibold text-body">Indisponível</p>;
+    return <p className="mt-2 font-display text-base font-semibold text-body">Indisponível</p>;
   }
   return (
-    <p className="mt-2 font-display text-[1.65rem] font-bold leading-none tracking-tight text-ink tabular-nums sm:text-3xl">
+    <p className="mt-2 font-display text-xl font-bold leading-none tracking-tight text-ink tabular-nums sm:text-2xl">
       {children}
     </p>
   );
 }
 
-const panelClassName = (active: boolean) =>
-  cn(
-    "relative h-auto min-h-11 flex-col items-start gap-0 overflow-hidden whitespace-normal rounded-2xl border px-4 py-4 text-left shadow-none",
-    "hover:bg-canvas hover:text-ink data-[state=active]:shadow-sm",
-    active ? "border-ink/15 bg-canvas text-ink" : "border-border bg-canvas-soft text-body",
-  );
-
-export function EarningsLedgerSwitch({ view, summary, onViewChange }: EarningsLedgerSwitchProps) {
-  const chargesActive = view === EARNINGS_VIEW.charges;
-  const depositsActive = view === EARNINGS_VIEW.deposits;
+export function EarningsLedgerSwitch({
+  view,
+  summary,
+  period,
+  onViewChange,
+  onPeriodChange,
+}: EarningsLedgerSwitchProps) {
   const depositLabel =
     summary.depositCount === 1 ? "1 depósito" : `${summary.depositCount} depósitos`;
 
   return (
     <div className="space-y-3">
-      <div className="relative">
-        <TabsList
-          className={cn(
-            "grid h-auto min-h-0 w-full grid-cols-1 gap-2 overflow-visible bg-transparent p-0",
-            "sm:grid-cols-2 sm:gap-8",
-          )}
-          aria-label="Visões de ganhos"
+      <div className="rounded-xl bg-canvas-soft p-1">
+        <div
+          className="grid grid-cols-3 gap-1"
+          role="group"
+          aria-label="Período dos ganhos"
         >
-          <TabsTrigger
+          {EARNINGS_PERIOD_TABS.map((tab) => {
+            const isActive = period === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => onPeriodChange?.(tab.id)}
+                className={cn(
+                  "h-11 rounded-lg px-2 text-sm font-medium transition-colors duration-150",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  isActive
+                    ? "bg-canvas text-ink shadow-sm"
+                    : "text-body hover:text-ink",
+                )}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <TabsPrimitive.List
+          className="mt-1 grid w-full grid-cols-2 items-stretch gap-1"
+          aria-label="Listas de ganhos"
+        >
+          <TabsPrimitive.Trigger
             value={EARNINGS_VIEW.charges}
             onClick={() => onViewChange?.(EARNINGS_VIEW.charges)}
-            className={panelClassName(chargesActive)}
+            className={ledgerTabClassName}
           >
-            <span
-              className={cn(
-                "absolute left-0 top-0 h-full w-[3px] rounded-none",
-                chargesActive ? "bg-accent" : "bg-transparent",
-              )}
-              aria-hidden
-            />
-            <span className="flex items-center gap-2 text-sm font-medium text-ink">
-              <Banknote className="h-4 w-4 shrink-0 text-accent" strokeWidth={1.75} aria-hidden />
-              Cobranças
+            <span className="flex items-center gap-2">
+              <LedgerIcon icon={Banknote} />
+              <span className="text-sm font-medium">Cobranças</span>
             </span>
             <LedgerAmount
               isLoading={summary.isLoadingReceivables}
@@ -90,31 +130,22 @@ export function EarningsLedgerSwitch({ view, summary, onViewChange }: EarningsLe
             >
               {formatCurrency(summary.agreedTotal)}
             </LedgerAmount>
-            <span className="mt-2 text-caption leading-snug text-body">
-              Valor combinado com o cliente
-            </span>
+            <span className="mt-1.5 text-caption leading-snug">Valor combinado</span>
             {summary.hasClawback && !summary.isLoadingReceivables && !summary.isErrorReceivables ? (
               <span className="mt-1 text-caption text-muted-foreground">
                 Líquido após estornos: {formatCurrency(summary.netTotal)}
               </span>
             ) : null}
-          </TabsTrigger>
+          </TabsPrimitive.Trigger>
 
-          <TabsTrigger
+          <TabsPrimitive.Trigger
             value={EARNINGS_VIEW.deposits}
             onClick={() => onViewChange?.(EARNINGS_VIEW.deposits)}
-            className={panelClassName(depositsActive)}
+            className={ledgerTabClassName}
           >
-            <span
-              className={cn(
-                "absolute left-0 top-0 h-full w-[3px] rounded-none",
-                depositsActive ? "bg-accent" : "bg-transparent",
-              )}
-              aria-hidden
-            />
-            <span className="flex items-center gap-2 text-sm font-medium text-ink">
-              <Landmark className="h-4 w-4 shrink-0 text-accent" strokeWidth={1.75} aria-hidden />
-              Depósitos
+            <span className="flex items-center gap-2">
+              <LedgerIcon icon={Landmark} />
+              <span className="text-sm font-medium">Depósitos</span>
             </span>
             <LedgerAmount
               isLoading={summary.isLoadingDeposits}
@@ -122,18 +153,9 @@ export function EarningsLedgerSwitch({ view, summary, onViewChange }: EarningsLe
             >
               {depositLabel}
             </LedgerAmount>
-            <span className="mt-2 text-caption leading-snug text-body">
-              O que cai na sua conta, em parcelas
-            </span>
-          </TabsTrigger>
-        </TabsList>
-
-        <div
-          className="pointer-events-none absolute left-1/2 top-1/2 z-10 hidden h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-canvas text-mute sm:flex"
-          aria-hidden
-        >
-          <ArrowRight className="h-4 w-4" strokeWidth={1.75} />
-        </div>
+            <span className="mt-1.5 text-caption leading-snug">Na sua conta</span>
+          </TabsPrimitive.Trigger>
+        </TabsPrimitive.List>
       </div>
 
       <p className="text-caption leading-relaxed text-body">

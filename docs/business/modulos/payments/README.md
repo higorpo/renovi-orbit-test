@@ -102,8 +102,8 @@
 ## Relação com outros módulos
 
 - **`negotiation-proposals` / `chats`:** aceite de proposta cria `payment_schedules` e abre checkout.
-- **`settings`:** embute `SavedCardsList` e `PaymentHistorySection` no cliente em `/dashboard/settings/payments` (Tabs **Formas de pagamento** / **Histórico**); histórico do prestador na aba **Cobranças** de `/dashboard/settings/earnings` (`?view=charges`; rota legado `/dashboard/settings/receivables` redireciona).
-- **`provider-earnings`:** UI unificada de Ganhos em `/dashboard/settings/earnings` (ledger Cobranças + Depósitos); lê settlements deste domínio; disclosure de previsão importado da Public API (sem re-export em `payments`; **não** nos cards da lista de captura).
+- **`settings`:** embute `SavedCardsList` e `PaymentHistorySection` no cliente em `/dashboard/settings/payments` (Tabs **Formas de pagamento** / **Histórico**); histórico do prestador na aba **Cobranças** de `/dashboard/settings/earnings` (`?view=charges`; `?period=` convive; rota legado `/dashboard/settings/receivables` redireciona).
+- **`provider-earnings`:** UI unificada de Ganhos em `/dashboard/settings/earnings` (chips de período + ledger Cobranças + Depósitos no padrão Tabs de Pagamentos); lê settlements deste domínio; disclosure de previsão importado da Public API (sem re-export em `payments`; **não** nos cards da lista de captura).
 - **`provider-kyc`:** UI (gate + wizard de credenciamento) até onboarding `ACTIVE`; backend de submissão/detecção permanece nas RPCs/EFs NetCred deste domínio.
 - **`my-services` / `view-services`:** status do serviço contratado reflete ciclo de pagamento; cancelamento pós-pagamento dispara reembolso; aviso discreto de `far_recapture_pending` no detalhe.
 - **`service-completion`:** writers de produto `EXECUTED`/`COMPLETED`/`IN_DISPUTE` (`service_completion_*`) — **fora** deste módulo (ADR-0004 / ADR-0006). Removidos: `payment_mark_service_executed`, `payment_confirm_service_completed`, `payment_cron_auto_complete_*`. Chargeback/`is_disputed` permanece aqui; **Disputa de serviço** (`IN_DISPUTE`) é do service-completion (≠ chargeback).

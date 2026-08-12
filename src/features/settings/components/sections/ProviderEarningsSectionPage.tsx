@@ -2,6 +2,7 @@ import { PaymentHistorySection } from "@/features/payments";
 import {
   EarningsLedgerSwitch,
   EarningsPage,
+  getEarningsPeriodRange,
   parseEarningsView,
   useEarningsViewParam,
 } from "@/features/provider-earnings";
@@ -21,8 +22,14 @@ export function ProviderEarningsSectionPage() {
 }
 
 function ProviderEarningsContent() {
-  const { view, setView } = useEarningsViewParam();
-  const summary = useEarningsLedgerSummary();
+  const { view, setView, period, setPeriod } = useEarningsViewParam();
+  const range = getEarningsPeriodRange(period);
+  const summary = useEarningsLedgerSummary({
+    receivedFrom: range.from,
+    receivedTo: range.to,
+    settlingFrom: range.from,
+    settlingTo: range.to,
+  });
 
   return (
     <SettingsSectionShell className="gap-4 md:gap-5">
@@ -36,13 +43,23 @@ function ProviderEarningsContent() {
         onValueChange={(value) => setView(parseEarningsView(value))}
         className="w-full"
       >
-        <EarningsLedgerSwitch view={view} summary={summary} onViewChange={setView} />
+        <EarningsLedgerSwitch
+          view={view}
+          summary={summary}
+          period={period}
+          onViewChange={setView}
+          onPeriodChange={setPeriod}
+        />
 
         <TabsContent value="deposits" className="mt-5 focus-visible:ring-0">
-          <EarningsPage />
+          <EarningsPage settlingFrom={range.from} settlingTo={range.to} />
         </TabsContent>
         <TabsContent value="charges" className="mt-5 focus-visible:ring-0">
-          <PaymentHistorySection role="provider" />
+          <PaymentHistorySection
+            role="provider"
+            receivedFrom={range.from}
+            receivedTo={range.to}
+          />
         </TabsContent>
       </Tabs>
     </SettingsSectionShell>

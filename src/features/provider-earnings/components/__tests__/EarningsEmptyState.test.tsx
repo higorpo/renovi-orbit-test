@@ -7,7 +7,7 @@ describe("EarningsEmptyState", () => {
     render(<EarningsEmptyState hasFilters={false} />);
 
     expect(screen.getByRole("status", { name: /Nenhuma liquidação/i })).toBeInTheDocument();
-    expect(screen.getByText("Nenhuma liquidação ainda")).toBeInTheDocument();
+    expect(screen.getByText("Nenhuma liquidação neste período")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Limpar filtros/i })).not.toBeInTheDocument();
   });
 

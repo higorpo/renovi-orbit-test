@@ -5,14 +5,14 @@
 - **Para que serve:** mostrar ao **prestador**, numa única página **Ganhos**, dois conceitos distintos: **Cobranças** (valor combinado na captura / `provider_payout`) e **Depósitos** (liquidações bancárias, que podem ser parceladas). Os números **não** se misturam.
 - **Quem usa:** prestadores autenticados (`profiles.role === provider`); UI hospedada no hub Configurações (`/dashboard/settings/earnings`), com `SettingsRoleGate` provider. Sem KYC `ACTIVE`, o `ProviderKycGate` substitui o conteúdo operacional e o chrome de nav fica oculto (entrada via hub Configurações na allowlist `/dashboard/settings`).
 - **Não é:** uma seção **Recebimentos** na nav (item removido). A captura continua sendo dado de `payments` (`provider_payment_receivables_v`), agora na aba Cobranças. Também não altera o calendário NetCred — só **lê** movements já sincronizados. **Não** há item **Ganhos** no `dashboardMenu` (removido).
-- **Valor:** transparência de “quanto combinamos” vs “quando cai na conta”, com filtros Previsto / Liquidado e fallback de estimativa D+30 no caption do ledger quando ainda não há `settling_at` real na lista.
-- **Riscos operacionais:** lista de depósitos vazia se ingestão (PAYOUT_*, enrich pós-captura/estorno ou `sync-netcred-settlements`) atrasar; `ProviderSettlementStatus` (payments) pode usar só o fallback D+30 (sem `settlingAt` real) — ver feature. Totais de Cobranças = soma client-side da lista completa (sem RPC nova).
+- **Valor:** transparência de “quanto combinamos” vs “quando cai na conta”, com período (Este mês / 3 meses / 6 meses), filtros Previsto / Liquidado e fallback de estimativa D+30 no caption do ledger quando ainda não há `settling_at` real na lista.
+- **Riscos operacionais:** lista de depósitos vazia se ingestão (PAYOUT_*, enrich pós-captura/estorno ou `sync-netcred-settlements`) atrasar **ou** se o movement cair fora da janela do período; `ProviderSettlementStatus` (payments) pode usar só o fallback D+30 (sem `settlingAt` real) — ver feature. Totais de Cobranças = soma client-side da lista do período (filtro `received_at` na view; sem RPC/paginação nova).
 
 ## 2. Visão geral funcional
 
 - **Objetivo:** hub Ganhos com ledger de duas visões + lista paginada de linhas de liquidação (`payment_settlement_movements`) + componente de disclosure de previsão reutilizável (outras superfícies).
-- **Escopo:** UI em `/dashboard/settings/earnings` (`ROUTE_PROVIDER_EARNINGS`); ownership da liquidação permanece em `provider-earnings`; host `ProviderEarningsSectionPage` em `settings` **compõe** Public API (não importa internals). Filtros server-side da lista de depósitos, agrupamento visual por parcela do mesmo `payment_schedule_id`, Public API do disclosure. Query `view` troca Cobranças/Depósitos.
-- **Limites:** sem mutações; sem filtros de data na UI (RPC aceita, front não envia); sem filtro por serviço; sem analytics GA/Sentry específicos na feature; sem RPC/migration nova na unificação das telas.
+- **Escopo:** UI em `/dashboard/settings/earnings` (`ROUTE_PROVIDER_EARNINGS`); ownership da liquidação permanece em `provider-earnings`; host `ProviderEarningsSectionPage` em `settings` **compõe** Public API (não importa internals). Filtros server-side da lista de depósitos (status + `p_settling_from`/`p_settling_to`), agrupamento visual por parcela do mesmo `payment_schedule_id`, Public API do disclosure. Query `view` troca Cobranças/Depósitos; query `period` (`3m`/`6m`; default Este mês omite o param) convive com `view`.
+- **Limites:** sem mutações; sem filtro por serviço; sem visão “todo o histórico” (máx. 6 meses civis); sem analytics GA/Sentry específicos na feature; sem RPC/migration nova nesta iteração (a RPC já aceitava o range de `settling_at`; a UI passou a enviá-lo).
 - **Relação:** backend de ingestão e persistência em **payments**; navegação via hub **settings** + chrome **dashboard-shell** + **provider-kyc**. Rota top-level `/dashboard/earnings` **removida** (sem redirect). Rota legado `/dashboard/settings/receivables` **existe** e redireciona para `?view=charges`.
 
 ## 3. Features do módulo
@@ -32,11 +32,12 @@
 
 ## 5. Principais fluxos
 
-1. Prestador abre **Configurações → Ganhos** (`/dashboard/settings/earnings`, default Depósitos) → ledger + `EarningsPage` → `useProviderSettlements` → RPC `list_provider_settlement_movements` → lista / vazio / erro.
-2. Troca de painel do ledger → `view=charges` (Cobranças) ou remove o param (Depósitos); `useEarningsViewParam` com `replace: true`.
-3. Troca de aba de filtro da lista de depósitos → nova `queryKey` → refetch página 1.
-4. **Carregar mais** → próxima página (page size 20).
-5. Disclosure em `ProviderSettlementStatus` (consumidor em `payments`) mostra previsão ou mensagem de hold — **não** nos cards da lista de captura.
+1. Prestador abre **Configurações → Ganhos** (`/dashboard/settings/earnings`, default Depósitos + Este mês) → período + ledger + `EarningsPage` → `useProviderSettlements` (com `settlingFrom`/`settlingTo`) → RPC `list_provider_settlement_movements` → lista / vazio / erro.
+2. Troca de aba do ledger → `view=charges` (Cobranças) ou remove o param (Depósitos); `useEarningsViewParam` com `replace: true` (preserva `period` se houver).
+3. Troca de período → `period=3m`/`6m` ou remove o param (Este mês); o range (`getEarningsPeriodRange`, calendário `America/Sao_Paulo`) filtra totais do ledger e as duas listas.
+4. Troca de aba de filtro da lista de depósitos → nova `queryKey` (inclui from/to) → refetch página 1.
+5. **Carregar mais** → próxima página (page size 20).
+6. Disclosure em `ProviderSettlementStatus` (consumidor em `payments`) mostra previsão ou mensagem de hold — **não** nos cards da lista de captura.
 
 ## 6. Regras transversais
 
@@ -64,13 +65,13 @@
 ## 9. Riscos e lacunas
 
 - `ProviderSettlementStatus` (payments) **não passa** `settlingAt` — previsões embutidas nesse componente usam D+30 até a lista Depósitos (ou outro consumidor) exibir a data real do movement. A lista de captura **não** mostra previsão por card.
-- Params de intervalo de datas da RPC existem sem UI.
+- Sem visão “todo o histórico”: a UI só oferece Este mês / 3 meses / 6 meses.
 - Sem instrumentação de analytics na feature.
 - Detalhe operacional NetCred / runbooks: `docs/payment-system/` (fora deste módulo).
 
 ## 10. Evidências
 
-- `src/features/provider-earnings/` (`EarningsPage`, `EarningsLedgerSwitch`, `useProviderSettlements`, `useEarningsViewParam`, `parseEarningsView`, `providerEarningsPath`, `settlements.api.ts`, disclosure, `ROUTE_PROVIDER_EARNINGS`)
+- `src/features/provider-earnings/` (`EarningsPage`, `EarningsLedgerSwitch`, `useProviderSettlements`, `useEarningsViewParam`, `parseEarningsView`, `parseEarningsPeriod`, `getEarningsPeriodRange`, `providerEarningsPath`, `settlements.api.ts`, disclosure, `ROUTE_PROVIDER_EARNINGS`, `earningsPeriod.ts`)
 - `src/features/settings/components/sections/ProviderEarningsSectionPage.tsx` — host unificado; `ProviderReceivablesPage.tsx` — redirect legado
 - `src/features/settings/hooks/useEarningsLedgerSummary.ts` — totais do ledger (soma captura client-side + `totalCount` depósitos)
 - `src/router.tsx` — `settings/earnings` e `settings/receivables` (redirect)
