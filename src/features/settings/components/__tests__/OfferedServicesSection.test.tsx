@@ -57,7 +57,15 @@ describe("OfferedServicesSection", () => {
     );
     expect(screen.getByText("Serviços oferecidos")).toBeInTheDocument();
     expect(
+      screen.getByText("Tipos de pedido que entram no seu feed"),
+    ).toBeInTheDocument();
+    expect(
       screen.getByPlaceholderText("Buscar serviços...")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Nenhum serviço selecionado ainda. Busque acima para receber pedidos desses tipos.",
+      ),
     ).toBeInTheDocument();
   });
 

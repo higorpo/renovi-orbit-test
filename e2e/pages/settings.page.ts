@@ -249,6 +249,19 @@ export class SettingsPage {
     await this.getOfferedServicesSection().waitFor({ state: "visible", timeout: 20_000 });
   }
 
+  getPedidosTab() {
+    return this.page.getByRole("tab", { name: "Pedidos" });
+  }
+
+  getVitrineTab() {
+    return this.page.getByRole("tab", { name: "Vitrine" });
+  }
+
+  async openVitrineTab() {
+    await this.getVitrineTab().click();
+    await this.getPublicProfileSection().waitFor({ state: "visible", timeout: 10_000 });
+  }
+
   getOfferedServicesSection() {
     return this.page.getByText("Serviços oferecidos").first();
   }

@@ -54,6 +54,9 @@ describe("PublicProfileSettingsSection", () => {
     render(<Wrapper profileSlug={null} />);
     expect(screen.getByText("Perfil público")).toBeInTheDocument();
     expect(
+      screen.getByText("Nome, bio e visibilidade do perfil"),
+    ).toBeInTheDocument();
+    expect(
       screen.getByLabelText(/Nome profissional/)
     ).toBeInTheDocument();
     expect(screen.getByLabelText(/Biografia/)).toBeInTheDocument();

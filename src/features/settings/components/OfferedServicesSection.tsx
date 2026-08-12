@@ -92,7 +92,7 @@ export function OfferedServicesSection({
         <SettingsCardHeader
           title="Serviços oferecidos"
           icon={Briefcase}
-          description="Pesquise e selecione os serviços que aparecem no seu perfil público."
+          description="Tipos de pedido que entram no seu feed"
         />
       </CardHeader>
       <CardContent className="space-y-4 pt-0 sm:pt-0">
@@ -150,7 +150,7 @@ export function OfferedServicesSection({
         {selectedServiceIds.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-canvas-soft px-4 py-8 text-center">
             <p className="text-sm leading-relaxed text-body">
-              Nenhum serviço selecionado ainda. Busque acima para adicionar ao perfil.
+              Nenhum serviço selecionado ainda. Busque acima para receber pedidos desses tipos.
             </p>
           </div>
         ) : (

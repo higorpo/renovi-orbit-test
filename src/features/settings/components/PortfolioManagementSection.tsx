@@ -416,7 +416,7 @@ export function PortfolioManagementSection({
         <SettingsCardHeader
           title="Portfólio"
           icon={ImageIcon}
-          description="Trabalhos realizados no seu perfil público"
+          description="Trabalhos exibidos no perfil público"
         />
       </CardHeader>
       <CardContent className="space-y-4 pt-0 sm:pt-0">

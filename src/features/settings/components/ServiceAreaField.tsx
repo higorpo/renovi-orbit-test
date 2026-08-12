@@ -483,7 +483,7 @@ export function ServiceAreaField({ form, disabled, hideLabel }: ServiceAreaField
               {neighborhoodIds.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-border bg-canvas-soft px-4 py-8 text-center">
                   <p className="text-sm leading-relaxed text-body">
-                    Nenhuma cidade adicionada. Inclua onde você atende para aparecer nas buscas da
+                    Nenhuma cidade adicionada. Inclua onde você atende para receber pedidos da
                     região.
                   </p>
                 </div>
@@ -629,7 +629,7 @@ export function ServiceAreaSection({ form, disabled }: Omit<ServiceAreaFieldProp
         <SettingsCardHeader
           title="Área de atuação"
           icon={MapPin}
-          description="Cidades e bairros em que você atende. Você pode atuar em mais de uma cidade."
+          description="Cidades e bairros em que você atende"
         />
       </CardHeader>
       <CardContent className="pt-0 sm:pt-0">

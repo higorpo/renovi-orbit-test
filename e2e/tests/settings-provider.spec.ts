@@ -26,6 +26,7 @@ test.describe("My Account — provider", () => {
   async function ensureVisibilityAndSave(page: import("@playwright/test").Page, target: "public" | "restricted") {
     const acc = new SettingsPage(page);
     await acc.gotoProfessionalProfile();
+    await acc.openVitrineTab();
     const targetRadio = visibilityRadio(page, target);
     const oppositeRadio = visibilityRadio(page, target === "public" ? "restricted" : "public");
 
@@ -76,7 +77,10 @@ test.describe("My Account — provider", () => {
     await expect(acc.getEntityTypeSectionTitle()).toBeVisible({ timeout: t });
     await expect(acc.getLegalSectionTitle()).toBeVisible({ timeout: t });
     await acc.gotoProfessionalProfile();
+    await expect(acc.getPedidosTab()).toBeVisible({ timeout: t });
     await expect(acc.getOfferedServicesSection()).toBeVisible({ timeout: t });
+    await expect(acc.getServiceAreaLabel()).toBeVisible({ timeout: t });
+    await acc.openVitrineTab();
     await expect(acc.getPublicProfileSection()).toBeVisible({ timeout: t });
     await expect(acc.getPortfolioSection()).toBeVisible({ timeout: t });
   });
@@ -170,6 +174,8 @@ test.describe("My Account — provider", () => {
   test("edge: display name over 120 chars shows validation toast", async ({ page }) => {
     test.setTimeout(45_000);
     const acc = new SettingsPage(page);
+    await acc.gotoProfessionalProfile();
+    await acc.openVitrineTab();
     await acc.getDisplayNameInput().fill("x".repeat(121));
     await page.waitForTimeout(2500);
     await expect(
@@ -180,6 +186,8 @@ test.describe("My Account — provider", () => {
   test("edge: bio over 2000 chars shows validation toast", async ({ page }) => {
     test.setTimeout(45_000);
     const acc = new SettingsPage(page);
+    await acc.gotoProfessionalProfile();
+    await acc.openVitrineTab();
     await acc.getBioTextarea().fill("b".repeat(2001));
     await page.waitForTimeout(2500);
     await expect(
@@ -254,6 +262,7 @@ test.describe("My Account — provider", () => {
     test.setTimeout(45_000);
     const acc = new SettingsPage(page);
     await acc.gotoProfessionalProfile();
+    await acc.openVitrineTab();
     const tag = Date.now().toString().slice(-5);
     await acc.getDisplayNameInput().fill(`E2E Pro ${tag}`);
     await acc.getBioTextarea().fill(`Bio E2E linha única ${tag}.`);
@@ -318,6 +327,7 @@ test.describe("My Account — provider", () => {
   test("portfolio: add disabled when title is empty or whitespace", async ({ page }) => {
     const acc = new SettingsPage(page);
     await acc.gotoProfessionalProfile();
+    await acc.openVitrineTab();
     await acc.getAdicionarTrabalhoButton().scrollIntoViewIfNeeded();
     await acc.getAdicionarTrabalhoButton().click();
     await expect(acc.getPortfolioDialogTitle()).toBeVisible();
@@ -330,6 +340,7 @@ test.describe("My Account — provider", () => {
   test("portfolio: Fechar button closes add dialog without saving", async ({ page }) => {
     const acc = new SettingsPage(page);
     await acc.gotoProfessionalProfile();
+    await acc.openVitrineTab();
     await acc.getAdicionarTrabalhoButton().scrollIntoViewIfNeeded();
     await acc.getAdicionarTrabalhoButton().click();
     await expect(acc.getPortfolioDialogTitle()).toBeVisible();
@@ -343,6 +354,7 @@ test.describe("My Account — provider", () => {
     test.setTimeout(120_000);
     const acc = new SettingsPage(page);
     await acc.gotoProfessionalProfile();
+    await acc.openVitrineTab();
     const baseTitle = `E2E Chain ${Date.now()}`;
     const editedTitle = `${baseTitle} editado`;
 
@@ -409,6 +421,7 @@ test.describe("My Account — provider", () => {
   test("public profile: copy link shows toast", async ({ page }) => {
     const acc = new SettingsPage(page);
     await acc.gotoProfessionalProfile();
+    await acc.openVitrineTab();
     await acc.getPublicProfileCopiarLinkButton().scrollIntoViewIfNeeded();
     await acc.getPublicProfileCopiarLinkButton().click();
     await expect(

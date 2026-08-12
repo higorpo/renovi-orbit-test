@@ -119,7 +119,7 @@ export function PublicProfileSettingsSection({
         <SettingsCardHeader
           title="Perfil público"
           icon={Eye}
-          description="Como clientes veem você na Prestway"
+          description="Nome, bio e visibilidade do perfil"
         />
       </CardHeader>
       <CardContent className="space-y-5 pt-0 sm:pt-0">

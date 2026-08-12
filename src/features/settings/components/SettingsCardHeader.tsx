@@ -19,7 +19,7 @@ export function SettingsCardHeader({
   className,
 }: SettingsCardHeaderProps) {
   return (
-    <div className={cn("flex items-center gap-3", className)}>
+    <div className={cn("flex items-start gap-3", className)}>
       {Icon ? (
         <div
           className={cn(

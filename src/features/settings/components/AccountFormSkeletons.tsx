@@ -162,23 +162,6 @@ function ServiceAreaSkeleton() {
   );
 }
 
-function PortfolioSkeleton() {
-  return (
-    <Card>
-      <CardHeader className="pb-3 sm:pb-0">
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
-          <Skeleton className="h-5 w-24" />
-        </div>
-      </CardHeader>
-      <CardContent className="!pt-4 space-y-3">
-        <Skeleton className="h-[4.75rem] w-full rounded-2xl" />
-        <Skeleton className="h-[4.75rem] w-full rounded-2xl" />
-      </CardContent>
-    </Card>
-  );
-}
-
 /** Skeleton for the provider account form sections. */
 export function ProviderFormSkeleton() {
   return (
@@ -201,15 +184,14 @@ export function ProviderFormSkeleton() {
   );
 }
 
-/** Skeleton for Perfil profissional (services, public profile, area, portfolio). */
+/** Skeleton for Perfil profissional (tabs + Pedidos cards). */
 export function ProfessionalProfileFormSkeleton() {
   return (
     <div className="space-y-5">
+      <Skeleton className="h-12 w-full rounded-xl" />
       <OfferedServicesSkeleton />
-      <PublicProfileSkeleton />
       <ServiceAreaSkeleton />
       <Skeleton className="h-4 w-52" />
-      <PortfolioSkeleton />
     </div>
   );
 }
