@@ -30,7 +30,7 @@ Evidência: `src/router.tsx` (árvore atual).
 | `/dashboard/services` | Herdado | `client`, `provider` | Real (`my-services`) | Slot por papel no layout |
 | `/dashboard/services/calendar` | Aninhado `provider` | **`provider` apenas** | Real (`provider-calendar`) | **Fora do menu**; entrada via banner em Meus Serviços |
 | `/dashboard/services/:id` | Herdado | `client`, `provider` | Real (`view-services`) | Detalhe; sheet ou stack; **fora do menu** |
-| `/dashboard/settings` (+ seções) | Herdado (+ `SettingsRoleGate` por seção) | `client`, `provider` | Real (`settings`; Ganhos unificado; Dados bancários só prestador) | Item **Configurações** no menu; **Allowlist KYC**; Ganhos em `/dashboard/settings/earnings` (`?view=charges` = Cobranças); `/dashboard/settings/payout-methods` só prestador (somente leitura); `/dashboard/settings/receivables` redireciona |
+| `/dashboard/settings` (+ seções) | Herdado (+ `SettingsRoleGate` por seção) | `client`, `provider` | Real (`settings`; Ganhos unificado; Documentos e Dados bancários só prestador) | Item **Configurações** no menu; **Allowlist KYC**; Ganhos em `/dashboard/settings/earnings` (`?view=charges` = Cobranças); `/dashboard/settings/kyc-documents` e `/dashboard/settings/payout-methods` só prestador (somente leitura; Documentos com download); `/dashboard/settings/receivables` redireciona |
 | `/dashboard/jobs` | Aninhado `provider` | **`provider` apenas** | Real (`provider-jobs`) | |
 | `/dashboard/chats` | Aninhado `client`+`provider` | `client`, `provider` | Real (`chats`) | Inbox CNS |
 | `/dashboard/chats/:chatId` | Filho de chats | `client`, `provider` | Real (`chats`) | Thread; chrome mobile `custom` |

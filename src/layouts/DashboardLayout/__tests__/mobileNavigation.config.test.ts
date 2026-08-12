@@ -107,6 +107,16 @@ describe("resolveMobileChrome", () => {
     expect(chrome.backFallback).toBe("/dashboard/settings");
   });
 
+  it("returns Documentos stack title for KYC documents", () => {
+    const chrome = resolveMobileChrome(
+      "/dashboard/settings/kyc-documents",
+      location("/dashboard/settings/kyc-documents"),
+    );
+    expect(chrome.mode).toBe("stack");
+    expect(chrome.stackTitle).toBe("Documentos");
+    expect(chrome.backFallback).toBe("/dashboard/settings");
+  });
+
   it("returns Jurídico stack title for the legal settings section", () => {
     const chrome = resolveMobileChrome(
       "/dashboard/settings/legal",

@@ -102,6 +102,9 @@ vi.mock("@/features/settings/components/sections/ProviderEarningsSectionPage", (
 vi.mock("@/features/settings/components/sections/ProviderPayoutMethodsPage", () => ({
   ProviderPayoutMethodsPage: () => null,
 }));
+vi.mock("@/features/settings/components/sections/ProviderKycDocumentsPage", () => ({
+  ProviderKycDocumentsPage: () => null,
+}));
 vi.mock("@/features/settings/components/sections/AccountPrivacyPage", () => ({
   AccountPrivacyPage: () => null,
 }));
@@ -192,6 +195,7 @@ describe("router", () => {
         "/dashboard/settings/receivables",
         "/dashboard/settings/earnings",
         "/dashboard/settings/payout-methods",
+        "/dashboard/settings/kyc-documents",
         "/dashboard/settings/privacy",
         "/dashboard/settings/legal",
         "/dashboard/settings/session",
@@ -231,5 +235,6 @@ describe("router", () => {
     expect(settings?.element).toBeTruthy();
     expect(settings?.children?.some((route) => route.path === "earnings")).toBe(true);
     expect(settings?.children?.some((route) => route.path === "payout-methods")).toBe(true);
+    expect(settings?.children?.some((route) => route.path === "kyc-documents")).toBe(true);
   });
 });

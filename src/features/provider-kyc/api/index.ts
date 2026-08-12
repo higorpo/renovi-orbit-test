@@ -1,6 +1,7 @@
 export {
   uploadKycDocument,
   validateKycDocumentFile,
+  getKycDocumentSignedUrl,
   createKycUploadSession,
   registerKycUploadPath,
   submitProviderKyc,
@@ -23,6 +24,7 @@ export type {
   SubmitProviderKycResult,
   DispatchKycResult,
   UploadKycDocumentResult,
+  GetKycDocumentSignedUrlResult,
   CreateKycUploadSessionResult,
   RegisterKycUploadPathResult,
   ProviderPaymentAccount,

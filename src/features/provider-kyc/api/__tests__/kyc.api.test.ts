@@ -5,6 +5,7 @@ import {
   dispatchKycEmail,
   fetchProviderPaymentAccount,
   fetchProviderPrivateProfileForKyc,
+  getKycDocumentSignedUrl,
   isProviderCredentialed,
   isProviderKycAwaitingReview,
   isProviderKycDocumentsSubmitted,
@@ -951,5 +952,58 @@ describe("kyc status helpers", () => {
       emailDispatchedAt: "2026-07-01T00:00:00.000Z",
       onboardingSubmittedAt: "2026-07-01T00:00:00.000Z",
     })).toBe(true);
+  });
+});
+
+describe("getKycDocumentSignedUrl", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("does not call storage for a blank path", async () => {
+    await expect(getKycDocumentSignedUrl("  ")).resolves.toEqual({
+      signedUrl: null,
+      error: "Documento não encontrado",
+    });
+    expect(mockStorageFrom).not.toHaveBeenCalled();
+  });
+
+  it("signs an existing KYC document path", async () => {
+    mockStorageFrom.mockReturnValue({
+      createSignedUrl: vi.fn().mockResolvedValue({
+        data: { signedUrl: "https://signed.example/id.pdf" },
+        error: null,
+      }),
+    });
+
+    const result = await getKycDocumentSignedUrl(
+      "providers/provider-1/kyc/identity/document.pdf",
+    );
+
+    expect(result).toEqual({
+      signedUrl: "https://signed.example/id.pdf",
+      error: null,
+    });
+    expect(mockStorageFrom).toHaveBeenCalledWith("provider-kyc-documents");
+    expect(mockStorageFrom.mock.results[0]?.value.createSignedUrl).toHaveBeenCalledWith(
+      "providers/provider-1/kyc/identity/document.pdf",
+      7 * 24 * 3600,
+    );
+  });
+
+  it("returns the storage error when signing fails", async () => {
+    mockStorageFrom.mockReturnValue({
+      createSignedUrl: vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: "Object not found" },
+      }),
+    });
+
+    await expect(
+      getKycDocumentSignedUrl("providers/provider-1/kyc/identity/document.pdf"),
+    ).resolves.toEqual({
+      signedUrl: null,
+      error: "Object not found",
+    });
   });
 });

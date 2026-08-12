@@ -259,6 +259,19 @@ export class SettingsPage {
     await this.getPayoutBankInput().waitFor({ state: "visible", timeout: 20_000 });
   }
 
+  async gotoKycDocuments() {
+    await this.page.goto("/dashboard/settings/kyc-documents");
+    await this.getKycDocumentsSupportLink().waitFor({ state: "visible", timeout: 20_000 });
+  }
+
+  getKycDocumentsSupportLink() {
+    return this.page.getByRole("link", { name: /Falar com o suporte/i });
+  }
+
+  getKycDocumentDownloadButton(label: string) {
+    return this.page.getByRole("button", { name: `Baixar ${label}` });
+  }
+
   getPayoutBankInput() {
     return this.page.getByLabel("Banco");
   }

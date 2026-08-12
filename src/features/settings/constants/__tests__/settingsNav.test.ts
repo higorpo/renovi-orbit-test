@@ -54,4 +54,29 @@ describe("getSettingsNavItems", () => {
       "/dashboard/settings/payout-methods",
     );
   });
+
+  it("lists Documentos for providers only, after Identidade legal", () => {
+    const providerLabels = getSettingsNavItems("provider")
+      .filter(isSettingsNavLink)
+      .map((item) => item.label);
+    const clientLabels = getSettingsNavItems("client")
+      .filter(isSettingsNavLink)
+      .map((item) => item.label);
+
+    expect(providerLabels).toContain("Documentos");
+    expect(clientLabels).not.toContain("Documentos");
+    expect(providerLabels.indexOf("Identidade legal")).toBeLessThan(
+      providerLabels.indexOf("Documentos"),
+    );
+    expect(providerLabels.indexOf("Documentos")).toBeLessThan(
+      providerLabels.indexOf("Perfil profissional"),
+    );
+
+    const docs = getSettingsNavItems("provider").find(
+      (item) => isSettingsNavLink(item) && item.slug === "kyc-documents",
+    );
+    expect(docs && isSettingsNavLink(docs) ? docs.path : null).toBe(
+      "/dashboard/settings/kyc-documents",
+    );
+  });
 });

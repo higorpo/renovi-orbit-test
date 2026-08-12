@@ -1,6 +1,7 @@
 import {
   Briefcase,
   CreditCard,
+  FileText,
   IdCard,
   Landmark,
   LogOut,
@@ -107,6 +108,12 @@ const PROVIDER_ITEMS: SettingsNavItem[] = [
     icon: IdCard,
   },
   {
+    slug: SETTINGS_SECTION.kycDocuments,
+    path: settingsSectionPath(SETTINGS_SECTION.kycDocuments),
+    label: "Documentos",
+    icon: FileText,
+  },
+  {
     slug: SETTINGS_SECTION.professionalProfile,
     path: settingsSectionPath(SETTINGS_SECTION.professionalProfile),
     label: "Perfil profissional",
@@ -137,6 +144,7 @@ export const SETTINGS_SECTION_STACK_TITLE: Record<SettingsSectionSlug, string> =
   addresses: "Endereços",
   payments: "Pagamentos",
   "legal-identity": "Identidade legal",
+  "kyc-documents": "Documentos",
   "professional-profile": "Perfil profissional",
   "payout-methods": "Dados bancários",
   receivables: "Ganhos",
@@ -153,6 +161,7 @@ export const CLIENT_ONLY_SETTINGS_SECTIONS: SettingsSectionSlug[] = [
 
 export const PROVIDER_ONLY_SETTINGS_SECTIONS: SettingsSectionSlug[] = [
   SETTINGS_SECTION.legalIdentity,
+  SETTINGS_SECTION.kycDocuments,
   SETTINGS_SECTION.professionalProfile,
   SETTINGS_SECTION.payoutMethods,
   SETTINGS_SECTION.receivables,

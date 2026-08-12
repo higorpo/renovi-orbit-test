@@ -6,6 +6,7 @@ export const SETTINGS_SECTION = {
   addresses: "addresses",
   payments: "payments",
   legalIdentity: "legal-identity",
+  kycDocuments: "kyc-documents",
   professionalProfile: "professional-profile",
   payoutMethods: "payout-methods",
   receivables: "receivables",
@@ -25,6 +26,7 @@ export const ROUTE_SETTINGS_PERSONAL_INFO = settingsSectionPath(SETTINGS_SECTION
 export const ROUTE_SETTINGS_ADDRESSES = settingsSectionPath(SETTINGS_SECTION.addresses);
 export const ROUTE_SETTINGS_PAYMENTS = settingsSectionPath(SETTINGS_SECTION.payments);
 export const ROUTE_SETTINGS_LEGAL_IDENTITY = settingsSectionPath(SETTINGS_SECTION.legalIdentity);
+export const ROUTE_SETTINGS_KYC_DOCUMENTS = settingsSectionPath(SETTINGS_SECTION.kycDocuments);
 export const ROUTE_SETTINGS_PROFESSIONAL_PROFILE = settingsSectionPath(
   SETTINGS_SECTION.professionalProfile,
 );

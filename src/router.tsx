@@ -123,6 +123,11 @@ const ProviderPayoutMethodsPage = lazy(() =>
     default: m.ProviderPayoutMethodsPage,
   })),
 )
+const ProviderKycDocumentsPage = lazy(() =>
+  import('@/features/settings/components/sections/ProviderKycDocumentsPage').then((m) => ({
+    default: m.ProviderKycDocumentsPage,
+  })),
+)
 const AccountPrivacyPage = lazy(() =>
   import('@/features/settings/components/sections/AccountPrivacyPage').then((m) => ({
     default: m.AccountPrivacyPage,
@@ -260,6 +265,7 @@ export const router = createBrowserRouter([
               { path: 'addresses', element: <ClientAddressesPage /> },
               { path: 'payments', element: <ClientPaymentsPage /> },
               { path: 'legal-identity', element: <ProviderLegalIdentityPage /> },
+              { path: 'kyc-documents', element: <ProviderKycDocumentsPage /> },
               { path: 'professional-profile', element: <ProviderProfessionalProfilePage /> },
               { path: 'payout-methods', element: <ProviderPayoutMethodsPage /> },
               { path: 'receivables', element: <ProviderReceivablesPage /> },

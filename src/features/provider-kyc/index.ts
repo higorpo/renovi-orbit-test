@@ -30,6 +30,7 @@ export {
   isProviderKycSuspended,
   uploadKycDocument,
   validateKycDocumentFile,
+  getKycDocumentSignedUrl,
   createKycUploadSession,
   registerKycUploadPath,
   submitProviderKyc,
@@ -44,6 +45,7 @@ export type {
   SubmitProviderKycResult,
   DispatchKycResult,
   UploadKycDocumentResult,
+  GetKycDocumentSignedUrlResult,
   ProviderPaymentAccount,
   FetchProviderPaymentAccountResult,
   ProviderPrivateProfileForKyc,
@@ -57,3 +59,13 @@ export {
   findBrazilianBankByCode,
 } from "./constants";
 export type { BrazilianBank } from "./constants";
+
+export {
+  listKycOnboardingDocuments,
+  kycDocumentFileName,
+} from "./utils/kycOnboardingDocuments";
+export type {
+  KycOnboardingDocumentKey,
+  KycOnboardingDocumentSlot,
+  ListKycOnboardingDocumentsInput,
+} from "./utils/kycOnboardingDocuments";

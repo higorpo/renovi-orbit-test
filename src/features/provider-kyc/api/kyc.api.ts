@@ -95,6 +95,11 @@ export type UploadKycDocumentResult = {
   error: string | null;
 };
 
+export type GetKycDocumentSignedUrlResult = {
+  signedUrl: string | null;
+  error: string | null;
+};
+
 export type CreateKycUploadSessionResult = {
   uploadSessionId: string | null;
   storagePathPrefix: string | null;
@@ -308,6 +313,32 @@ export async function uploadKycDocument(
     sessionId: session.uploadSessionId,
     error: null,
   };
+}
+
+export async function getKycDocumentSignedUrl(
+  path: string,
+): Promise<GetKycDocumentSignedUrlResult> {
+  const trimmed = path.trim();
+  if (!trimmed) {
+    return { signedUrl: null, error: "Documento não encontrado" };
+  }
+
+  const { data, error } = await supabase.storage
+    .from(PROVIDER_KYC_DOCUMENTS_BUCKET)
+    .createSignedUrl(trimmed, KYC_DOCUMENT_SIGNED_URL_EXPIRY_SEC);
+
+  if (error || !data?.signedUrl) {
+    logger.warn("kyc_document_signed_url_failed", {
+      path: trimmed,
+      error: error?.message,
+    });
+    return {
+      signedUrl: null,
+      error: error?.message ?? "Falha ao gerar URL do documento",
+    };
+  }
+
+  return { signedUrl: data.signedUrl, error: null };
 }
 
 function isSubmitProviderKycPayload(value: unknown): value is Record<string, unknown> {

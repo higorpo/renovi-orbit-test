@@ -196,6 +196,11 @@ export function ProfessionalProfileFormSkeleton() {
   );
 }
 
+/** Skeleton for Documentos (read-only onboarding files). */
+export function KycDocumentsFormSkeleton() {
+  return <SkeletonCardSection fields={3} />;
+}
+
 /** Skeleton for Dados bancários (read-only payout account). */
 export function PayoutMethodsFormSkeleton() {
   return <SkeletonCardSection fields={4} />;

@@ -65,7 +65,7 @@ Labels na UI: “Tipo de cadastro”, “Dados pessoais”, “Dados bancários�
 2. PF: documentos obrigatórios `identity` + `address-proof`.
 3. PJ: `legal-rep-id` (identidade do representante; no submit o mesmo path é dual-mapeado para `identity_doc_storage_path` e `legal_rep_doc_storage_path` — a RPC exige que coincidam), `address-proof` (comprovante de endereço da empresa) e `corporate-charter`. Não há upload separado de `identity` no wizard PJ.
 4. Banco: código FEBRABAN via `BankPicker` (lista da BrasilAPI `/banks/v1`, com fallback no JSON local e overrides de nome amigáveis); agência só dígitos (sem dígito verificador no campo); conta com dígito; PIX opcional. Depois do submit, os mesmos campos são **exibidos** (não editados) em Configurações → Dados bancários — sem `BankPicker` nessa tela.
-5. Upload Option A: criar sessão → upload no storage → registrar path → URL assinada.
+5. Upload Option A: criar sessão → upload no storage → registrar path → URL assinada (`KYC_DOCUMENT_SIGNED_URL_EXPIRY_SEC` = 7 dias). A mesma API `getKycDocumentSignedUrl` é usada depois em Configurações → Documentos para o prestador **baixar** o arquivo já persistido (sem re-upload nessa tela).
 6. Prefill: dados de `provider_profiles_private`; telefone/nome/e-mail vêm do perfil/conta passados pelo gate (`defaultPhone`, `defaultFullName`, `accountEmail`).
 
 ## 8. Campos e dados da feature
@@ -143,7 +143,7 @@ O wizard em si não altera status além do submit. Após sucesso, o gate refetch
 | Storage `provider-kyc-documents` | Arquivos do KYC |
 | `provider_kyc_upload_sessions` | Option A: create → upload → register path; status `pending` → `linked` no submit |
 | Janitor `payment_janitor_orphan_kyc_documents` | Expira sessões pendentes e remove objetos órfãos do bucket (cron `cron_payment_janitor_orphan_kyc_documents`) |
-| `provider_profiles_private` | Prefill e persistência de identidade/banco via submit (upsert — fonte única). Os mesmos campos de banco/PIX são **exibidos** (somente leitura) em Configurações → Dados bancários (`useProviderPayoutMethods`); settings **não** atualiza `bank_*` / `pix_key` |
+| `provider_profiles_private` | Prefill e persistência de identidade/banco via submit (upsert — fonte única). Os mesmos campos de banco/PIX são **exibidos** (somente leitura) em Configurações → Dados bancários (`useProviderPayoutMethods`); os paths dos anexos (`identity_doc_storage_path`, `address_proof_storage_path`, `corporate_charter_storage_path`, `legal_rep_doc_storage_path`) são **listados/baixados** em Configurações → Documentos (`listKycOnboardingDocuments` + `getKycDocumentSignedUrl`). Settings **não** atualiza `bank_*` / `pix_key` nem reenvia arquivos |
 | `provider_gateway_accounts` | Conta NetCred / `onboarding_status` após submit |
 
 ## 13. Integrações e efeitos externos
@@ -153,11 +153,11 @@ O wizard em si não altera status além do submit. Após sucesso, o gate refetch
 | `payment_create_provider_kyc_upload_session` | Cria sessão; retorna `upload_session_id` + `storage_path_prefix` |
 | Storage upload | Grava arquivo no path do prestador |
 | `payment_register_provider_kyc_upload_path` | Associa path à sessão |
-| Signed URL | Expiração 7 dias (`KYC_DOCUMENT_SIGNED_URL_EXPIRY_SEC`) — usada no payload do dispatch de e-mail |
+| Signed URL | Expiração 7 dias (`KYC_DOCUMENT_SIGNED_URL_EXPIRY_SEC`) — usada no payload do dispatch de e-mail e, depois, no download em Configurações → Documentos (`getKycDocumentSignedUrl`; path vazio → “Documento não encontrado”). Storage SELECT do dono já permitido (migration `20260801185000_create_provider_kyc_documents_storage.sql`); **sem** RPC/migration nova nesta consulta |
 | `payment_submit_provider_kyc` | Persiste identidade (`p_entity_type`, `p_document`, `p_full_name`, `p_phone`, campos PJ) + banco + paths em **`provider_profiles_private`** (fonte única; sem tabela de submissions) |
 | `dispatch-kyc-email` | Disparo / retry do e-mail operacional de credenciamento (default `credenciamento@prestway.com`; env `NETCRED_CREDENCIAMENTO_EMAIL`; local via Inbucket/Mailpit se `INBUCKET_SMTP_HOST`) |
 | BrasilAPI `/banks/v1` | Catálogo de bancos do `BankPicker` (fallback JSON local se a API falhar); o mesmo catálogo (`useBrazilianBanks` / `formatBankLabel`) resolve o rótulo do banco na seção Configurações → Dados bancários |
-| Hub Configurações (`settings`) | Consulta somente leitura dos dados bancários já persistidos; CTA suporte reutiliza `PROVIDER_KYC_SUPPORT_URL` / `PROVIDER_KYC_HELP_MAILTO`. **Não** substitui o passo bank do wizard |
+| Hub Configurações (`settings`) | Consulta somente leitura dos dados bancários já persistidos e dos anexos KYC (download via signed URL); CTA suporte reutiliza `PROVIDER_KYC_SUPPORT_URL` / `PROVIDER_KYC_HELP_MAILTO`. **Não** substitui o passo bank nem o passo documents do wizard |
 
 ## 14. Listagens, buscas e filtros
 
@@ -177,8 +177,8 @@ O wizard em si não altera status além do submit. Após sucesso, o gate refetch
 ## 16. Dependências
 
 - Consome: `auth`, `provider_profiles_private`, RPCs/storage/Edge de pagamentos.
-- Alimenta: onboarding NetCred; gate passa a mostrar telas de status pós-envio; Configurações lê os dados bancários persistidos (somente leitura).
-- Host: [gate-e-acesso-operacional](./gate-e-acesso-operacional.md). Cross-link: [configuracoes](../../settings/features/configuracoes.md) (seção Dados bancários).
+- Alimenta: onboarding NetCred; gate passa a mostrar telas de status pós-envio; Configurações lê os dados bancários persistidos (somente leitura) e os anexos (consulta/download).
+- Host: [gate-e-acesso-operacional](./gate-e-acesso-operacional.md). Cross-link: [configuracoes](../../settings/features/configuracoes.md) (seções Dados bancários e Documentos).
 
 ## 17. Regras implícitas
 
@@ -207,7 +207,8 @@ Breadcrumbs Sentry: `provider_kyc.step_viewed`, `provider_kyc.submit_started`, `
 - `src/features/provider-kyc/constants/brazilianBanks.ts` (overrides, mapeamento, fallback)
 - `src/features/provider-kyc/constants/brazilianBanksDefault.json`
 - `src/features/provider-kyc/types/providerKyc.validation.ts`
-- `src/features/provider-kyc/api/kyc.api.ts` (`uploadKycDocument`, `submitProviderKyc`, `fetchProviderPrivateProfileForKyc`)
+- `src/features/provider-kyc/api/kyc.api.ts` (`uploadKycDocument`, `submitProviderKyc`, `fetchProviderPrivateProfileForKyc`, `getKycDocumentSignedUrl`)
+- `src/features/provider-kyc/utils/kycOnboardingDocuments.ts` (`listKycOnboardingDocuments` — slots PF/PJ; PJ não duplica identity; fallback legal_rep → identity; `entity_type` ausente = PF)
 - `src/features/provider-kyc/api/providerKyc.rpc.ts`
 - `src/features/provider-kyc/hooks/useDispatchKyc.ts`
 - `src/features/provider-kyc/components/ProviderKycGate.tsx` (host do formulário)
@@ -221,3 +222,5 @@ Breadcrumbs Sentry: `provider_kyc.step_viewed`, `provider_kyc.submit_started`, `
 - Revalidado sem drift: passos `KYC_WIZARD_STEPS` = entity → identity → bank → documents → review; labels e regras PF/PJ (`legal-rep-id` + endereço da empresa via `address-proof`) alinhados ao código.
 
 **Atualização 2026-08-12:** os dados bancários persistidos no submit passam a ser **exibidos** (não editados) em Configurações → Dados bancários. O wizard permanece o único fluxo de preenchimento/`BankPicker` no app; sem mudança de RPC NetCred neste ciclo.
+
+**Atualização 2026-08-12 (Documentos em Configurações):** os paths persistidos no submit passam a ser **listados e baixados** em Configurações → Documentos (`/dashboard/settings/kyc-documents`) via `listKycOnboardingDocuments` + `getKycDocumentSignedUrl`. Sem re-upload nessa tela; alterações só pelo suporte. Sem RPC/migration nova (SELECT storage do dono já existe). O wizard permanece o único fluxo de upload/reenvio no app.
