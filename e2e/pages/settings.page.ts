@@ -254,6 +254,19 @@ export class SettingsPage {
     await this.getDepositosTab().waitFor({ state: "visible", timeout: 20_000 });
   }
 
+  async gotoPayoutMethods() {
+    await this.page.goto("/dashboard/settings/payout-methods");
+    await this.getPayoutBankInput().waitFor({ state: "visible", timeout: 20_000 });
+  }
+
+  getPayoutBankInput() {
+    return this.page.getByLabel("Banco");
+  }
+
+  getPayoutSupportLink() {
+    return this.page.getByRole("link", { name: /Falar com o suporte/i });
+  }
+
   getCobrancasTab() {
     return this.page.getByRole("tab", { name: /Cobranças/ });
   }

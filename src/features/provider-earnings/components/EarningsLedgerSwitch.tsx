@@ -34,7 +34,8 @@ const ledgerTabClassName = cn(
   "flex min-h-11 w-full min-w-0 flex-col items-start justify-start gap-0",
   "whitespace-normal rounded-lg px-3 py-3 text-left text-sm font-medium",
   "transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-  "data-[state=active]:bg-canvas data-[state=active]:text-ink data-[state=active]:shadow-sm",
+  "data-[state=active]:bg-canvas-soft data-[state=active]:text-ink",
+  "md:data-[state=active]:bg-canvas md:data-[state=active]:shadow-sm",
   "data-[state=inactive]:text-body",
 );
 
@@ -83,7 +84,7 @@ export function EarningsLedgerSwitch({
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl bg-canvas-soft p-1">
+      <div className="rounded-xl bg-canvas p-1 md:bg-canvas-soft">
         <div
           className="grid grid-cols-3 gap-1"
           role="group"
@@ -101,7 +102,7 @@ export function EarningsLedgerSwitch({
                   "h-11 rounded-lg px-2 text-sm font-medium transition-colors duration-150",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                   isActive
-                    ? "bg-canvas text-ink shadow-sm"
+                    ? "bg-canvas-soft text-ink md:bg-canvas md:shadow-sm"
                     : "text-body hover:text-ink",
                 )}
               >

@@ -97,6 +97,16 @@ describe("resolveMobileChrome", () => {
     expect(chrome.showBottomNav).toBe(false);
   });
 
+  it("returns Dados bancários stack title for payout methods", () => {
+    const chrome = resolveMobileChrome(
+      "/dashboard/settings/payout-methods",
+      location("/dashboard/settings/payout-methods"),
+    );
+    expect(chrome.mode).toBe("stack");
+    expect(chrome.stackTitle).toBe("Dados bancários");
+    expect(chrome.backFallback).toBe("/dashboard/settings");
+  });
+
   it("returns Jurídico stack title for the legal settings section", () => {
     const chrome = resolveMobileChrome(
       "/dashboard/settings/legal",

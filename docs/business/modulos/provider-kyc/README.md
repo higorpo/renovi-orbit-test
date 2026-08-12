@@ -55,7 +55,7 @@
 |------------------|-----|
 | `provider_gateway_accounts` | `onboarding_status`, `email_dispatched_at`, `onboarding_submitted_at`, `onboarding_reminder_count`, `last_onboarding_reminder_at` (gateway `netcred`) |
 | Stub bootstrap | Trigger `trg_profiles_bootstrap_provider_gateway_account` cria linha `PENDING_DOCUMENTS` (`document=''`) quando `profiles.role` vira provider |
-| `provider_profiles_private` | Prefill do wizard (não do gate) |
+| `provider_profiles_private` | Prefill do wizard (não do gate); fonte da seção Configurações → Dados bancários (somente leitura) |
 | `provider_kyc_upload_sessions` + bucket `provider-kyc-documents` | Uploads Option A (wizard) |
 | Cache React Query `["provider-payment-account", providerId]` | Leitura/polling do gate e do hook de nav |
 
@@ -64,7 +64,7 @@
 | Módulo / peça | Relação |
 |---------------|---------|
 | **dashboard-shell** | `DashboardLayout` hospeda `ProviderKycGate` e consome `useProviderKycBlocksNav` (`hideMenu`, DesktopNav, bottom nav, `pb-20`) |
-| **settings** | Allowlist `/dashboard/settings*` — conteúdo liberado com KYC bloqueado |
+| **settings** | Allowlist `/dashboard/settings*` — conteúdo liberado com KYC bloqueado; após persistir no wizard, os dados bancários são **exibidos** (não editados) em Configurações → Dados bancários (`/dashboard/settings/payout-methods`); settings reutiliza `useBrazilianBanks` / `formatBankLabel` e `PROVIDER_KYC_SUPPORT_URL` / `PROVIDER_KYC_HELP_MAILTO` |
 | **payments** | Conta NetCred; RPCs `payment_*`; cron `detect-netcred-onboarding` (10:00 UTC); cobrança exige `ACTIVE` |
 | **message-dispatcher** | Eventos `PROVIDER_KYC_SUBMITTED`, `PROVIDER_ONBOARDING_UNDER_REVIEW`, `PROVIDER_KYC_REJECTED`, `PROVIDER_ACTIVATED`, `PROVIDER_SUSPENDED`, `PROVIDER_ONBOARDING_INCOMPLETE_REMINDER` |
 | Cron lembretes incompletos | `enqueue_provider_onboarding_incomplete_reminders` / `cron_enqueue_*` + pg_cron `0 11 * * *` (job `enqueue_provider_onboarding_incomplete_reminders`); telemetria `job_runs` |

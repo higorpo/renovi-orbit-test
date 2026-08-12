@@ -34,4 +34,24 @@ describe("getSettingsNavItems", () => {
     expect(labels).not.toContain("Recebimentos");
     expect(labels.filter((label) => label === "Ganhos")).toHaveLength(1);
   });
+
+  it("lists Dados bancários for providers only, before Ganhos", () => {
+    const providerLabels = getSettingsNavItems("provider")
+      .filter(isSettingsNavLink)
+      .map((item) => item.label);
+    const clientLabels = getSettingsNavItems("client")
+      .filter(isSettingsNavLink)
+      .map((item) => item.label);
+
+    expect(providerLabels).toContain("Dados bancários");
+    expect(clientLabels).not.toContain("Dados bancários");
+    expect(providerLabels.indexOf("Dados bancários")).toBeLessThan(providerLabels.indexOf("Ganhos"));
+
+    const payout = getSettingsNavItems("provider").find(
+      (item) => isSettingsNavLink(item) && item.slug === "payout-methods",
+    );
+    expect(payout && isSettingsNavLink(payout) ? payout.path : null).toBe(
+      "/dashboard/settings/payout-methods",
+    );
+  });
 });

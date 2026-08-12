@@ -7,6 +7,7 @@ export const SETTINGS_SECTION = {
   payments: "payments",
   legalIdentity: "legal-identity",
   professionalProfile: "professional-profile",
+  payoutMethods: "payout-methods",
   receivables: "receivables",
   earnings: "earnings",
   privacy: "privacy",
@@ -27,6 +28,7 @@ export const ROUTE_SETTINGS_LEGAL_IDENTITY = settingsSectionPath(SETTINGS_SECTIO
 export const ROUTE_SETTINGS_PROFESSIONAL_PROFILE = settingsSectionPath(
   SETTINGS_SECTION.professionalProfile,
 );
+export const ROUTE_SETTINGS_PAYOUT_METHODS = settingsSectionPath(SETTINGS_SECTION.payoutMethods);
 export const ROUTE_SETTINGS_EARNINGS = settingsSectionPath(SETTINGS_SECTION.earnings);
 /** Canonical capture history: Ganhos with the Cobranças panel. Legacy `/receivables` redirects here. */
 export const ROUTE_SETTINGS_RECEIVABLES = `${ROUTE_SETTINGS_EARNINGS}?view=charges`;

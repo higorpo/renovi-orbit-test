@@ -99,6 +99,9 @@ vi.mock("@/features/settings/components/sections/ProviderReceivablesPage", () =>
 vi.mock("@/features/settings/components/sections/ProviderEarningsSectionPage", () => ({
   ProviderEarningsSectionPage: () => null,
 }));
+vi.mock("@/features/settings/components/sections/ProviderPayoutMethodsPage", () => ({
+  ProviderPayoutMethodsPage: () => null,
+}));
 vi.mock("@/features/settings/components/sections/AccountPrivacyPage", () => ({
   AccountPrivacyPage: () => null,
 }));
@@ -188,6 +191,7 @@ describe("router", () => {
         "/dashboard/settings/professional-profile",
         "/dashboard/settings/receivables",
         "/dashboard/settings/earnings",
+        "/dashboard/settings/payout-methods",
         "/dashboard/settings/privacy",
         "/dashboard/settings/legal",
         "/dashboard/settings/session",
@@ -226,5 +230,6 @@ describe("router", () => {
     expect(jobs?.element).toBeTruthy();
     expect(settings?.element).toBeTruthy();
     expect(settings?.children?.some((route) => route.path === "earnings")).toBe(true);
+    expect(settings?.children?.some((route) => route.path === "payout-methods")).toBe(true);
   });
 });

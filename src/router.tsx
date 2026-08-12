@@ -118,6 +118,11 @@ const ProviderEarningsSectionPage = lazy(() =>
     default: m.ProviderEarningsSectionPage,
   })),
 )
+const ProviderPayoutMethodsPage = lazy(() =>
+  import('@/features/settings/components/sections/ProviderPayoutMethodsPage').then((m) => ({
+    default: m.ProviderPayoutMethodsPage,
+  })),
+)
 const AccountPrivacyPage = lazy(() =>
   import('@/features/settings/components/sections/AccountPrivacyPage').then((m) => ({
     default: m.AccountPrivacyPage,
@@ -256,6 +261,7 @@ export const router = createBrowserRouter([
               { path: 'payments', element: <ClientPaymentsPage /> },
               { path: 'legal-identity', element: <ProviderLegalIdentityPage /> },
               { path: 'professional-profile', element: <ProviderProfessionalProfilePage /> },
+              { path: 'payout-methods', element: <ProviderPayoutMethodsPage /> },
               { path: 'receivables', element: <ProviderReceivablesPage /> },
               { path: 'earnings', element: <ProviderEarningsSectionPage /> },
               { path: 'privacy', element: <AccountPrivacyPage /> },

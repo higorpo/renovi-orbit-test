@@ -195,3 +195,8 @@ export function ProfessionalProfileFormSkeleton() {
     </div>
   );
 }
+
+/** Skeleton for Dados bancários (read-only payout account). */
+export function PayoutMethodsFormSkeleton() {
+  return <SkeletonCardSection fields={4} />;
+}

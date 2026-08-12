@@ -2,6 +2,7 @@ import {
   Briefcase,
   CreditCard,
   IdCard,
+  Landmark,
   LogOut,
   MapPin,
   Scale,
@@ -112,6 +113,12 @@ const PROVIDER_ITEMS: SettingsNavItem[] = [
     icon: Briefcase,
   },
   {
+    slug: SETTINGS_SECTION.payoutMethods,
+    path: settingsSectionPath(SETTINGS_SECTION.payoutMethods),
+    label: "Dados bancários",
+    icon: Landmark,
+  },
+  {
     slug: SETTINGS_SECTION.earnings,
     path: settingsSectionPath(SETTINGS_SECTION.earnings),
     label: "Ganhos",
@@ -131,6 +138,7 @@ export const SETTINGS_SECTION_STACK_TITLE: Record<SettingsSectionSlug, string> =
   payments: "Pagamentos",
   "legal-identity": "Identidade legal",
   "professional-profile": "Perfil profissional",
+  "payout-methods": "Dados bancários",
   receivables: "Ganhos",
   earnings: "Ganhos",
   privacy: "Privacidade",
@@ -146,6 +154,7 @@ export const CLIENT_ONLY_SETTINGS_SECTIONS: SettingsSectionSlug[] = [
 export const PROVIDER_ONLY_SETTINGS_SECTIONS: SettingsSectionSlug[] = [
   SETTINGS_SECTION.legalIdentity,
   SETTINGS_SECTION.professionalProfile,
+  SETTINGS_SECTION.payoutMethods,
   SETTINGS_SECTION.receivables,
   SETTINGS_SECTION.earnings,
 ];
