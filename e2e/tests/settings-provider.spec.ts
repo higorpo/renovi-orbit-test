@@ -84,13 +84,13 @@ test.describe("My Account — provider", () => {
 
   test("session: logout dialog cancel stays on conta", async ({ page }) => {
     const acc = new SettingsPage(page);
-    await acc.getSairDaPlataformaButton().scrollIntoViewIfNeeded();
-    await acc.getSairDaPlataformaButton().click();
+    await acc.getSairDaContaButton().scrollIntoViewIfNeeded();
+    await acc.getSairDaContaButton().click();
     await expect(acc.getLogoutAlertDialog()).toBeVisible({ timeout: 15_000 });
     await expect(acc.getLogoutDialogTitle()).toBeVisible();
     await acc.getLogoutDialogCancelButton().click();
     await expect(acc.getLogoutAlertDialog()).not.toBeVisible();
-    await expect(page).toHaveURL(/\/dashboard\/conta/);
+    await expect(page).toHaveURL(/\/dashboard\/settings/);
   });
 
   test("privacy: DPO mailto and export dialog", async ({ page }) => {
@@ -428,8 +428,8 @@ test.describe("My Account — provider", () => {
 
   test("logout ends session", async ({ page }) => {
     const acc = new SettingsPage(page);
-    await acc.getSairDaPlataformaButton().scrollIntoViewIfNeeded();
-    await acc.getSairDaPlataformaButton().click();
+    await acc.getSairDaContaButton().scrollIntoViewIfNeeded();
+    await acc.getSairDaContaButton().click();
     await expect(acc.getLogoutAlertDialog()).toBeVisible({ timeout: 15_000 });
     await acc.getLogoutConfirmButton().click();
     await expect(page).toHaveURL("/", { timeout: 15_000 });

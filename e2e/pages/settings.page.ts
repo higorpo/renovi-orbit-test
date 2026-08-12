@@ -127,22 +127,18 @@ export class SettingsPage {
     return this.page.getByRole("button", { name: "Entendi" });
   }
 
-  getSessaoSection() {
-    return this.page.getByText("Sessão").first();
-  }
-
-  getSairDaPlataformaButton() {
-    return this.page.getByRole("button", { name: "Sair da plataforma" });
+  getSairDaContaButton() {
+    return this.page.getByRole("button", { name: "Sair da conta" });
   }
 
   getLogoutAlertDialog(): Locator {
     return this.page
-      .getByRole("alertdialog", { name: "Sair da plataforma" })
-      .or(this.page.getByRole("dialog").filter({ hasText: /Sair da plataforma|desconectado da sua conta/i }));
+      .getByRole("alertdialog", { name: "Sair da conta" })
+      .or(this.page.getByRole("dialog").filter({ hasText: /Sair da conta|desconectado da sua conta/i }));
   }
 
   getLogoutDialogTitle() {
-    return this.getLogoutAlertDialog().getByRole("heading", { name: "Sair da plataforma" });
+    return this.getLogoutAlertDialog().getByRole("heading", { name: "Sair da conta" });
   }
 
   getLogoutConfirmButton() {

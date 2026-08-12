@@ -8,12 +8,12 @@ ADR de navegação: [`docs/adr/0002-account-settings-hub.md`](../../../../adr/00
 
 ## 1. Resumo executivo
 
-Hub responsivo de configurações sob `/dashboard/settings` (slugs em inglês), não mais uma página única em scroll em `/dashboard/conta`. Cliente e prestador mantêm cadastro, foto, privacidade/LGPD e sessão em seções; o prestador gerencia ainda identidade legal, perfil profissional (público, ofertados, área, portfólio), recebimentos na captura e Ganhos (liquidação). **Fase 1:** só o shell de navegação; UIs de formulário/seção existentes reutilizadas; auto-save inalterado. Exclusão de conta e exportação LGPD hoje são fluxos manuais via e-mail ao DPO (`dpo@prestway.com`).
+Hub responsivo de configurações sob `/dashboard/settings` (slugs em inglês), não mais uma página única em scroll em `/dashboard/conta`. Cliente e prestador mantêm cadastro, foto, privacidade/LGPD e exclusão de conta (seção Conta) em seções; o prestador gerencia ainda identidade legal, perfil profissional (público, ofertados, área, portfólio), recebimentos na captura e Ganhos (liquidação). Logout fica no rodapé da navegação do hub (**Sair da conta**), não em rota. **Fase 1:** só o shell de navegação; UIs de formulário/seção existentes reutilizadas; auto-save inalterado. Exclusão de conta e exportação LGPD hoje são fluxos manuais via e-mail ao DPO (`dpo@prestway.com`).
 
 ## 2. Objetivo de negócio
 
 - Manter dados cadastrais confiáveis para contratação, matching geográfico e página pública do prestador.
-- Oferecer ponto de saída (logout / conta) mesmo com KYC prestador incompleto.
+- Oferecer ponto de saída (logout no rodapé da nav / exclusão em Conta) mesmo com KYC prestador incompleto.
 - Centralizar preferências de privacidade e pedidos LGPD sem self-service destrutivo na API.
 - Um hub de conta no menu do dashboard (sem Endereços / Ganhos como itens top-level).
 
@@ -32,7 +32,8 @@ Hub responsivo de configurações sob `/dashboard/settings` (slugs em inglês), 
 | Prestador | `personal-info`, `legal-identity`, `professional-profile`, `receivables`, `earnings`, `privacy`, `session` |
 
 - **Layout:** `SettingsLayout` — desktop: sidebar `SettingsNavList` + `<Outlet />`; mobile: só outlet.
-- **Índice mobile:** `SettingsIndexPage` — título “Configurações”, `AccountSummaryCard`, lista de seções.
+- **Índice mobile:** `SettingsIndexPage` — título “Configurações”, `AccountSummaryCard`, lista de seções + rodapé **Sair da conta**.
+- **Nav do hub (`settingsNav.ts` / `SettingsNavList`):** lista principal termina com **Privacidade** → **Conta** (`session`, ícone `UserCog`); abaixo do divisor, item de rodapé **Sair da conta** (`kind: "logout"`, ícone `LogOut`) — **não** é rota; abre `LogoutConfirmDialog`.
 - **Summary card:** mobile no índice; desktop só em `personal-info` (`ClientPersonalInfoPage` / `ProviderPersonalInfoPage`).
 - **KYC:** prefixo allowlist `PROVIDER_KYC_ALLOWED_PATH_PREFIX = "/dashboard/settings"` — ver [gate-e-acesso-operacional](../../provider-kyc/features/gate-e-acesso-operacional.md).
 - **Menu dashboard:** item **Configurações** → `/dashboard/settings` (`dashboardMenu.ts`). Removidos itens **Endereços** e **Ganhos**.
@@ -65,7 +66,11 @@ flowchart TD
   G -->|provider personal-info / legal / professional| K[Form / seções prestador]
   G -->|provider receivables| L[PaymentHistory provider]
   G -->|provider earnings| M[EarningsPage via provider-earnings]
-  G -->|privacy / session| N[Privacy + Logout + DangerZone]
+  G -->|privacy| N[PrivacySection]
+  G -->|session Conta| O[DangerZoneSection]
+  D --> P["Sair da conta (footer nav)"]
+  F --> P
+  P --> Q["LogoutConfirmDialog → signOut"]
 ```
 
 ### Cliente — feliz
@@ -73,14 +78,14 @@ flowchart TD
 1. Abre hub → mobile lista; desktop personal-info.
 2. Edita nome/telefone/CPF em personal-info → após 1500 ms valida Zod e persiste `profiles` + `client_profiles_private`.
 3. Endereços / pagamentos nas seções dedicadas; em Pagamentos, abas **Formas de pagamento** (cartões) e **Histórico**.
-4. Privacidade, sessão (logout) ou zona de perigo (DPO).
+4. Privacidade; Conta (exclusão / DPO); ou **Sair da conta** no rodapé da nav (logout).
 
 ### Prestador — feliz
 
 1. Abre hub → mesma lógica mobile/desktop.
 2. personal-info / legal-identity / professional-profile → debounce 2000 ms e mutações por grupos dirty onde aplicável.
 3. Recebimentos (captura); Ganhos (liquidação bancária — feature externa hospedada).
-4. Privacidade / sessão / DPO.
+4. Privacidade; Conta (DPO); ou **Sair da conta** no rodapé da nav.
 
 ## 6. Fluxos alternativos e exceções
 
@@ -114,8 +119,9 @@ flowchart TD
 12. Prestador: `useUpdateAccountProfile({ silent: true })` — toasts de profile base silenciados no fluxo de grupos.
 13. Cliente — seção payments: header “Pagamentos”; abas **Formas de pagamento** (`SavedCardsList` com `tokenizeContext="profile"` e `phone` do perfil) e **Histórico** (`PaymentHistorySection role="client"`). Listas Prestway sem card/título aninhado (título só no header da página).
 14. Prestador — receivables: header “Recebimentos” + `PaymentHistorySection role="provider"` (sem abas). Contratos/views no módulo payments.
-15. Logout: confirmação em `AlertDialog` → `signOut()` (`useAuth`) — seção session.
-16. Fase 1: shell de navegação; sem redesign row-by-row dos formulários.
+15. Logout: item **Sair da conta** no rodapé de `SettingsNavList` (sidebar desktop + índice mobile) → `LogoutConfirmDialog` (`AlertDialog`) → `signOut()` (`useAuth`). Não é rota/`session`.
+16. Seção Conta (`/dashboard/settings/session`): header “Conta” / “Exclusão permanente da sua conta”; só `DangerZoneSection` (orientação DPO). `LogoutSection` removida.
+17. Fase 1: shell de navegação; sem redesign row-by-row dos formulários.
 
 ## 8. Campos e dados
 
@@ -211,8 +217,8 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 | Copiar / abrir perfil | Prestador | slug | Clipboard / nova URL |
 | CRUD portfólio | Prestador | Título | Items + imagens |
 | Falar DPO / Exportar | Ambos | privacy | mailto / dialog |
-| Excluir conta (UI) | Ambos | session / danger | Orientação DPO |
-| Sair | Ambos | session | `signOut` |
+| Excluir conta (UI) | Ambos | Conta (`session`) / `DangerZoneSection` | Orientação DPO |
+| Sair da conta | Ambos | Rodapé da nav (`SettingsNavList`) | `LogoutConfirmDialog` → `signOut` |
 
 ## 16. Dependências
 
@@ -241,7 +247,8 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 
 - Shell: `SettingsLayout.tsx`, `SettingsIndexPage.tsx`, `SettingsNavList.tsx`, `SettingsSectionHeader.tsx`, `SettingsRoleGate.tsx`
 - Seções: `components/sections/PersonalInfoPage.tsx`, `ClientPersonalInfoPage.tsx`, `ProviderPersonalInfoPage.tsx`, `ClientAddressesPage.tsx`, `ClientPaymentsPage.tsx`, `ProviderLegalIdentityPage.tsx`, `ProviderProfessionalProfilePage.tsx`, `ProviderReceivablesPage.tsx`, `ProviderEarningsSectionPage.tsx`, `AccountPrivacyPage.tsx`, `AccountSessionPage.tsx`
-- Blocos reutilizados: `DadosPessoaisSection`, `ContatoIdentidadeSection`, `EntityTypeSection`, `LegalIdentitySection`, `OfferedServicesSection`, `PublicProfileSettingsSection`, `ServiceAreaField`, `PortfolioManagementSection`, `PrivacySection`, `DangerZoneSection`, `LogoutSection`, `AccountSummaryCard`, `AccountErrorState`
+- Blocos reutilizados: `DadosPessoaisSection`, `ContatoIdentidadeSection`, `EntityTypeSection`, `LegalIdentitySection`, `OfferedServicesSection`, `PublicProfileSettingsSection`, `ServiceAreaField`, `PortfolioManagementSection`, `PrivacySection`, `DangerZoneSection`, `LogoutConfirmDialog`, `AccountSummaryCard`, `AccountErrorState`
+- Nav: `SettingsNavList` (variantes sidebar/list) + `constants/settingsNav.ts` (item logout de rodapé)
 - APIs: `api/clientProfilePrivate.api.ts`, `providerPrivateProfile.api.ts`, `providerPublicProfile.api.ts`, `offeredServices.api.ts`, `portfolio.api.ts`, `profileImageStorage.api.ts`, `portfolioImageStorage.api.ts`, `providerProfile.api.ts`
 - Hooks: `useAccountProfile`, `useClientPrivateProfile`, `useUpdateAccountProfile`, `useProviderProfile`, `useUpdateProviderProfile`, `useProviderSettingsForm`, `useOfferedServices`, `usePortfolioItems`, `useProfilePhotoMutation`, `useProfileImageUrl`
 - Validação: `types/accountForm.validation.ts`, `types/providerAccountForm.validation.ts`
@@ -271,7 +278,8 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 | addresses | `AddressesSection` |
 | payments | Header “Pagamentos”; Tabs **Formas de pagamento** (`SavedCardsList`) e **Histórico** (`PaymentHistorySection role="client"`) |
 | privacy | `PrivacySection` |
-| session | `LogoutSection` + `DangerZoneSection` |
+| session (Conta) | Header “Conta” / “Exclusão permanente da sua conta”; só `DangerZoneSection` |
+| Rodapé nav (não é seção) | **Sair da conta** → `LogoutConfirmDialog` |
 
 ### Prestador
 
@@ -284,7 +292,8 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 | receivables | `PaymentHistorySection role="provider"` |
 | earnings | `SettingsSectionHeader` + `EarningsPage` (header interno oculto no host) |
 | privacy | `PrivacySection` |
-| session | `LogoutSection` + `DangerZoneSection` |
+| session (Conta) | Header “Conta” / “Exclusão permanente da sua conta”; só `DangerZoneSection` |
+| Rodapé nav (não é seção) | **Sair da conta** → `LogoutConfirmDialog` |
 
 ## Anexo B — Mensagens (toasts / diálogos)
 
@@ -299,7 +308,7 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 | Link copiado para a área de transferência. / Não foi possível copiar o link. | Seção pública |
 | Não foi possível atualizar. / o perfil. | Hooks update provider |
 | Textos DPO / 15 dias úteis | Privacy + DangerZone |
-| Confirmação logout | `LogoutSection` |
+| Confirmação logout (“Sair da conta”) | `LogoutConfirmDialog` (via `SettingsNavList`) |
 
 ## Anexo C — Checklist QA
 
@@ -314,6 +323,9 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - [ ] Menu sem Endereços / Ganhos; Configurações → `/dashboard/settings`
 - [ ] `/dashboard/conta`, `/dashboard/earnings`, `/dashboard/addresses` 404 (sem redirect)
 - [ ] Prestador sem KYC ACTIVE ainda acessa `/dashboard/settings*`
+- [ ] Nav: **Conta** (UserCog) logo após **Privacidade**; **Sair da conta** (LogOut) abaixo do divisor
+- [ ] Conta (`/dashboard/settings/session`): só exclusão (`DangerZoneSection`); sem logout na página
+- [ ] **Sair da conta** abre `LogoutConfirmDialog` e chama `signOut` (desktop sidebar + índice mobile)
 
 ## 21. Atualização de auditoria (2026-08-12)
 
@@ -323,3 +335,4 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - Regras de formulário/auto-save revalidadas como inalteradas na fase 1.
 - Superfície monolítica removida: `SettingsPage` / `SettingsClientPage` / `SettingsProviderPage` / `DeleteAccountDialog` — produção só `SettingsLayout` + `SettingsIndexPage` + `components/sections/*`; exclusão permanece mailto DPO em `DangerZoneSection`.
 - **UI Pagamentos (cliente):** `ClientPaymentsPage` com Tabs Formas de pagamento / Histórico; listas Prestway (skeleton, empty dashed); CRUD/rotas inalterados.
+- **UX Conta / logout:** **Conta** na lista principal (após Privacidade, ícone `UserCog`); **Sair da conta** no rodapé da nav (`LogoutConfirmDialog` → `signOut`, sem rota); `AccountSessionPage` só `DangerZoneSection`; `LogoutSection` removida.

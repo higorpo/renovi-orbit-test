@@ -3,11 +3,11 @@ import {
   Briefcase,
   CreditCard,
   IdCard,
-  Lock,
   LogOut,
   MapPin,
   Shield,
   User,
+  UserCog,
   Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -18,16 +18,37 @@ import {
   type SettingsSectionSlug,
 } from "./routes";
 
-export interface SettingsNavItem {
-  slug: SettingsSectionSlug;
-  path: string;
+interface SettingsNavItemBase {
   label: string;
   icon: LucideIcon;
-  /** Shown below the divider (session / danger). */
+  /** Shown below the divider (logout). */
   footer?: boolean;
 }
 
-const SHARED_FOOTER: SettingsNavItem[] = [
+export interface SettingsNavLinkItem extends SettingsNavItemBase {
+  kind?: "link";
+  slug: SettingsSectionSlug;
+  path: string;
+}
+
+export interface SettingsNavLogoutItem extends SettingsNavItemBase {
+  kind: "logout";
+}
+
+export type SettingsNavItem = SettingsNavLinkItem | SettingsNavLogoutItem;
+
+export function isSettingsNavLink(item: SettingsNavItem): item is SettingsNavLinkItem {
+  return item.kind !== "logout";
+}
+
+const LOGOUT_ITEM: SettingsNavLogoutItem = {
+  kind: "logout",
+  label: "Sair da conta",
+  icon: LogOut,
+  footer: true,
+};
+
+const SHARED_TAIL: SettingsNavItem[] = [
   {
     slug: SETTINGS_SECTION.privacy,
     path: settingsSectionPath(SETTINGS_SECTION.privacy),
@@ -38,9 +59,9 @@ const SHARED_FOOTER: SettingsNavItem[] = [
     slug: SETTINGS_SECTION.session,
     path: settingsSectionPath(SETTINGS_SECTION.session),
     label: "Conta",
-    icon: LogOut,
-    footer: true,
+    icon: UserCog,
   },
+  LOGOUT_ITEM,
 ];
 
 const CLIENT_ITEMS: SettingsNavItem[] = [
@@ -62,7 +83,7 @@ const CLIENT_ITEMS: SettingsNavItem[] = [
     label: "Pagamentos",
     icon: CreditCard,
   },
-  ...SHARED_FOOTER,
+  ...SHARED_TAIL,
 ];
 
 const PROVIDER_ITEMS: SettingsNavItem[] = [
@@ -96,7 +117,7 @@ const PROVIDER_ITEMS: SettingsNavItem[] = [
     label: "Ganhos",
     icon: Wallet,
   },
-  ...SHARED_FOOTER,
+  ...SHARED_TAIL,
 ];
 
 export function getSettingsNavItems(role: ProfileRole): SettingsNavItem[] {

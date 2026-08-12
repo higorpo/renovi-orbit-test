@@ -2,7 +2,7 @@
 
 ## 1. Leitura para negócio
 
-- **Para que serve:** hub responsivo de configurações da conta (**cliente** e **prestador**) sob `/dashboard/settings/*` (slugs em inglês): dados cadastrais, foto, privacidade/LGPD, sessão; no prestador, identidade legal, perfil profissional (público `/perfil/:slug`, ofertados, área, portfólio), recebimentos na captura e hospedagem da UI de Ganhos.
+- **Para que serve:** hub responsivo de configurações da conta (**cliente** e **prestador**) sob `/dashboard/settings/*` (slugs em inglês): dados cadastrais, foto, privacidade/LGPD, exclusão de conta (seção Conta); no prestador, identidade legal, perfil profissional (público `/perfil/:slug`, ofertados, área, portfólio), recebimentos na captura e hospedagem da UI de Ganhos. Logout fica no rodapé da navegação do hub (não é rota).
 - **Quem usa:** `client` e `provider` autenticados (`ProtectedRoute` no dashboard).
 - **Valor:** qualidade cadastral para matching/confiança; conformidade LGPD (exportação/exclusão via DPO); um único hub de conta no menu (sem itens separados Endereços / Ganhos).
 - **Fase 1 (shell):** navegação por seções; formulários/UIs existentes reutilizados; auto-save inalterado. ADR: [`docs/adr/0002-account-settings-hub.md`](../../../adr/0002-account-settings-hub.md).
@@ -12,8 +12,8 @@
 ## 2. Visão geral funcional
 
 - **Entrada:** menu **Configurações** → `/dashboard/settings` (`ROUTE_SETTINGS`).
-- **Mobile:** índice = lista de seções + `AccountSummaryCard` acima; cada seção é chrome **stack** com voltar para `/dashboard/settings`.
-- **Desktop:** sidebar + conteúdo; visitar `/dashboard/settings` redireciona para `/dashboard/settings/personal-info`; `AccountSummaryCard` só em personal-info (desktop).
+- **Mobile:** índice = lista de seções + `AccountSummaryCard` acima; cada seção é chrome **stack** com voltar para `/dashboard/settings`. Na lista: seções (incl. **Conta** após **Privacidade**) e, abaixo do divisor, **Sair da conta** (abre diálogo; não navega).
+- **Desktop:** sidebar + conteúdo (mesma ordem: Conta na lista principal; **Sair da conta** no rodapé); visitar `/dashboard/settings` redireciona para `/dashboard/settings/personal-info`; `AccountSummaryCard` só em personal-info (desktop).
 - **Persistência:** `profiles`, `client_profiles_private`, `provider_profiles_private`, `provider_profiles_public`, `provider_offered_services`, `provider_service_area_neighborhoods`, `provider_portfolio_items`; buckets `profile-images` e `provider-portfolio-images`.
 - **UX de edição:** auto-save (debounce **1,5 s** cliente, **2 s** prestador); portfólio e serviços ofertados com ações explícitas; texto “As alterações são salvas automaticamente.”
 
@@ -38,14 +38,15 @@
 3. Foto → upload/remove storage + path em `profiles` (summary no índice mobile / personal-info desktop).
 4. Cliente: endereços / pagamentos (Tabs **Formas de pagamento** + **Histórico** de captura).
 5. Prestador: identidade legal, perfil profissional, recebimentos (captura), ganhos (liquidação — feature `provider-earnings`).
-6. Privacidade / exclusão → mailto DPO; sessão → logout → `signOut`.
+6. Privacidade → exportação/mailto DPO; Conta (`/dashboard/settings/session`) → exclusão via `DangerZoneSection` (mailto DPO); **Sair da conta** (item de rodapé da nav, sem rota) → `LogoutConfirmDialog` → `signOut`.
 
 ## 6. Regras transversais
 
 - E-mail Auth **somente leitura** na UI.
 - Slug público: gerado na primeira definição “real” de `display_name` (quando slug ainda é null/`providerId`); depois de slug real, mudança de nome **não** regenera slug.
 - Política de privacidade: link só se `VITE_MAIN_SITE_URL`; senão “Política de privacidade em breve.”
-- Exclusão de conta: orientação mailto DPO em `DangerZoneSection` (sem delete imediato na API).
+- Exclusão de conta: orientação mailto DPO em `DangerZoneSection` na seção Conta (sem delete imediato na API).
+- Logout: item **Sair da conta** no rodapé de `SettingsNavList` (sidebar desktop + índice mobile); confirmação em `LogoutConfirmDialog` (`AlertDialog`); não é slug/rota.
 - Rotas removidas (sem redirect): `/dashboard/conta`, `/dashboard/earnings`, `/dashboard/addresses`.
 
 ## 7. Entidades
@@ -83,7 +84,7 @@
 
 ## 10. Evidências
 
-- `src/features/settings/` — `SettingsLayout`, `SettingsIndexPage`, `constants/routes.ts`, `constants/settingsNav.ts`, `components/sections/*`
+- `src/features/settings/` — `SettingsLayout`, `SettingsIndexPage`, `SettingsNavList`, `LogoutConfirmDialog`, `constants/routes.ts`, `constants/settingsNav.ts`, `components/sections/*` (Conta = `AccountSessionPage` + `DangerZoneSection`)
 - `src/router.tsx` — `path: 'settings'` + children
 - `src/layouts/DashboardLayout/dashboardMenu.ts` — Configurações → `ROUTE_SETTINGS`
 - `src/layouts/DashboardLayout/mobileNavigation.config.ts` — índice tab-root; seções stack → `/dashboard/settings`

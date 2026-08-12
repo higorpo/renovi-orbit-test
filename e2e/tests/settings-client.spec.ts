@@ -29,7 +29,7 @@ test.describe("My Account — client", () => {
     await expect(acc.getSummaryName()).not.toHaveText("—");
   });
 
-  test("shows personal data, contact, addresses, privacy, session and danger zone sections", async ({
+  test("shows personal data, contact, addresses, privacy and sign-out in settings", async ({
     page,
   }) => {
     const acc = new SettingsPage(page);
@@ -37,8 +37,7 @@ test.describe("My Account — client", () => {
     await expect(acc.getSectionContatoIdentidade()).toBeVisible();
     await expect(acc.getSectionEnderecos()).toBeVisible();
     await expect(acc.getSectionPrivacidade()).toBeVisible();
-    await expect(acc.getSessaoSection()).toBeVisible();
-    await expect(acc.getZonaPerigoSection()).toBeVisible();
+    await expect(acc.getSairDaContaButton()).toBeVisible();
   });
 
   test("email field is read-only and full name input is visible", async ({ page }) => {
@@ -105,13 +104,13 @@ test.describe("My Account — client", () => {
 
   test("session: logout dialog cancel keeps user on conta", async ({ page }) => {
     const acc = new SettingsPage(page);
-    await acc.getSairDaPlataformaButton().scrollIntoViewIfNeeded();
-    await acc.getSairDaPlataformaButton().click();
+    await acc.getSairDaContaButton().scrollIntoViewIfNeeded();
+    await acc.getSairDaContaButton().click();
     await expect(acc.getLogoutAlertDialog()).toBeVisible({ timeout: 15_000 });
     await expect(acc.getLogoutDialogTitle()).toBeVisible();
     await acc.getLogoutDialogCancelButton().click();
     await expect(acc.getLogoutAlertDialog()).not.toBeVisible();
-    await expect(page).toHaveURL(/\/dashboard\/conta/);
+    await expect(page).toHaveURL(/\/dashboard\/settings/);
   });
 
   test("auto-save: valid full name shows success toast", async ({ page }) => {
@@ -238,8 +237,8 @@ test.describe("My Account — client", () => {
 
   test("logout ends session and redirects to home", async ({ page }) => {
     const acc = new SettingsPage(page);
-    await acc.getSairDaPlataformaButton().scrollIntoViewIfNeeded();
-    await acc.getSairDaPlataformaButton().click();
+    await acc.getSairDaContaButton().scrollIntoViewIfNeeded();
+    await acc.getSairDaContaButton().click();
     await expect(acc.getLogoutAlertDialog()).toBeVisible({ timeout: 15_000 });
     await acc.getLogoutConfirmButton().click();
     await expect(page).toHaveURL("/", { timeout: 15_000 });
