@@ -28,6 +28,7 @@ function ProviderDadosPessoaisAdapter({
     <DadosPessoaisSection
       form={form as unknown as ReturnType<typeof useForm<AccountFormData>>}
       email={email}
+      showCpf={false}
     />
   );
 }

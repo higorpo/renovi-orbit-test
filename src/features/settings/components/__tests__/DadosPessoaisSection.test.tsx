@@ -8,14 +8,16 @@ import type { AccountFormData } from "../../types/accountForm.validation";
 function Wrapper({
   defaultValues,
   email,
+  showCpf,
 }: {
   defaultValues: AccountFormData;
   email: string;
+  showCpf?: boolean;
 }) {
   const form = useForm<AccountFormData>({ defaultValues });
   return (
     <Form {...form}>
-      <DadosPessoaisSection form={form} email={email} />
+      <DadosPessoaisSection form={form} email={email} showCpf={showCpf} />
     </Form>
   );
 }
@@ -71,5 +73,19 @@ describe("DadosPessoaisSection", () => {
     const cpfInput = screen.getByLabelText(/CPF/);
     fireEvent.change(cpfInput, { target: { value: "12345678900" } });
     expect(cpfInput).toHaveValue("123.456.789-00");
+  });
+
+  it("hides CPF when showCpf is false", () => {
+    render(
+      <Wrapper
+        defaultValues={{ full_name: "Maria", phone: "", cpf: "" }}
+        email="maria@example.com"
+        showCpf={false}
+      />
+    );
+    expect(screen.queryByLabelText(/CPF/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Seu CPF é usado apenas para validação/)
+    ).not.toBeInTheDocument();
   });
 });

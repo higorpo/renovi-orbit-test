@@ -122,6 +122,8 @@ Coisas para fazer next
 
 - Adicionar página nas configurações para o prestador ver as informações fornecidas no onboarding (documentos)
 
+- Não permitir admins logar na plataforma
+
 
 
 

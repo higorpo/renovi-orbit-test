@@ -17,9 +17,15 @@ import { SettingsCardHeader } from "./SettingsCardHeader";
 export interface DadosPessoaisSectionProps {
   form: UseFormReturn<AccountFormData>;
   email: string;
+  /** Client personal info shows CPF here. Providers edit CPF in Identidade legal. */
+  showCpf?: boolean;
 }
 
-export function DadosPessoaisSection({ form, email }: DadosPessoaisSectionProps) {
+export function DadosPessoaisSection({
+  form,
+  email,
+  showCpf = true,
+}: DadosPessoaisSectionProps) {
   return (
     <Card className="rounded-2xl border-border shadow-sm">
       <CardHeader className="pb-3 sm:pb-3">
@@ -65,31 +71,33 @@ export function DadosPessoaisSection({ form, email }: DadosPessoaisSectionProps)
             contato com o suporte.
           </FormDescription>
         </div>
-        <FormField
-          control={form.control}
-          name="cpf"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="account-cpf">CPF</FormLabel>
-              <FormControl>
-                <Input
-                  id="account-cpf"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="000.000.000-00"
-                  value={field.value}
-                  onChange={(e) => field.onChange(maskCPF(e.target.value))}
-                  onBlur={field.onBlur}
-                />
-              </FormControl>
-              <FormDescription>
-                Seu CPF é usado apenas para validação de identidade e proteção da sua
-                conta, em conformidade com a LGPD.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {showCpf ? (
+          <FormField
+            control={form.control}
+            name="cpf"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel htmlFor="account-cpf">CPF</FormLabel>
+                <FormControl>
+                  <Input
+                    id="account-cpf"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="000.000.000-00"
+                    value={field.value}
+                    onChange={(e) => field.onChange(maskCPF(e.target.value))}
+                    onBlur={field.onBlur}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Seu CPF é usado apenas para validação de identidade e proteção da sua
+                  conta, em conformidade com a LGPD.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ) : null}
       </CardContent>
     </Card>
   );

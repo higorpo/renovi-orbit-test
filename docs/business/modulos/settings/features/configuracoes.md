@@ -85,9 +85,11 @@ flowchart TD
 ### Prestador — feliz
 
 1. Abre hub → mesma lógica mobile/desktop.
-2. personal-info / legal-identity / professional-profile → debounce 2000 ms e mutações por grupos dirty onde aplicável.
-3. Recebimentos (captura); Ganhos (liquidação bancária — feature externa hospedada).
-4. Privacidade; Jurídico (termos + política + **Contrato de uso da plataforma**); Conta (DPO); ou **Sair da conta** no rodapé da nav.
+2. **Informações pessoais** (`personal-info`): nome, e-mail (somente leitura) e telefone — **sem CPF** (`DadosPessoaisSection` com `showCpf={false}`; header: “Nome, foto e telefone de contato”). Auto-save com debounce 2000 ms.
+3. **Identidade legal** (`legal-identity`): tipo PF/PJ + documentos — CPF no campo `cpf` quando `entity_type === "pf"`; em PJ, CNPJ + CPF do representante (`legal_representative_cpf`), não o campo `cpf` de PF. Mesmo debounce/grupos dirty.
+4. Perfil profissional → debounce 2000 ms e mutações por grupos dirty onde aplicável.
+5. Recebimentos (captura); Ganhos (liquidação bancária — feature externa hospedada).
+6. Privacidade; Jurídico (termos + política + **Contrato de uso da plataforma**); Conta (DPO); ou **Sair da conta** no rodapé da nav.
 
 ## 6. Fluxos alternativos e exceções
 
@@ -125,6 +127,8 @@ flowchart TD
 16. Seção Conta (`/dashboard/settings/session`): header “Conta” / “Exclusão permanente da sua conta”; só `DangerZoneSection` (orientação DPO). `LogoutSection` removida.
 17. Seção Jurídico (`/dashboard/settings/legal`): header “Jurídico” / “Documentos oficiais da Prestway”; `LegalDocumentsSection` (`aria-label="Documentos jurídicos"`). Links (mesmo padrão do cadastro; `null` se `VITE_MAIN_SITE_URL` ausente): Termos de uso → `TERMS_OF_USE_URL` (`…/juridico/termos-de-uso`); Política de privacidade → `PRIVACY_POLICY_URL`; **só prestador** (`showProviderContract` via `profile.role === "provider"`): Contrato de uso da plataforma → `PROVIDER_PLATFORM_CONTRACT_URL` (`…/juridico/adesao-prestador`, mesmo path do “Contrato de Adesão” no signup). **Não** lista política de comissões nem adesão-cliente. Sem `SettingsRoleGate`, sem persistência/API/migration. Privacidade permanece com DPO / exportar / atalho da política — Jurídico não a substitui.
 18. Fase 1: shell de navegação; sem redesign row-by-row dos formulários.
+19. Prestador — Informações pessoais: `DadosPessoaisSection` com `showCpf={false}` (sem campo CPF na UI). Cliente — mesma seção com default `showCpf={true}` (CPF em Dados pessoais).
+20. Prestador — Identidade legal: documento PF via campo `cpf`; PJ via CNPJ + `legal_representative_cpf` (não usa o campo `cpf` de PF na UI PJ).
 
 ## 8. Campos e dados
 
@@ -144,9 +148,9 @@ flowchart TD
 | `full_name` | Nome completo | Sim | Igual cliente | `profiles` |
 | `phone` | Contato (card separado) | Não | Telefone BR | `profiles` |
 | `entity_type` | PF / PJ | Sim | enum | privado |
-| `cpf` | CPF (PF) | Se preenchido válido | CPF | privado |
-| `cnpj`, `razao_social` | PJ | Refine PJ | CNPJ + não vazios | privado |
-| `nome_fantasia`, representantes, `commercial_contact` | Legal | Não | CPF rep. se preenchido; contact max 120 | privado |
+| `cpf` | CPF (PF) — só em `legal-identity` / `LegalIdentitySection` quando PF; **oculto** em `personal-info` | Se preenchido válido | CPF | `provider_profiles_private` |
+| `cnpj`, `razao_social` | PJ (`legal-identity`) | Refine PJ | CNPJ + não vazios | privado |
+| `nome_fantasia`, `legal_representative_name`, `legal_representative_cpf`, `commercial_contact` | PJ (`legal-identity`) | Não | CPF rep. se preenchido; contact max 120 | privado |
 | `display_name`, `bio` | Perfil público | Não | max 120 / 2000 | público |
 | `profile_visibility` | Visibilidade | Sim | `public` \| `restricted` | público |
 | `service_area_neighborhood_ids` | Área | Não | UUIDs | `provider_service_area_neighborhoods` |
@@ -235,6 +239,8 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 
 - Hidratação do form: `hydratedProfileIdRef` evita reset contínuo após primeiro load do `profile.id` (fluxos de formulário reutilizados).
 - Prestador: telefone fora de `DadosPessoaisSection` (card Contato dedicado) em personal-info.
+- Prestador: CPF **não** aparece em Informações pessoais — `ProviderPersonalInfoPage` passa `showCpf={false}` a `DadosPessoaisSection` (default da prop é `true`). Cliente em `ClientPersonalInfoPage` não passa a prop → CPF permanece em Dados pessoais.
+- Prestador: edição de documento fiscal/cadastral em Identidade legal (`LegalIdentitySection`): PF → campo `cpf`; PJ → CNPJ + `legal_representative_cpf` (e demais campos PJ), sem exibir o campo `cpf` de PF.
 - Cliente não vê `PaymentHistorySection` com role provider e vice-versa.
 - Zona de perigo copy fala em remoção irreversível, mas ação real é pedido por e-mail.
 - Toasts de sucesso de foto: “Foto atualizada com sucesso.” / “Foto removida.” (`useProfilePhotoMutation`).
@@ -244,7 +250,7 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 
 - Usuário pode interpretar “Excluir minha conta” como delete imediato.
 - Validação de foto silenciosa na UI.
-- Dados sensíveis (CPF/CNPJ) na mesma superfície do auto-save.
+- Dados sensíveis (CPF/CNPJ): cliente edita CPF em personal-info; prestador edita CPF/CNPJ em legal-identity — ambos com auto-save.
 - Dependência de env (`VITE_MAIN_SITE_URL`) para links de documentos jurídicos (Privacidade + Jurídico).
 - Deep links legados para `/dashboard/conta` (ex.: enqueue de lembrete KYC na migration) **não** redirecionam — rota removida.
 
@@ -279,7 +285,7 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 | Seção | Conteúdo principal |
 |-------|-------------------|
 | Índice (mobile) | Summary + nav list |
-| personal-info | Header; Summary (só desktop); Dados pessoais (nome, e-mail, CPF) + Contato (telefone) + auto-save |
+| personal-info | Header; Summary (só desktop); Dados pessoais (nome, e-mail, CPF — `showCpf` default) + Contato (telefone) + auto-save |
 | addresses | `AddressesSection` |
 | payments | Header “Pagamentos”; Tabs **Formas de pagamento** (`SavedCardsList`) e **Histórico** (`PaymentHistorySection role="client"`) |
 | privacy | `PrivacySection` (DPO / exportar / atalho da política) |
@@ -292,8 +298,8 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 | Seção | Conteúdo principal |
 |-------|-------------------|
 | Índice (mobile) | Summary (+ link/copiar perfil) + nav list |
-| personal-info | Header; Summary (só desktop); dados + contato |
-| legal-identity | Entity type + identidade legal (cadastro PF/PJ — ≠ Jurídico) |
+| personal-info | Header “Informações pessoais” / “Nome, foto e telefone de contato”; Summary (só desktop); `DadosPessoaisSection` com `showCpf={false}` (nome, e-mail) + card Contato (telefone) — **sem CPF** |
+| legal-identity | Entity type + `LegalIdentitySection` (cadastro PF/PJ — ≠ Jurídico): PF → CPF (`cpf`); PJ → CNPJ, razão social, nome fantasia, representante, CPF do representante, contato comercial |
 | professional-profile | Ofertados + perfil público/área + portfólio |
 | receivables | `PaymentHistorySection role="provider"` |
 | earnings | `SettingsSectionHeader` + `EarningsPage` (header interno oculto no host) |
@@ -325,6 +331,8 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - [ ] Cliente e prestador veem conjuntos de seções distintos
 - [ ] Auto-save 1,5 s / 2 s; inválido bloqueia persistência
 - [ ] E-mail disabled; CPF/CNPJ máscaras
+- [ ] Prestador: personal-info **sem** CPF; CPF (PF) ou CNPJ + CPF do representante (PJ) só em legal-identity
+- [ ] Cliente: CPF permanece em Dados pessoais (personal-info)
 - [ ] Endereços / pagamentos só cliente; receivables / earnings só prestador
 - [ ] Cliente payments: abas Formas de pagamento / Histórico sob header Pagamentos
 - [ ] Ganhos em `/dashboard/settings/earnings` (não top-level)
@@ -348,3 +356,4 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - **UI Pagamentos (cliente):** `ClientPaymentsPage` com Tabs Formas de pagamento / Histórico; listas Prestway (skeleton, empty dashed); CRUD/rotas inalterados.
 - **UX Conta / logout:** **Conta** na lista principal (após Jurídico, ícone `UserCog`); **Sair da conta** no rodapé da nav (`LogoutConfirmDialog` → `signOut`, sem rota); `AccountSessionPage` só `DangerZoneSection`; `LogoutSection` removida.
 - **Seção Jurídico (`legal`):** `AccountLegalPage` + `LegalDocumentsSection`; nav `SHARED_TAIL` Privacidade → Jurídico → Conta; rota `/dashboard/settings/legal`; links site jurídico (termos, política; prestador + contrato `adesao-prestador`); Privacidade não substituída; sem persistência/API.
+- **CPF prestador fora de personal-info:** `DadosPessoaisSection` ganha prop `showCpf` (default `true`); `ProviderPersonalInfoPage` usa `showCpf={false}`; cliente inalterado. Prestador edita CPF em `legal-identity` (`LegalIdentitySection`: PF → `cpf`; PJ → CNPJ + `legal_representative_cpf`).
