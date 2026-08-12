@@ -35,17 +35,22 @@ export function validateProfileImageFile(file: File): string | null {
 /**
  * Upload a profile image to storage. Returns the path to store in profiles.profile_image_path.
  * Caller must then update the profile row with this path.
+ *
+ * Each upload gets a unique object key so replacing a photo changes `profile_image_path`
+ * and the UI can refetch a fresh signed URL (fixed keys + upsert left the path unchanged
+ * and browsers kept showing the previous image).
  */
 export async function uploadProfileImage(
   userId: string,
-  file: File
+  file: File,
+  options?: { previousPath?: string | null },
 ): Promise<UploadProfileImageResult> {
   const err = validateProfileImageFile(file);
   if (err) return { path: null, error: err };
 
   const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
   const safeExt = ["jpeg", "jpg", "png", "webp", "heic", "heif"].includes(ext) ? ext : "jpg";
-  const filename = `avatar.${safeExt}`;
+  const filename = `avatar-${crypto.randomUUID()}.${safeExt}`;
   const path = profileImagePath(userId, filename);
 
   const { error } = await supabase.storage
@@ -56,6 +61,19 @@ export async function uploadProfileImage(
     logger.error("profile_image_upload_error", { userId, error: error.message });
     return { path: null, error: error.message };
   }
+
+  const previousPath = options?.previousPath;
+  if (previousPath && previousPath !== path) {
+    const removeResult = await removeProfileImageFromStorage(previousPath);
+    if (removeResult.error) {
+      logger.warn("profile_image_previous_cleanup_failed", {
+        userId,
+        previousPath,
+        error: removeResult.error,
+      });
+    }
+  }
+
   return { path, error: null };
 }
 

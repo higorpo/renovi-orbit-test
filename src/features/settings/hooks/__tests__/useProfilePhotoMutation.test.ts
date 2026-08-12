@@ -73,11 +73,33 @@ describe("useUploadProfilePhoto", () => {
       await result.current.uploadPhotoAsync(file);
     });
 
-    expect(uploadProfileImage).toHaveBeenCalledWith("user-1", file);
+    expect(uploadProfileImage).toHaveBeenCalledWith("user-1", file, {
+      previousPath: null,
+    });
     expect(profileApi.updateProfile).toHaveBeenCalledWith("user-1", {
       profile_image_path: "users/user-1/profile/avatar.jpg",
     });
     expect(toast.success).toHaveBeenCalledWith("Foto atualizada com sucesso.");
+  });
+
+  it("passes the current profile image path so storage can replace without stale UI", async () => {
+    useAuth.mockReturnValue({
+      user: { id: "user-1", email: "u@e.com" },
+      profile: { id: "user-1", profile_image_path: "users/user-1/profile/avatar-old.jpg" },
+    } as ReturnType<typeof useAuth>);
+
+    const file = new File(["x"], "photo.jpg", { type: "image/jpeg" });
+    const { result } = renderHook(() => useUploadProfilePhoto(), {
+      wrapper: createWrapper(),
+    });
+
+    await act(async () => {
+      await result.current.uploadPhotoAsync(file);
+    });
+
+    expect(uploadProfileImage).toHaveBeenCalledWith("user-1", file, {
+      previousPath: "users/user-1/profile/avatar-old.jpg",
+    });
   });
 
   it("shows error toast when not authenticated", async () => {

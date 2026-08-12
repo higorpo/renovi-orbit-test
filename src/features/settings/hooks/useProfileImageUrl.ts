@@ -20,6 +20,7 @@ export function useProfileImageUrl(path: string | null | undefined): {
     }
 
     let cancelled = false;
+    setUrl("");
     setIsLoading(true);
 
     getProfileImageSignedUrl(path).then((signedUrl) => {

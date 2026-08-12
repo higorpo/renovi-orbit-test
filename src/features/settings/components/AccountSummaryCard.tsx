@@ -29,7 +29,6 @@ export interface AccountSummaryCardProps {
 
 export function AccountSummaryCard({
   fullName,
-  email,
   createdAt,
   profileImagePath,
   onPhotoSelect,
@@ -128,7 +127,6 @@ export function AccountSummaryCard({
             <h2 className="truncate font-display text-lg font-semibold tracking-tight text-ink sm:text-xl">
               {fullName || "—"}
             </h2>
-            <p className="truncate text-sm text-body">{email || "—"}</p>
             {sinceFormatted ? (
               <p className="text-caption text-muted-foreground">
                 {sinceLabel} {sinceFormatted}

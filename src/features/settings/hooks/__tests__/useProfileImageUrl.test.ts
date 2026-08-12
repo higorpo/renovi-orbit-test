@@ -46,6 +46,30 @@ describe("useProfileImageUrl", () => {
     expect(getProfileImageSignedUrl).toHaveBeenCalledWith("users/u1/profile/avatar.jpg");
   });
 
+  it("refetches signed URL when the storage path changes after a replacement upload", async () => {
+    getProfileImageSignedUrl
+      .mockResolvedValueOnce("https://signed.url/old.jpg")
+      .mockResolvedValueOnce("https://signed.url/new.jpg");
+
+    const { result, rerender } = renderHook(
+      ({ path }: { path: string | null }) => useProfileImageUrl(path),
+      { initialProps: { path: "users/u1/profile/avatar-old.jpg" } },
+    );
+
+    await waitFor(() => {
+      expect(result.current.url).toBe("https://signed.url/old.jpg");
+    });
+
+    rerender({ path: "users/u1/profile/avatar-new.jpg" });
+
+    await waitFor(() => {
+      expect(result.current.url).toBe("https://signed.url/new.jpg");
+    });
+
+    expect(getProfileImageSignedUrl).toHaveBeenCalledTimes(2);
+    expect(getProfileImageSignedUrl).toHaveBeenLastCalledWith("users/u1/profile/avatar-new.jpg");
+  });
+
   it("sets url to empty when getProfileImageSignedUrl returns empty", async () => {
     getProfileImageSignedUrl.mockResolvedValue("");
 

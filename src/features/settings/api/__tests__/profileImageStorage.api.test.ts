@@ -89,6 +89,76 @@ describe("uploadProfileImage", () => {
     expect(mockStorageFrom).toHaveBeenCalledWith("profile-images");
   });
 
+  it("uses a unique storage path on every upload so replacements refresh in the UI", async () => {
+    const file = new File(["x"], "a.jpg", { type: "image/jpeg" });
+    Object.defineProperty(file, "size", { value: 1024 });
+    const first = await uploadProfileImage("user-1", file);
+    const second = await uploadProfileImage("user-1", file);
+    expect(first.path).toBeTruthy();
+    expect(second.path).toBeTruthy();
+    expect(first.path).not.toBe(second.path);
+    expect(first.path).toMatch(/users\/user-1\/profile\/avatar-/);
+    expect(second.path).toMatch(/users\/user-1\/profile\/avatar-/);
+  });
+
+  it("removes the previous storage object after a successful replacement upload", async () => {
+    const chain = mockProfileImagesChain();
+    vi.mocked(chain.upload).mockResolvedValue({
+      data: { id: "id-1", path: "path", fullPath: "profile-images/path" },
+      error: null,
+    });
+    vi.mocked(chain.remove).mockResolvedValue({ data: [], error: null });
+
+    const file = new File(["x"], "a.jpg", { type: "image/jpeg" });
+    Object.defineProperty(file, "size", { value: 1024 });
+    const previousPath = "users/user-1/profile/avatar-old.jpg";
+    const result = await uploadProfileImage("user-1", file, { previousPath });
+
+    expect(result.error).toBeNull();
+    expect(chain.remove).toHaveBeenCalledWith([previousPath]);
+  });
+
+  it("does not remove previousPath when it matches the new path", async () => {
+    const chain = mockProfileImagesChain();
+    vi.mocked(chain.upload).mockResolvedValue({
+      data: { id: "id-1", path: "path", fullPath: "profile-images/path" },
+      error: null,
+    });
+    vi.mocked(chain.remove).mockResolvedValue({ data: [], error: null });
+    vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000001",
+    );
+
+    const file = new File(["x"], "a.jpg", { type: "image/jpeg" });
+    Object.defineProperty(file, "size", { value: 1024 });
+    const samePath = "users/user-1/profile/avatar-00000000-0000-4000-8000-000000000001.jpg";
+    await uploadProfileImage("user-1", file, { previousPath: samePath });
+
+    expect(chain.remove).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+
+  it("still succeeds when cleaning up the previous object fails", async () => {
+    const chain = mockProfileImagesChain();
+    vi.mocked(chain.upload).mockResolvedValue({
+      data: { id: "id-1", path: "path", fullPath: "profile-images/path" },
+      error: null,
+    });
+    vi.mocked(chain.remove).mockResolvedValue({
+      data: null,
+      error: { message: "gone" } as never,
+    });
+
+    const file = new File(["x"], "a.jpg", { type: "image/jpeg" });
+    Object.defineProperty(file, "size", { value: 1024 });
+    const result = await uploadProfileImage("user-1", file, {
+      previousPath: "users/user-1/profile/old.jpg",
+    });
+
+    expect(result.error).toBeNull();
+    expect(result.path).toBeTruthy();
+  });
+
   it("returns validation error when file exceeds max size", async () => {
     const file = new File(["x"], "a.jpg", { type: "image/jpeg" });
     Object.defineProperty(file, "size", { value: 3 * 1024 * 1024 });
@@ -101,7 +171,7 @@ describe("uploadProfileImage", () => {
     const file = new File(["x"], "avatar.xyz", { type: "image/jpeg" });
     Object.defineProperty(file, "size", { value: 1024 });
     const result = await uploadProfileImage("user-1", file);
-    expect(result.path).toMatch(/avatar\.jpg$/);
+    expect(result.path).toMatch(/avatar-.+\.jpg$/);
     expect(result.error).toBeNull();
   });
 
@@ -109,7 +179,7 @@ describe("uploadProfileImage", () => {
     const file = new File(["x"], "..", { type: "image/jpeg" });
     Object.defineProperty(file, "size", { value: 1024 });
     const result = await uploadProfileImage("user-1", file);
-    expect(result.path).toMatch(/avatar\.jpg$/);
+    expect(result.path).toMatch(/avatar-.+\.jpg$/);
     expect(result.error).toBeNull();
   });
 
