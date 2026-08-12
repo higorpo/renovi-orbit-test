@@ -7,7 +7,7 @@ Plataforma mobile-first da Prestway: **uma codebase** React (Vite) que entrega *
 | Superfície | Status | Notas |
 |------------|--------|--------|
 | **Web / PWA** | Ativo | Browser + instalável; Service Worker em `src/sw.ts`; offline-first |
-| **Android (nativo)** | Ativo | Projeto em `android/`; `appId` `br.com.renovi.orbit` |
+| **Android (nativo)** | Ativo | Projeto em `android/`; `appId` `com.prestway.orbit` |
 | **iOS (nativo)** | Em breve | Mesmo código; projeto Capacitor iOS ainda não disponível no repositório |
 
 Toda feature nova deve ser pensada **app-first e mobile-first** (touch, telas estreitas, safe areas, teclado nativo, persistência local), e depois adaptada para desktop. Detalhes: regra Cursor `platform-ux`.

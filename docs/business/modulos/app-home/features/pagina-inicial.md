@@ -48,7 +48,7 @@ Oferecer um **ponto de entrada HTTP** identificável (marca + caminho para login
 
 - A home **não** tem chrome de dashboard nem regras mobile próprias.
 - Bootstrap nativo: `main.tsx` → `initCapacitorPlugins()` → `hydratePersistSessionPreference()` → `renderApp()`; splash escondido por `CapacitorSplashHider` no `RootLayout` (vale para qualquer rota, inclusive `/`).
-- `capacitor.config.ts`: `appId: br.com.renovi.orbit`, `appName: Orbit`, `webDir: dist`; bloco `server.url` + `cleartext: true` marcado no arquivo como temporário até produção.
+- `capacitor.config.ts`: `appId: com.prestway.orbit`, `appName: Orbit`, `webDir: dist`; bloco `server.url` + `cleartext: true` marcado no arquivo como temporário até produção.
 
 ## 4. Perfis envolvidos
 

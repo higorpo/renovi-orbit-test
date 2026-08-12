@@ -1,4 +1,4 @@
-package br.com.renovi.orbit;
+package com.prestway.orbit;
 
 import com.getcapacitor.BridgeActivity;
 

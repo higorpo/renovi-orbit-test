@@ -6,7 +6,7 @@ globs: src/**/*,android/**/*,capacitor.config.ts
 
 # Plataforma e UX (Web/PWA + Capacitor)
 
-Uma codebase React (Vite) → **Web/PWA** (`src/sw.ts`), **Android** (`android/`, `br.com.renovi.orbit`), **iOS em breve**. **Mobile-first e app-first** antes de desktop (`max-sm:` / `sm:`).
+Uma codebase React (Vite) → **Web/PWA** (`src/sw.ts`), **Android** (`android/`, `com.prestway.orbit`), **iOS em breve**. **Mobile-first e app-first** antes de desktop (`max-sm:` / `sm:`).
 
 ## Capacitor
 

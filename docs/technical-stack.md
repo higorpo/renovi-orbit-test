@@ -23,7 +23,7 @@
 ## Plataformas de entrega
 
 - **Web / PWA** — SPA Vite; PWA opcional (`VITE_ENABLE_PWA=true`) com Service Worker customizado (`src/sw.ts`, estratégia `injectManifest` + Workbox).
-- **Android** — Shell nativo em `android/`, `appId` `br.com.renovi.orbit`, artefato web em `dist/` sincronizado via `yarn cap:sync`.
+- **Android** — Shell nativo em `android/`, `appId` `com.prestway.orbit`, artefato web em `dist/` sincronizado via `yarn cap:sync`.
 - **iOS** — Mesma base de código; projeto Capacitor iOS ainda não no repositório.
 
 Abordagem **offline-first**: cache (SW, React Query `staleTime`), `@capacitor/preferences` e filas de mutação ao reconectar.

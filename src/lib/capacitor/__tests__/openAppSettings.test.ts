@@ -47,13 +47,13 @@ describe("openAppSettings", () => {
   it("navigates to Android application details intent", async () => {
     isNativePlatformMock.mockReturnValue(true);
     getPlatformMock.mockReturnValue("android");
-    getInfoMock.mockResolvedValue({ id: "br.com.prestway.orbit" });
+    getInfoMock.mockResolvedValue({ id: "com.prestway.orbit" });
 
     await expect(openAppSettings()).resolves.toBe(true);
     expect(window.location.href).toContain(
       "android.settings.APPLICATION_DETAILS_SETTINGS",
     );
-    expect(window.location.href).toContain("br.com.prestway.orbit");
+    expect(window.location.href).toContain("com.prestway.orbit");
   });
 
   it("returns false when native open throws", async () => {

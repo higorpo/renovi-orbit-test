@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'br.com.renovi.orbit',
+  appId: 'com.prestway.orbit',
   appName: 'Orbit',
   webDir: 'dist',
   android: {
