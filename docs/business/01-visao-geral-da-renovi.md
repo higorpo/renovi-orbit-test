@@ -129,7 +129,7 @@ Matriz detalhada: [Perfis e permissões](./perfis-e-permissoes.md).
 | Lacuna | Evidência |
 |--------|-----------|
 | **Painel admin** | Sem rotas `/admin/*` no `router.tsx`; papel `admin` redireciona para destino inexistente neste tree. Resolve de **Disputa de serviço** é via RPC privilegiada (`service_completion_admin_resolve_dispute` / `service_role`), não UI. |
-| **Placeholders do dashboard** | `/dashboard` (Visão geral) e `/dashboard/help` → `DashboardFakePage`. **Configurações** é hub real em `/dashboard/settings/*` (não placeholder). Gestão de endereços em `/dashboard/settings/addresses` / wizard. |
+| **Placeholders do dashboard** | `/dashboard` (Visão geral) → `DashboardFakePage`. **Configurações** é hub real em `/dashboard/settings/*` (não placeholder). `/dashboard/help` **removida** (sem redirect). Gestão de endereços em `/dashboard/settings/addresses` / wizard. |
 | **Calendário editável / disponibilidade** | Calendário do prestador é **só consulta** de serviços já contratados — não agenda livre nem CRUD de disponibilidade. |
 | **Onboarding de papel desconhecido** | Redirect para `/onboarding` sem rota correspondente no router. |
 

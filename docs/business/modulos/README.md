@@ -15,7 +15,7 @@ Este diretório concentra a **documentação funcional e técnica por módulo**,
 | 6 | [provider-jobs](./provider-jobs/README.md) | Feed de trabalhos (oportunidades); dismiss; propostas via CNS; detalhe via `ServiceDetailShell` / sheet | `/dashboard/jobs` (lista); detalhe `/dashboard/services/:id` | `src/features/provider-jobs/` | Concluída |
 | 7 | [provider-profile](./provider-profile/README.md) | Perfil público do prestador | `/perfil/:slug` | `src/features/provider-profile/` | Concluída |
 | 8 | [dynamic-form](./dynamic-form/README.md) | Motor de formulários + demo DEV | `/dev/demo/form` (somente `import.meta.env.DEV`) | `src/features/dynamic-form/` | Concluída |
-| 9 | [dashboard-shell](./dashboard-shell/README.md) | Layout, menu por papel (Conversas; Ganhos/Endereços **fora** do menu top-level — hub Configurações); placeholders (visão geral, ajuda); calendar **fora** do menu | `/dashboard`, `/dashboard/help` (+ host de `/dashboard/settings/*`) | `src/layouts/DashboardLayout/` | Concluída |
+| 9 | [dashboard-shell](./dashboard-shell/README.md) | Layout, menu por papel (Conversas; Ganhos/Endereços **fora** do menu top-level — hub Configurações); placeholder Visão geral; calendar **fora** do menu | `/dashboard` (+ host de `/dashboard/settings/*`) | `src/layouts/DashboardLayout/` | Concluída |
 | 10 | [app-home](./app-home/README.md) | Página inicial mínima | `/` (index) | `src/App.tsx` | Concluída |
 | 11 | [message-dispatcher](./message-dispatcher/README.md) | Notificações multicanal (e-mail, push): pipeline/FSM, quotas, quiet hours, engagement | *Sem rota de UI; backend-only* | `supabase/migrations/`, `supabase/functions/message-dispatcher-*` | Concluída (critério doc); P-08/P-09 produto abertos |
 | 12 | [chats](./chats/README.md) | Conversas e negociação (CNS): lista, thread, propostas; sheet compare/history | `/dashboard/chats`, `/dashboard/chats/:chatId` (menu **Conversas**) | `src/features/chats/`, `src/features/negotiation-proposals/` | Concluída |
@@ -36,8 +36,8 @@ Este diretório concentra a **documentação funcional e técnica por módulo**,
 
 | Papel | Itens |
 |-------|--------|
-| Cliente | Visão geral · Meus Serviços · **Conversas** · Configurações · Ajuda |
-| Prestador | Visão geral · Meus Serviços · Trabalhos · **Conversas** · Configurações · Ajuda |
+| Cliente | Visão geral · Meus Serviços · **Conversas** · Configurações |
+| Prestador | Visão geral · Meus Serviços · Trabalhos · **Conversas** · Configurações |
 
 Calendário do prestador: rota `/dashboard/services/calendar` **não** entra no menu. Ganhos e Endereços vivem no hub Configurações (`/dashboard/settings/*`), sem item top-level.
 
@@ -113,7 +113,7 @@ Contagem: inventário anterior **22** + **service-completion** = **23** pastas a
 3. **Pós-sucesso do pedido de orçamento (logado):** possível inconsistência de navegação vs router; validar em `useRequestQuoteSubmit` / `RequestQuote` (pendência de QA).
 4. **Papel `admin`:** existe no tipo de perfil; **sem** área administrativa mapeada no `router.tsx` para este repositório.
 5. **`/example`:** rota de exemplo, não documentada como módulo de negócio.
-6. **Menu vs rotas:** Conversas e Configurações no menu; Ganhos, calendário e detalhe de serviço são rotas reais **fora** do menu top-level (Ganhos no hub Configurações); Visão geral / Ajuda ainda placeholder.
+6. **Menu vs rotas:** Conversas e Configurações no menu; Ganhos, calendário e detalhe de serviço são rotas reais **fora** do menu top-level (Ganhos no hub Configurações); Visão geral ainda placeholder; `/dashboard/help` **removida** (sem redirect).
 7. **Matching legado:** Edge `match-provider-jobs` morta (pasta vazia); RPC `match_provider_jobs` ainda no schema sem caller de app — ver [matching-dispatch](./matching-dispatch/README.md).
 8. **Engagement push na web:** `src/sw.ts` navega no `notificationclick` mas **não** chama `recordPushClick` — gap coberto em [notifications](./notifications/README.md).
 

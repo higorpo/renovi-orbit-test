@@ -54,7 +54,7 @@ Legenda: **OK** = documentado com evidência direta (README + feature); **Parcia
 | Linhas de módulo na tabela `src/features` com status **OK** | **18** |
 | Linhas com status **Parcial** (profundidade) | **0** |
 | Módulos fora de features: **OK** / **Parcial** | **4 OK** (shell, app-home, MMD, matching) / **0 Parcial** |
-| Rotas placeholder identificadas | ≥2 (`/dashboard`, `/dashboard/help`) — **não** inclui hub `/dashboard/settings/*` (real), `/dashboard/services/:id`, `/dashboard/services/calendar`. Removidas: `/dashboard/addresses`, `/dashboard/earnings`, `/dashboard/conta`, fake `/dashboard/settings` |
+| Rotas placeholder identificadas | ≥1 (`/dashboard`) — **não** inclui hub `/dashboard/settings/*` (real), `/dashboard/services/:id`, `/dashboard/services/calendar`. Removidas: `/dashboard/addresses`, `/dashboard/earnings`, `/dashboard/conta`, `/dashboard/help`, fake `/dashboard/settings` |
 | Cobertura documental (módulos com README+feature existentes) | **~100%** dos módulos inventariados com pasta em `modulos/`; **critério de profundidade ≥20:** **100%** das features (33/33) |
 | Status agregado (OK vs Parcial nas linhas desta matriz) | **OK: 23** · **Parcial: 0** — lacunas de produto (P-01, P-MD-*, N-01, PAY-DC, PC-*, P-SR-*, SC-*) **não** rebaixam o status documental quando o comportamento está documentado |
 

@@ -97,7 +97,7 @@ flowchart TD
 8. **Pending / form:** conta null **ou** `PENDING_DOCUMENTS`.
 9. **Chrome de navegação:** `useProviderKycBlocksNav` ⇔ `role === "provider"` **e** (`accountQuery.isLoading` **ou** `shouldBlockProviderForKyc(account)`). Inclui loading para evitar flash de menus antes do gate resolver.
 10. **Host do wizard:** `ProviderKycForm` recebe `providerId`, `accountEmail`, `defaultPhone`, `defaultFullName`, `onSubmitted` → `accountQuery.refetch()`.
-11. **Suporte nas telas de status:** CTA “Falar com suporte” via `PROVIDER_KYC_SUPPORT_URL` (`VITE_MAIN_SITE_URL` + `/suporte`); se vazio, fallback `href="/dashboard/help"`.
+11. **Suporte nas telas de status:** CTA “Falar com suporte” via `PROVIDER_KYC_SUPPORT_URL` (`VITE_MAIN_SITE_URL` + `/suporte`); se `VITE_MAIN_SITE_URL` ausente, `PROVIDER_KYC_SUPPORT_URL` é `null` e o CTA usa `PROVIDER_KYC_HELP_MAILTO` (`mailto:contato@prestway.com`).
 12. **Submitting sem CTA de suporte:** `KycSubmittingStatus` usa `showSupportCta={false}`.
 13. **Definição de menu vs render:** `getDashboardMenu(role)` não filtra por KYC; o layout **omite** a renderização do chrome quando `hideNavForKyc`.
 
@@ -245,7 +245,7 @@ Evidência: migrations `payment_mmd_notification_catalog`, `provider_activated_m
 | Acessar Configurações (conteúdo) | Prestador bloqueado | Path allowlist **após** loading | Children da conta; chrome de nav **ainda oculto** | Durante loading: spinner no gate |
 | Preencher/enviar KYC | Prestador | Pending / null / reenvio rejeitado | Wizard; refetch após submit | Detalhe no wizard |
 | Reenviar documentos | Prestador `REJECTED` | CTA na tela de rejeição | Abre wizard (`showRejectedForm`) | Estado local |
-| Falar com suporte | Prestador em status screens | CTA padrão (exceto submitting) | Abre URL suporte (nova aba) | Fallback `/dashboard/help` se env vazio |
+| Falar com suporte | Prestador em status screens | CTA padrão (exceto submitting) | Abre URL suporte (nova aba) ou `mailto` | Fallback `PROVIDER_KYC_HELP_MAILTO` se env vazio |
 | Retry dispatch e-mail | Sistema (hook) | Submitting e não loading | Mutation `retry_only`; invalida conta se disparado | Log `retry_dispatch_kyc_email_failed`; não bloqueia UI |
 | Ver chrome de navegação | Prestador | `ACTIVE` e conta carregada | DesktopNav / bottom nav / hamburger | Bloqueado/loading: chrome oculto; logo permanece |
 | Deep link operacional | Prestador bloqueado | Guard de role passa | Conteúdo = UI KYC; menus ocultos | Ex.: `/dashboard/jobs` não mostra lista |
@@ -286,7 +286,7 @@ Evidência: migrations `payment_mmd_notification_catalog`, `provider_activated_m
 | Janela de loading | Spinner no gate + menus já ocultos; allowlist de conta só após loading |
 | Estado `showRejectedForm` | Perde-se em remount; não há deep link “modo reenvio” |
 | Copy “Configurações” nas telas de status | Texto pode mencionar acesso a Configurações; chrome de nav está oculto — path allowlist só libera conteúdo se a URL for `/dashboard/settings*` |
-| Dependência de env | Suporte sem `VITE_MAIN_SITE_URL` cai em `/dashboard/help` (rota placeholder do shell) |
+| Dependência de env | Suporte sem `VITE_MAIN_SITE_URL` cai em `mailto:contato@prestway.com` (`PROVIDER_KYC_HELP_MAILTO`) |
 
 ## 19. Evidências
 
@@ -324,7 +324,7 @@ Evidência: migrations `payment_mmd_notification_catalog`, `provider_activated_m
 ## Anexo A — Checklist de cenários de QA
 
 - [ ] Cliente: dashboard operacional sem spinner/KYC do gate; menus normais.
-- [ ] Prestador `ACTIVE`: slots + outlet + menu completo (incl. Trabalhos, Ganhos, Ajuda).
+- [ ] Prestador `ACTIVE`: slots + outlet + menu completo (Visão geral, Meus Serviços, Trabalhos, Conversas, Configurações).
 - [ ] Prestador sem conta / `PENDING_DOCUMENTS`: formulário; **menus ocultos** (desktop, bottom nav, hamburger); header/logo permanece.
 - [ ] Prestador `DOCUMENTS_SUBMITTED` sem e-mail: “Enviando…”; retry ativo; sem CTA suporte; menus ocultos.
 - [ ] Prestador `DOCUMENTS_SUBMITTED` com e-mail: “Documentos enviados”; polling 30 s; menus ocultos.

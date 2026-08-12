@@ -27,12 +27,11 @@ Dar navegação estável e previsível no painel pós-login, sem misturar regras
 | `/dashboard/services/calendar` | `ProviderCalendarPage` | **Real** (`provider-calendar`) | `provider` |
 | `/dashboard/services/:id` | `ServiceDetailShell` | **Real** (`view-services`) | — |
 | `/dashboard/settings` (+ seções) | `SettingsLayout` / `SettingsIndexPage` / seções / host earnings | **Real** (`settings` + `provider-earnings` em `earnings`) | `client`/`provider` por seção |
-| `/dashboard/help` | `DashboardFakePage` título “Ajuda” | **Fake** | — (pai) |
 | `/dashboard/jobs` | `ProviderJobsRouteSlot` | **Real** (`provider-jobs`) | `provider` |
 | `/dashboard/chats` | `ChatsLayout` | **Real** (`chats`) | `client`, `provider` |
 | `/dashboard/chats/:chatId` | `ChatsConversationRoute` | **Real** (`chats`) | (filho de chats) |
 
-**Removidas (sem redirect):** `/dashboard/conta`, `/dashboard/earnings`, `/dashboard/addresses`.
+**Removidas (sem redirect):** `/dashboard/conta`, `/dashboard/earnings`, `/dashboard/addresses`, `/dashboard/help`.
 
 ### 3.3 Entry points fora do menu
 
@@ -83,7 +82,7 @@ Passos:
 
 ## 7. Regras de negócio
 
-1. **Menu cliente** (`clientMenuItems`), ordem fixa — primeiros 5 = bottom nav:
+1. **Menu cliente** (`clientMenuItems`), ordem fixa — `CLIENT_MAIN_COUNT = 4` (todos no bottom nav; sem overflow de Ajuda):
 
    | # | Label | Path | No menu | Real / Fake |
    |---|-------|------|---------|-------------|
@@ -91,9 +90,8 @@ Passos:
    | 2 | Meus Serviços | `/dashboard/services` | Sim (main) | Real |
    | 3 | Conversas | `/dashboard/chats` | Sim (main) | Real |
    | 4 | Configurações | `/dashboard/settings` | Sim (main) | Real (hub) |
-   | 5 | Ajuda | `/dashboard/help` | Sim (main) | Fake |
 
-2. **Menu prestador** (`providerMenuItems`), ordem fixa — primeiros 5 = bottom nav:
+2. **Menu prestador** (`providerMenuItems`), ordem fixa — `PROVIDER_MAIN_COUNT = 5` (`allItems.length = 5`; sem item extra no overflow):
 
    | # | Label | Path | No menu | Real / Fake |
    |---|-------|------|---------|-------------|
@@ -102,7 +100,6 @@ Passos:
    | 3 | Trabalhos | `/dashboard/jobs` | Sim (main) | Real |
    | 4 | Conversas | `/dashboard/chats` | Sim (main) | Real |
    | 5 | Configurações | `/dashboard/settings` | Sim (main) | Real (hub; Ganhos dentro) |
-   | 6 | Ajuda | `/dashboard/help` | Sim (overflow) | Fake |
 
 3. **Não há item “Orçamentos”** no menu atual (nem cliente nem prestador). Orçamentos/negociação vivem em Conversas / Meus Serviços (outros módulos).
 
@@ -186,7 +183,7 @@ Não aplicável ao shell/placeholder. Listagens ficam nas features hospedadas.
 - `/dashboard/settings` é hub real no menu (Configurações); índice mobile = tab-root; seções = stack com back ao índice.
 - Prestador pode digitar URL de `/dashboard/jobs` etc. sem KYC `ACTIVE`: o router deixa passar o guard de role; o **gate substitui** o conteúdo (exceto allowlist); chrome de nav permanece oculto.
 - Matching de ativo no desktop: path `/dashboard` só ativo em igualdade exata; demais itens usam `pathname.startsWith(itemPath)` (`DesktopNav`).
-- Contagem mainItems: sempre `allItems.slice(0, 5)` por papel — cliente: Ajuda no bottom nav (5 itens); prestador: Configurações no bottom nav, Ajuda no overflow.
+- Contagem mainItems: `allItems.slice(0, CLIENT_MAIN_COUNT|PROVIDER_MAIN_COUNT)` — cliente: 4 itens (sem overflow); prestador: 5 itens (sem item extra no overflow).
 
 ## 18. Riscos
 
@@ -215,7 +212,7 @@ Não aplicável ao shell/placeholder. Listagens ficam nas features hospedadas.
 
 | Item | Status | Observação |
 |------|--------|------------|
-| Conteúdo futuro de Visão geral e Ajuda | Não localizado | Só `DashboardFakePage` nessas rotas |
+| Conteúdo futuro de Visão geral | Não localizado | Só `DashboardFakePage` no index `/dashboard`; `/dashboard/help` removida |
 | Hub Configurações | Implementado | `SettingsLayout` + seções; item no menu |
 | Módulo `provider-calendar` no índice de `docs/business/modulos/` | Fora do escopo deste doc | Rota hospedada pelo shell; doc de domínio pode estar em outro módulo |
 
@@ -226,7 +223,7 @@ Não aplicável ao shell/placeholder. Listagens ficam nas features hospedadas.
 | Path / condição | Modo | Bottom nav | Header shell |
 |-----------------|------|------------|--------------|
 | Raízes tab (`/dashboard`, services, chats, jobs, `/dashboard/settings`, …) | `tab-root` | Sim | Logo + hamburger |
-| `/dashboard/services/calendar`, help | `stack` | Não | ← + título |
+| `/dashboard/services/calendar` | `stack` | Não | ← + título |
 | `/dashboard/settings/:seção` | `stack` | Não | ← + título da seção; back → `/dashboard/settings` |
 | `/dashboard/services/:id` com state sheet | `tab-root` (lista atrás) | Sim | Tab |
 | `/dashboard/services/:id` full-page | `stack` | Não | “Detalhes do serviço” |
@@ -236,8 +233,9 @@ Evidência: `mobileNavigation.config.ts`, `mobileNavigation.types.ts`.
 
 ## Anexo B — Checklist QA (shell)
 
-- [ ] Cliente: bottom nav = Visão geral, Meus Serviços, Conversas, Configurações, Ajuda.
-- [ ] Prestador ACTIVE: bottom nav = Visão geral, Meus Serviços, Trabalhos, Conversas, Configurações; Ajuda no overflow.
+- [ ] Cliente: bottom nav = Visão geral, Meus Serviços, Conversas, Configurações (4 itens; sem Ajuda).
+- [ ] Prestador ACTIVE: bottom nav = Visão geral, Meus Serviços, Trabalhos, Conversas, Configurações (5 itens; sem Ajuda/overflow extra).
+- [ ] `/dashboard/help` → 404 (rota removida, sem redirect).
 - [ ] Prestador não-ACTIVE (ou loading): menus **ocultos**; header/logo permanece; rotas operacionais mostram UI KYC (exceto conteúdo em `/dashboard/settings*`).
 - [ ] Sem itens Endereços / Ganhos no menu; Ganhos em `/dashboard/settings/earnings`.
 - [ ] `/dashboard/chats` → layout real de conversas.

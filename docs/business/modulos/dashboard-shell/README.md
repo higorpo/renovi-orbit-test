@@ -45,7 +45,7 @@ Páginas filhas podem ser **reais** (features) ou **placeholder** (`DashboardFak
 ## 6. Regras transversais
 
 - **Menu ≠ inventário completo de rotas:** existem rotas reais sem item no menu (`/dashboard/services/calendar`, `/dashboard/services/:id`); Ganhos/Endereços ficam sob o hub Configurações, não como itens top-level.
-- **Bottom nav mobile:** primeiros **5** itens de `allItems` (`CLIENT_MAIN_COUNT` / `PROVIDER_MAIN_COUNT`); demais ficam no overflow do hamburger / desktop “mais” — quando o chrome está visível.
+- **Bottom nav mobile:** primeiros N itens de `allItems` (`CLIENT_MAIN_COUNT = 4`, `PROVIDER_MAIN_COUNT = 5`); com essas contagens iguais ao tamanho de `allItems`, não há item extra no overflow — quando o chrome está visível.
 - **KYC:** bloqueio de **conteúdo** (gate) + ocultação do **chrome** (`useProviderKycBlocksNav`) e allowlist são do módulo [provider-kyc](../provider-kyc/features/gate-e-acesso-operacional.md); o shell hospeda gate e consome o hook.
 - **Fallback de papel:** se `profile` ainda sem `role`, o layout trata como `"client"` (`profile?.role ?? "client"`).
 
@@ -68,9 +68,10 @@ Nenhuma persistência própria do shell. Lê `profile.role` via `useAuth`. Conta
 
 | Item | Status |
 |------|--------|
-| Placeholders Visão geral (`/dashboard`) e Ajuda (`/dashboard/help`) | Confirmado (`DashboardFakePage`) |
+| Placeholder Visão geral (`/dashboard`) | Confirmado (`DashboardFakePage`) |
 | Hub Configurações (`/dashboard/settings/*`) | **Real** — feature `settings`; item no menu |
-| Conteúdo futuro de Visão geral / Ajuda | Não localizado no código |
+| Conteúdo futuro de Visão geral | Não localizado no código |
+| Rota/menu Ajuda (`/dashboard/help`) | **Removida** (sem redirect); `DashboardFakePage` permanece só no index |
 | Itens Endereços / Ganhos / rota `/dashboard/conta` | **Removidos** do menu/router; hub `/dashboard/settings` |
 | Item antigo de menu “Orçamentos” (prestador) | **Removido** — não está em `dashboardMenu.ts` atual |
 

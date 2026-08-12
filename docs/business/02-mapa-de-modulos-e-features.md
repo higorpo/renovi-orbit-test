@@ -42,16 +42,15 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | Rota | Comportamento no código |
 |------|-------------------------|
 | `/dashboard` | `DashboardFakePage` “Visão geral” |
-| `/dashboard/help` | Placeholder “Ajuda” |
 
-> **Não é placeholder:** `/dashboard/services/:id` → `ServiceDetailShell`; hub `/dashboard/settings/*` (settings + host de earnings; item **Configurações** no menu). Rotas **removidas** (sem redirect): `/dashboard/conta`, `/dashboard/earnings`, `/dashboard/addresses`.
+> **Não é placeholder:** `/dashboard/services/:id` → `ServiceDetailShell`; hub `/dashboard/settings/*` (settings + host de earnings; item **Configurações** no menu). Rotas **removidas** (sem redirect): `/dashboard/conta`, `/dashboard/earnings`, `/dashboard/addresses`, `/dashboard/help`.
 
 ## Menu do dashboard (evidência: `dashboardMenu.ts`)
 
 | Papel | Itens (`allItems`) |
 |-------|--------------------|
-| **Cliente** | Visão geral, Meus Serviços, Conversas, Configurações (`/dashboard/settings`), Ajuda |
-| **Prestador** | Visão geral, Meus Serviços, Trabalhos, Conversas, Configurações (`/dashboard/settings`), Ajuda |
+| **Cliente** | Visão geral, Meus Serviços, Conversas, Configurações (`/dashboard/settings`) |
+| **Prestador** | Visão geral, Meus Serviços, Trabalhos, Conversas, Configurações (`/dashboard/settings`) |
 
 **Fora do menu (rotas reais):** `/dashboard/services/calendar`, `/dashboard/services/:id`; seções do hub `/dashboard/settings/*` (incl. earnings) acessíveis pelo menu Configurações, não como itens top-level.
 

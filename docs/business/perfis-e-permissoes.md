@@ -31,13 +31,14 @@ Evidência: `src/router.tsx` (árvore atual).
 | `/dashboard/services/calendar` | Aninhado `provider` | **`provider` apenas** | Real (`provider-calendar`) | **Fora do menu**; entrada via banner em Meus Serviços |
 | `/dashboard/services/:id` | Herdado | `client`, `provider` | Real (`view-services`) | Detalhe; sheet ou stack; **fora do menu** |
 | `/dashboard/settings` (+ seções) | Herdado (+ `SettingsRoleGate` por seção) | `client`, `provider` | Real (`settings`; earnings host) | Item **Configurações** no menu; **Allowlist KYC**; Ganhos em `/dashboard/settings/earnings` |
-| `/dashboard/help` | Herdado | `client`, `provider` | **Fake** | No menu (overflow cliente: no main; prestador: overflow) |
 | `/dashboard/jobs` | Aninhado `provider` | **`provider` apenas** | Real (`provider-jobs`) | |
 | `/dashboard/chats` | Aninhado `client`+`provider` | `client`, `provider` | Real (`chats`) | Inbox CNS |
 | `/dashboard/chats/:chatId` | Filho de chats | `client`, `provider` | Real (`chats`) | Thread; chrome mobile `custom` |
 | `/example` | `ProtectedRoute` | **`client` apenas** | Demo | |
 | `/admin/*` | **Não declarado** | — | — | Destino órfão — ver § Admin (P-02) |
 | `/onboarding` | **Não declarado** | — | — | Fallback de papel desconhecido (P-03) |
+
+**Rotas removidas (sem redirect):** `/dashboard/conta`, `/dashboard/earnings`, `/dashboard/addresses`, `/dashboard/help`.
 
 ### Redirecionamento pós-login (`getRedirectPathForProfile`)
 
@@ -51,7 +52,7 @@ Evidência: `src/router.tsx` (árvore atual).
 
 ## Menu do dashboard (`getDashboardMenu`)
 
-Evidência: `src/layouts/DashboardLayout/dashboardMenu.ts`. Bottom nav mobile = primeiros **5** itens (`CLIENT_MAIN_COUNT` / `PROVIDER_MAIN_COUNT`). Fallback de role no layout: `profile?.role ?? "client"`.
+Evidência: `src/layouts/DashboardLayout/dashboardMenu.ts`. Bottom nav mobile = primeiros N itens (`CLIENT_MAIN_COUNT = 4`, `PROVIDER_MAIN_COUNT = 5`). Fallback de role no layout: `profile?.role ?? "client"`.
 
 ### Cliente (`role === "client"`)
 
@@ -61,7 +62,6 @@ Evidência: `src/layouts/DashboardLayout/dashboardMenu.ts`. Bottom nav mobile = 
 | 2 | Meus Serviços | `/dashboard/services` | Sim | Real |
 | 3 | Conversas | `/dashboard/chats` | Sim | Real |
 | 4 | Configurações | `/dashboard/settings` | Sim | Real (hub) |
-| 5 | Ajuda | `/dashboard/help` | Sim | Fake |
 
 ### Prestador (qualquer role ≠ `client` no helper)
 
@@ -72,7 +72,6 @@ Evidência: `src/layouts/DashboardLayout/dashboardMenu.ts`. Bottom nav mobile = 
 | 3 | Trabalhos | `/dashboard/jobs` | Sim | Real |
 | 4 | Conversas | `/dashboard/chats` | Sim | Real |
 | 5 | Configurações | `/dashboard/settings` | Sim | Real (hub; Ganhos dentro) |
-| 6 | Ajuda | `/dashboard/help` | Overflow | Fake |
 
 **Não estão no menu (itens top-level):** `/dashboard/services/calendar`, `/dashboard/services/:id`; seções `/dashboard/settings/*` acessíveis pelo item Configurações (não como itens separados). Não há itens Endereços / Ganhos / “Orçamentos”.
 
