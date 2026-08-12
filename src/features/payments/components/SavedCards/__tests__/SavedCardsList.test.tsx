@@ -139,7 +139,7 @@ describe("SavedCardsList", () => {
     });
 
     const { rerender } = render(<SavedCardsList tokenizeContext="profile" />);
-    expect(screen.getByText(/Carregando cartões/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Carregando cartões/i)).toBeInTheDocument();
 
     mockUseSavedCards.mockReturnValue({
       cards: [],
@@ -150,7 +150,7 @@ describe("SavedCardsList", () => {
       refetch: vi.fn(),
     });
     rerender(<SavedCardsList tokenizeContext="profile" />);
-    expect(screen.getByText("Nenhum cartão salvo ainda.")).toBeInTheDocument();
+    expect(screen.getByText(/Nenhum cartão salvo ainda/i)).toBeInTheDocument();
   });
 
   it("opens add card sheet and handles successful add", async () => {
@@ -330,6 +330,6 @@ describe("SavedCardsList", () => {
 
     rerender(<SavedCardsList tokenizeContext="profile" />);
 
-    expect(screen.getByText("Nenhum cartão salvo ainda.")).toBeInTheDocument();
+    expect(screen.getByText(/Nenhum cartão salvo ainda/i)).toBeInTheDocument();
   });
 });

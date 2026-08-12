@@ -102,7 +102,7 @@
 ## Relação com outros módulos
 
 - **`negotiation-proposals` / `chats`:** aceite de proposta cria `payment_schedules` e abre checkout.
-- **`settings`:** embute `PaymentHistorySection` (cliente em `/dashboard/settings/payments`; prestador em `/dashboard/settings/receivables`) e `SavedCardsList` (cliente, payments).
+- **`settings`:** embute `SavedCardsList` e `PaymentHistorySection` no cliente em `/dashboard/settings/payments` (Tabs **Formas de pagamento** / **Histórico**); histórico do prestador em `/dashboard/settings/receivables`.
 - **`provider-earnings`:** UI de liquidações bancárias em `/dashboard/settings/earnings`; lê settlements deste domínio; disclosure de previsão importado da Public API (sem re-export em `payments`).
 - **`provider-kyc`:** UI (gate + wizard de credenciamento) até onboarding `ACTIVE`; backend de submissão/detecção permanece nas RPCs/EFs NetCred deste domínio.
 - **`my-services` / `view-services`:** status do serviço contratado reflete ciclo de pagamento; cancelamento pós-pagamento dispara reembolso; aviso discreto de `far_recapture_pending` no detalhe.

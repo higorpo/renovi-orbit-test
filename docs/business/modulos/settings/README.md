@@ -36,7 +36,7 @@
 1. Abrir Configurações → mobile: índice; desktop: redirect para personal-info.
 2. Abrir seção → carregar/editar (auto-save / ações explícitas conforme seção).
 3. Foto → upload/remove storage + path em `profiles` (summary no índice mobile / personal-info desktop).
-4. Cliente: endereços / pagamentos (cartões + histórico captura).
+4. Cliente: endereços / pagamentos (Tabs **Formas de pagamento** + **Histórico** de captura).
 5. Prestador: identidade legal, perfil profissional, recebimentos (captura), ganhos (liquidação — feature `provider-earnings`).
 6. Privacidade / exclusão → mailto DPO; sessão → logout → `signOut`.
 
@@ -67,7 +67,7 @@
 |--------|----------------|
 | `auth` | `useAuth`, `profileApi.updateProfile`, `signOut` |
 | `addresses` | Seção `/dashboard/settings/addresses` (só cliente) — ver [addresses](../addresses/README.md) |
-| `payments` | Seção payments (cliente: cartões + histórico) e receivables (prestador: histórico captura) — ver [historico-e-reembolso](../payments/features/historico-e-reembolso.md) |
+| `payments` | Seção payments (cliente: abas Formas de pagamento / Histórico) e receivables (prestador: histórico captura) — ver [historico-e-reembolso](../payments/features/historico-e-reembolso.md) |
 | `request-quote` | Estilo de card em ofertados (`getServiceCardStyle`) |
 | `provider-profile` | Página pública `/perfil/:slug` (destino do link) |
 | `provider-kyc` | Allowlist prefix `/dashboard/settings` |

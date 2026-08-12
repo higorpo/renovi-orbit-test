@@ -35,7 +35,7 @@ describe("ProviderPaymentHistoryList", () => {
     });
 
     renderList();
-    expect(screen.getByText(/Carregando recebimentos/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Carregando recebimentos/i)).toBeInTheDocument();
   });
 
   it("shows error state", () => {
@@ -43,6 +43,7 @@ describe("ProviderPaymentHistoryList", () => {
       data: undefined,
       isLoading: false,
       isError: true,
+      refetch: vi.fn(),
     });
 
     renderList();
@@ -59,7 +60,7 @@ describe("ProviderPaymentHistoryList", () => {
     });
 
     renderList();
-    expect(screen.getByText(/Nenhum recebimento registrado ainda/i)).toBeInTheDocument();
+    expect(screen.getByText(/Nenhum recebimento ainda/i)).toBeInTheDocument();
   });
 
   it("renders receivables with original amount when net differs", () => {

@@ -19,15 +19,15 @@
 
 | Perfil | Superfície | Rota / entry | Componente |
 |--------|------------|--------------|------------|
-| Cliente | Histórico de pagamentos | `/dashboard/settings/payments` | `PaymentHistorySection` → `ClientPaymentHistoryList` |
+| Cliente | Histórico de pagamentos | `/dashboard/settings/payments` → aba **Histórico** | `PaymentHistorySection` → `ClientPaymentHistoryList` |
 | Prestador | Recebimentos (captura) | `/dashboard/settings/receivables` | `PaymentHistorySection` → `ProviderPaymentHistoryList` |
 | Cliente / Prestador | Cancelar serviço | Detalhe do serviço (`ServiceDetailPage` → `ServiceDetailActionsBar`) | `ContractedServiceCancelAction` |
 
-- **Rota própria:** nenhuma — seções do hub Configurações (`settings`).
-- **Deep links / query params:** não há parâmetros específicos desta feature.
+- **Rota própria:** nenhuma — seções do hub Configurações (`settings`). Na página do cliente, o histórico divide espaço com cartões via Tabs (aba irmã **Formas de pagamento**); o título da página (“Pagamentos” / “Recebimentos”) fica no `SettingsSectionHeader` — as listas **não** repetem título de seção.
+- **Deep links / query params:** não há parâmetros específicos desta feature (aba padrão do cliente = Formas de pagamento; Histórico só ao selecionar a aba).
 - **Guards:** hub Configurações e detalhe de serviço sob dashboard autenticado; views de histórico filtram por `auth.uid()` (ou admin).
 
-Evidência: `src/router.tsx` (`settings/payments`, `settings/receivables`); `ClientPaymentsPage.tsx`; `ProviderReceivablesPage.tsx`; `ServiceDetailActionsBar.tsx` (`ContractedServiceCancelAction` quando há contrato e papel client/provider).
+Evidência: `src/router.tsx` (`settings/payments`, `settings/receivables`); `ClientPaymentsPage.tsx` (Tabs); `ProviderReceivablesPage.tsx`; `ServiceDetailActionsBar.tsx` (`ContractedServiceCancelAction` quando há contrato e papel client/provider).
 
 ## 4. Perfis envolvidos
 
@@ -157,7 +157,7 @@ Sucesso pré-cobrança: `outcome: PRE_CHARGE_CANCELLED`, `scheduleId`.
 - **Disclosure:** `getCancellationDisclosure` — textos distintos pré-cobrança / prestador / cliente com estimativa ToS (usa `serviceExecutionAt` do lifecycle; fallback aproxima data+turno em `America/Sao_Paulo`).
 - **Estimativa cliente:** só com `baseAmount` e `paidAmount` > 0 (lidos de `client_payment_transactions_v` quando estado `PAID`); prestador **não** vê valores de multa (mensagem de estorno integral fixa).
 - **Double-submit:** botões desabilitados com `processRefund.isPending`; label “Cancelando…”.
-- **Histórico:** sem formulário; estados de loading / erro / vazio na lista.
+- **Histórico:** sem formulário; loading com **skeleton**; erro com mensagem + botão **Tentar novamente** (`refetch`); empty com painel tracejado Prestway (sem título duplicado da página).
 
 ## 10. Validações de back-end
 
@@ -248,13 +248,16 @@ Cancelamento pós-commit / side effects → `contracted_services.status = CANCEL
 | Filtros UI | Nenhum (todos os estados pós-captura elegíveis na view) |
 | Busca textual | Não |
 | Paginação | **Não** — lista completa no cliente |
-| Empty | “Nenhum pagamento/recebimento registrado ainda.” |
+| Loading | Skeleton Prestway (sem spinner textual) |
+| Empty (cliente) | Painel dashed: “Nenhum pagamento ainda” + copy de apoio |
+| Empty (prestador) | Painel dashed: “Nenhum recebimento ainda” + copy de apoio; intro com link para Ganhos permanece acima da lista |
+| Erro | Mensagem de load fail + **Tentar novamente** |
 
 ## 15. Ações disponíveis
 
 | Ação | Quem | Pré-condição | Resultado sucesso | Erro típico |
 |------|------|--------------|-------------------|-------------|
-| Ver histórico | Cliente / Prestador | Autenticado; linhas na view | Lista / empty / erro de fetch | Mensagem genérica de load fail |
+| Ver histórico | Cliente / Prestador | Autenticado; linhas na view | Lista / empty / erro de fetch (retry) | Mensagem de load fail + Tentar novamente |
 | Cancelar (pré-cobrança) | Cliente ou prestador do serviço | Elegibilidade UI + estados pré-charge | Toast “Serviço cancelado com sucesso.” | Matriz §Anexo A |
 | Cancelar (pós-`PAID`) | Idem | Parcela `PAID` + execução conhecida no servidor | Toast com janela 30–60 dias | `refund_failed`, guards 409, etc. |
 | Abrir Ganhos (link) | Prestador | — | Navegação `/dashboard/settings/earnings` | — |
@@ -284,6 +287,7 @@ Cancelamento pós-commit / side effects → `contracted_services.status = CANCEL
 7. Payload `refund_failed` mesmo com HTTP ok é forçado a erro (CHK-008) — nunca toast de sucesso.
 8. `supportUrl` é anexado ao `Error` em falhas, mas o toast de `ContractedServiceCancelAction` exibe só `error.message` (URL não aparece na UI atual).
 9. Rate limit fail-closed: se o limiter falhar, a Edge rejeita (não “abre” o limite).
+10. Título da superfície fica no `SettingsSectionHeader` da página host; `ClientPaymentHistoryList` / `ProviderPaymentHistoryList` / `SavedCardsList` não repetem H2/título de seção.
 
 ## 18. Riscos
 
@@ -306,7 +310,7 @@ Cancelamento pós-commit / side effects → `contracted_services.status = CANCEL
 | API | `api/history.api.ts`, `api/refund.api.ts`, `api/charges.api.ts` (lifecycle) |
 | Utils | `clientPaymentHistoryAmounts.ts`, `formatPaymentHistoryState.ts`, `contractedServiceCancellation.ts`, `mapCancellationError.ts`, `formatPostChargeCancelSuccessMessage.ts` |
 | Tipos | `types/paymentHistory.types.ts` |
-| Conta | `src/features/settings/components/sections/ClientPaymentsPage.tsx`, `ProviderReceivablesPage.tsx` |
+| Conta | `src/features/settings/components/sections/ClientPaymentsPage.tsx` (Tabs), `ProviderReceivablesPage.tsx` |
 | Detalhe serviço | `src/features/view-services/components/ServiceDetailActionsBar.tsx`, `ServiceDetailPage.tsx` |
 | Edge | `supabase/functions/process-refund/{index,handleRequest,types}.ts` |
 | Views | `supabase/migrations/20260801140000_create_payment_history_views.sql` |
@@ -352,7 +356,7 @@ Fontes: `mapCancellationError.ts`, `refund.api.ts`, `process-refund/handleReques
 | `Unauthorized` / sem Bearer | 401 | Fallback genérico | |
 | `service_id` ausente / JSON inválido | 400 | Fallback genérico | |
 | `service_scheduled_at_missing` | 422 | Fallback genérico | `service_execution_at` nulo no contexto pós-PAID |
-| Erro de rede / fetch history | — | Não foi possível carregar o histórico de pagamentos/recebimentos. | Listas apenas |
+| Erro de rede / fetch history | — | Não foi possível carregar o histórico de pagamentos/recebimentos. + **Tentar novamente** | Listas apenas |
 | Código desconhecido | — | Não foi possível processar o cancelamento/reembolso. Tente novamente. | `FALLBACK_CANCELLATION_ERROR` |
 
 ### Outcomes de sucesso (não são erros)

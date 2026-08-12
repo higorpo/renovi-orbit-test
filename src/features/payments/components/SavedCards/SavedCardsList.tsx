@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CreditCard, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +31,19 @@ export type SavedCardsListProps = {
   tokenizeContext?: "checkout" | "profile";
 };
 
+function SavedCardsListSkeleton() {
+  return (
+    <div className="space-y-3" aria-busy="true" aria-label="Carregando cartões">
+      <div className="flex items-center justify-between gap-3">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-9 w-40 rounded-full" />
+      </div>
+      <Skeleton className="h-[4.75rem] w-full rounded-2xl" />
+      <Skeleton className="h-[4.75rem] w-full rounded-2xl" />
+    </div>
+  );
+}
+
 export function SavedCardsList({
   phone,
   providerServiceId,
@@ -44,6 +58,7 @@ export function SavedCardsList({
     if (resolvedPhone?.replace(/\D/g, "").trim()) return;
     void refreshProfile();
   }, [resolvedPhone, refreshProfile]);
+
   const [addCardOpen, setAddCardOpen] = useState(false);
   const [tokenToRemove, setTokenToRemove] = useState<string | null>(null);
   const [blockedWarning, setBlockedWarning] = useState<{
@@ -92,71 +107,90 @@ export function SavedCardsList({
   };
 
   if (isLoading) {
-    return (
-      <section className="rounded-xl border border-border p-6" aria-label="Cartões salvos">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          Carregando cartões…
-        </div>
-      </section>
-    );
+    return <SavedCardsListSkeleton />;
   }
 
   return (
-    <section className="rounded-xl border border-border p-6 space-y-4" aria-label="Cartões salvos">
-      <div className="space-y-1">
-        <h2 className="text-lg font-semibold">Formas de pagamento</h2>
-        <p className="text-sm text-muted-foreground">
-          Gerencie os cartões salvos para pagamentos futuros.
-        </p>
-      </div>
+    <>
+      <div className="space-y-4" aria-label="Cartões salvos">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-caption text-muted-foreground">
+            {cards.length === 0
+              ? "Nenhum cadastrado"
+              : cards.length === 1
+                ? "1 cartão"
+                : `${cards.length} cartões`}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            onClick={() => setAddCardOpen(true)}
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            Adicionar cartão
+          </Button>
+        </div>
 
-      {cards.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhum cartão salvo ainda.</p>
-      ) : (
-        <ul className="space-y-3">
-          {cards.map((card) => (
-            <li
-              key={card.id}
-              className="flex items-center gap-3 rounded-xl border border-border p-4"
+        {cards.length === 0 ? (
+          <div className="flex flex-col items-center rounded-2xl border border-dashed border-border bg-canvas-soft px-6 py-12 text-center">
+            <div
+              className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary"
+              aria-hidden
             >
-              <CreditCard className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
-              <div className="min-w-0 flex-1 space-y-1">
-                <p className="text-sm font-medium">
-                  {getCardBrandLabel(card.card_brand)} · {formatMaskedCardLabel(card.card_number_masked)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Validade {formatCardExpiry(card.expiry_month, card.expiry_year)}
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={`Remover cartão ${formatMaskedCardLabel(card.card_number_masked)}`}
-                disabled={isRevoking && revokingTokenId === card.id}
-                onClick={() => setTokenToRemove(card.id)}
-              >
-                {isRevoking && revokingTokenId === card.id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                ) : (
-                  <Trash2 className="h-4 w-4" aria-hidden />
-                )}
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full justify-start gap-2"
-        onClick={() => setAddCardOpen(true)}
-      >
-        <Plus className="h-4 w-4" aria-hidden />
-        Adicionar Cartão
-      </Button>
+              <CreditCard className="h-6 w-6" strokeWidth={1.75} />
+            </div>
+            <p className="font-display text-base font-semibold tracking-tight text-ink">
+              Nenhum cartão salvo ainda
+            </p>
+            <p className="mt-1 max-w-xs text-sm leading-relaxed text-body">
+              Adicione um cartão para pagar serviços com mais agilidade.
+            </p>
+          </div>
+        ) : (
+          <ul className="m-0 list-none space-y-3 p-0">
+            {cards.map((card) => (
+              <li key={card.id}>
+                <article className="rounded-2xl border border-border bg-canvas p-4 shadow-sm sm:p-5">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary"
+                      aria-hidden
+                    >
+                      <CreditCard className="h-5 w-5" strokeWidth={1.75} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-display text-[15px] font-semibold tracking-tight text-ink">
+                        {getCardBrandLabel(card.card_brand)} ·{" "}
+                        {formatMaskedCardLabel(card.card_number_masked)}
+                      </p>
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        Validade {formatCardExpiry(card.expiry_month, card.expiry_year)}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 shrink-0 rounded-full text-body hover:bg-destructive/10 hover:text-destructive"
+                      aria-label={`Remover cartão ${formatMaskedCardLabel(card.card_number_masked)}`}
+                      disabled={isRevoking && revokingTokenId === card.id}
+                      onClick={() => setTokenToRemove(card.id)}
+                    >
+                      {isRevoking && revokingTokenId === card.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                      )}
+                    </Button>
+                  </div>
+                </article>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <AddCardSheetDialog
         open={addCardOpen}
@@ -205,6 +239,6 @@ export function SavedCardsList({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </section>
+    </>
   );
 }

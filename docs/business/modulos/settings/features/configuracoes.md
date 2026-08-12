@@ -61,7 +61,7 @@ flowchart TD
   F --> G
   G -->|client personal-info| H[Form auto-save 1.5s]
   G -->|client addresses| I[AddressesSection]
-  G -->|client payments| J[SavedCards + PaymentHistory client]
+  G -->|client payments| J["Tabs: Formas de pagamento | Histórico"]
   G -->|provider personal-info / legal / professional| K[Form / seções prestador]
   G -->|provider receivables| L[PaymentHistory provider]
   G -->|provider earnings| M[EarningsPage via provider-earnings]
@@ -72,7 +72,7 @@ flowchart TD
 
 1. Abre hub → mobile lista; desktop personal-info.
 2. Edita nome/telefone/CPF em personal-info → após 1500 ms valida Zod e persiste `profiles` + `client_profiles_private`.
-3. Endereços / pagamentos (cartões + histórico) nas seções dedicadas.
+3. Endereços / pagamentos nas seções dedicadas; em Pagamentos, abas **Formas de pagamento** (cartões) e **Histórico**.
 4. Privacidade, sessão (logout) ou zona de perigo (DPO).
 
 ### Prestador — feliz
@@ -112,8 +112,8 @@ flowchart TD
 10. E-mail do usuário não é editável no formulário.
 11. Slug: em `updateProviderPublicProfile`, se `display_name` atualiza e slug atual é null ou igual a `providerId`, gera slug único; após slug “real”, alterações de nome não mudam o slug (código analisado).
 12. Prestador: `useUpdateAccountProfile({ silent: true })` — toasts de profile base silenciados no fluxo de grupos.
-13. Cliente: `SavedCardsList` com `tokenizeContext="profile"` e `phone` do perfil (seção payments).
-14. Histórico: `PaymentHistorySection role="client"|"provider"` — contratos/views no módulo payments (seções payments / receivables).
+13. Cliente — seção payments: header “Pagamentos”; abas **Formas de pagamento** (`SavedCardsList` com `tokenizeContext="profile"` e `phone` do perfil) e **Histórico** (`PaymentHistorySection role="client"`). Listas Prestway sem card/título aninhado (título só no header da página).
+14. Prestador — receivables: header “Recebimentos” + `PaymentHistorySection role="provider"` (sem abas). Contratos/views no módulo payments.
 15. Logout: confirmação em `AlertDialog` → `signOut()` (`useAuth`) — seção session.
 16. Fase 1: shell de navegação; sem redesign row-by-row dos formulários.
 
@@ -204,8 +204,8 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 | Auto-save campos | Ambos | Dirty + Zod OK | Persistência |
 | Upload / remover foto | Ambos | Arquivo válido / path existe | Storage + profile path |
 | CRUD endereços | Cliente | Seção addresses | Feature addresses |
-| Cartões salvos | Cliente | Seção payments | Feature payments |
-| Ver histórico captura | Cliente / Prestador | payments / receivables | `PaymentHistorySection` |
+| Cartões salvos | Cliente | Seção payments → aba Formas de pagamento | Feature payments |
+| Ver histórico captura | Cliente / Prestador | payments → aba Histórico / receivables | `PaymentHistorySection` |
 | Ver Ganhos | Prestador | Seção earnings | `EarningsPage` |
 | Add/remove serviços | Prestador | professional-profile | `setOfferedServices` |
 | Copiar / abrir perfil | Prestador | slug | Clipboard / nova URL |
@@ -269,7 +269,7 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 | Índice (mobile) | Summary + nav list |
 | personal-info | Header; Summary (só desktop); Dados pessoais (nome, e-mail, CPF) + Contato (telefone) + auto-save |
 | addresses | `AddressesSection` |
-| payments | `SavedCardsList` + `PaymentHistorySection role="client"` |
+| payments | Header “Pagamentos”; Tabs **Formas de pagamento** (`SavedCardsList`) e **Histórico** (`PaymentHistorySection role="client"`) |
 | privacy | `PrivacySection` |
 | session | `LogoutSection` + `DangerZoneSection` |
 
@@ -309,6 +309,7 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - [ ] Auto-save 1,5 s / 2 s; inválido bloqueia persistência
 - [ ] E-mail disabled; CPF/CNPJ máscaras
 - [ ] Endereços / pagamentos só cliente; receivables / earnings só prestador
+- [ ] Cliente payments: abas Formas de pagamento / Histórico sob header Pagamentos
 - [ ] Ganhos em `/dashboard/settings/earnings` (não top-level)
 - [ ] Menu sem Endereços / Ganhos; Configurações → `/dashboard/settings`
 - [ ] `/dashboard/conta`, `/dashboard/earnings`, `/dashboard/addresses` 404 (sem redirect)
@@ -321,3 +322,4 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - Allowlist KYC `/dashboard/settings`.
 - Regras de formulário/auto-save revalidadas como inalteradas na fase 1.
 - Superfície monolítica removida: `SettingsPage` / `SettingsClientPage` / `SettingsProviderPage` / `DeleteAccountDialog` — produção só `SettingsLayout` + `SettingsIndexPage` + `components/sections/*`; exclusão permanece mailto DPO em `DangerZoneSection`.
+- **UI Pagamentos (cliente):** `ClientPaymentsPage` com Tabs Formas de pagamento / Histórico; listas Prestway (skeleton, empty dashed); CRUD/rotas inalterados.

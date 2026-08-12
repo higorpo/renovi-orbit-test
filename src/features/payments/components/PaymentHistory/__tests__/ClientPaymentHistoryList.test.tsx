@@ -17,7 +17,7 @@ describe("ClientPaymentHistoryList", () => {
     });
 
     render(<ClientPaymentHistoryList />);
-    expect(screen.getByText(/Carregando histórico/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Carregando histórico/i)).toBeInTheDocument();
   });
 
   it("shows error state", () => {
@@ -25,6 +25,7 @@ describe("ClientPaymentHistoryList", () => {
       data: undefined,
       isLoading: false,
       isError: true,
+      refetch: vi.fn(),
     });
 
     render(<ClientPaymentHistoryList />);
@@ -41,7 +42,7 @@ describe("ClientPaymentHistoryList", () => {
     });
 
     render(<ClientPaymentHistoryList />);
-    expect(screen.getByText(/Nenhum pagamento registrado ainda/i)).toBeInTheDocument();
+    expect(screen.getByText(/Nenhum pagamento ainda/i)).toBeInTheDocument();
   });
 
   it("renders transactions with installment and dispute badge", () => {
