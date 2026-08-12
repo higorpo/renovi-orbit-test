@@ -1,6 +1,6 @@
 # Configurações (cliente e prestador)
 
-Documentação alinhada a `src/features/settings/`, hub em `src/router.tsx` (`/dashboard/settings/*`) e APIs/hooks da feature. Endereços e histórico de pagamentos são **embutidos** — detalhe canônico nos módulos `addresses` e `payments` (links apenas). Ganhos: UI de `provider-earnings` hospedada no hub.
+Documentação alinhada a `src/features/settings/`, hub em `src/router.tsx` (`/dashboard/settings/*`) e APIs/hooks da feature. Endereços e histórico/cartões do **cliente** são **embutidos** — detalhe canônico nos módulos `addresses` e `payments` (links apenas). Prestador: página **Ganhos** unificada (settings **compõe** Public API de `provider-earnings` + `payments`, como Pagamentos do cliente).
 
 ADR de navegação: [`docs/adr/0002-account-settings-hub.md`](../../../../adr/0002-account-settings-hub.md).
 
@@ -8,7 +8,7 @@ ADR de navegação: [`docs/adr/0002-account-settings-hub.md`](../../../../adr/00
 
 ## 1. Resumo executivo
 
-Hub responsivo de configurações sob `/dashboard/settings` (slugs em inglês), não mais uma página única em scroll em `/dashboard/conta`. Cliente e prestador mantêm cadastro, foto, privacidade/LGPD, documentos oficiais (seção **Jurídico**, slug `legal`) e exclusão de conta (seção Conta) em seções; o prestador gerencia ainda identidade legal (`legal-identity` — cadastro PF/PJ, distinto de Jurídico), perfil profissional (público, ofertados, área, portfólio), recebimentos na captura e Ganhos (liquidação). Logout fica no rodapé da navegação do hub (**Sair da conta**), não em rota. **Fase 1:** só o shell de navegação; UIs de formulário/seção existentes reutilizadas; auto-save inalterado. Exclusão de conta e exportação LGPD hoje são fluxos manuais via e-mail ao DPO (`dpo@prestway.com`). Jurídico não persiste dados (só links externos).
+Hub responsivo de configurações sob `/dashboard/settings` (slugs em inglês), não mais uma página única em scroll em `/dashboard/conta`. Cliente e prestador mantêm cadastro, foto, privacidade/LGPD, documentos oficiais (seção **Jurídico**, slug `legal`) e exclusão de conta (seção Conta) em seções; o prestador gerencia ainda identidade legal (`legal-identity` — cadastro PF/PJ, distinto de Jurídico), perfil profissional (público, ofertados, área, portfólio) e **Ganhos** (página unificada: valor combinado na captura + o que cai na conta). Logout fica no rodapé da navegação do hub (**Sair da conta**), não em rota. **Fase 1:** só o shell de navegação; UIs de formulário/seção existentes reutilizadas; auto-save inalterado. Exclusão de conta e exportação LGPD hoje são fluxos manuais via e-mail ao DPO (`dpo@prestway.com`). Jurídico não persiste dados (só links externos).
 
 ## 2. Objetivo de negócio
 
@@ -29,7 +29,8 @@ Hub responsivo de configurações sob `/dashboard/settings` (slugs em inglês), 
 | Papel | Slugs |
 |-------|-------|
 | Cliente | `personal-info`, `addresses`, `payments`, `privacy`, `legal`, `session` |
-| Prestador | `personal-info`, `legal-identity`, `professional-profile`, `receivables`, `earnings`, `privacy`, `legal`, `session` |
+| Prestador (nav) | `personal-info`, `legal-identity`, `professional-profile`, `earnings`, `privacy`, `legal`, `session` — um item **Ganhos** (`Wallet`); **sem** item Recebimentos |
+| Prestador (legado) | Slug `receivables` permanece em `SETTINGS_SECTION` e `PROVIDER_ONLY_SETTINGS_SECTIONS`; rota `/dashboard/settings/receivables` existe no router; `ProviderReceivablesPage` faz `Navigate replace` para `ROUTE_SETTINGS_RECEIVABLES` = `/dashboard/settings/earnings?view=charges`. Stack title de `receivables` e `earnings` = “Ganhos” |
 
 - **Layout:** `SettingsLayout` — desktop: sidebar `SettingsNavList` + `<Outlet />`; mobile: só outlet.
 - **Índice mobile:** `SettingsIndexPage` — título “Configurações”, `AccountSummaryCard`, lista de seções + rodapé **Sair da conta**.
@@ -39,13 +40,14 @@ Hub responsivo de configurações sob `/dashboard/settings` (slugs em inglês), 
 - **KYC:** prefixo allowlist `PROVIDER_KYC_ALLOWED_PATH_PREFIX = "/dashboard/settings"` — ver [gate-e-acesso-operacional](../../provider-kyc/features/gate-e-acesso-operacional.md).
 - **Menu dashboard:** item **Configurações** → `/dashboard/settings` (`dashboardMenu.ts`). Removidos itens **Endereços** e **Ganhos**.
 - **Rotas removidas (sem redirect):** `/dashboard/conta`, `/dashboard/earnings`, `/dashboard/addresses`.
-- **Constante:** `ROUTE_SETTINGS`; helpers `settingsSectionPath` / `SETTINGS_SECTION` (incl. `legal`) / `ROUTE_SETTINGS_LEGAL` em `constants/routes.ts`.
+- **Constante:** `ROUTE_SETTINGS`; helpers `settingsSectionPath` / `SETTINGS_SECTION` (incl. `legal`, `earnings`, `receivables`) / `ROUTE_SETTINGS_LEGAL` / `ROUTE_SETTINGS_EARNINGS` / `ROUTE_SETTINGS_RECEIVABLES` (`${ROUTE_SETTINGS_EARNINGS}?view=charges`) em `constants/routes.ts`.
+- **Query da página Ganhos:** `view=charges` abre Cobranças; ausência ou outro valor = Depósitos (`useEarningsViewParam` / `parseEarningsView`; helper `providerEarningsPath("charges")`).
 
 ## 4. Perfis envolvidos
 
 | Perfil | Acesso | Não acessa |
 |--------|--------|------------|
-| `client` | Seções cliente + cauda compartilhada (`privacy`, `legal`, `session`); `SettingsRoleGate` nas seções client-only | legal-identity, professional-profile, receivables, earnings |
+| `client` | Seções cliente + cauda compartilhada (`privacy`, `legal`, `session`); `SettingsRoleGate` nas seções client-only | legal-identity, professional-profile, earnings (e rota legado receivables, que redireciona para Ganhos e depois o gate da página earnings) |
 | `provider` | Seções prestador + mesma cauda compartilhada; em Jurídico vê também o contrato de uso | addresses, payments (cartões/histórico cliente) |
 | Visitante | Não | Guard do dashboard |
 | `admin` | Sem superfície dedicada neste hub | — |
@@ -65,8 +67,8 @@ flowchart TD
   G -->|client addresses| I[AddressesSection]
   G -->|client payments| J["Tabs: Formas de pagamento | Histórico"]
   G -->|provider personal-info / legal / professional| K[Form / seções prestador]
-  G -->|provider receivables| L[PaymentHistory provider]
-  G -->|provider earnings| M[EarningsPage via provider-earnings]
+  G -->|provider earnings| M[Ganhos: ledger Cobranças / Depósitos]
+  G -->|provider receivables legado| L["Navigate replace → earnings?view=charges"]
   G -->|privacy| N[PrivacySection]
   G -->|legal Jurídico| R[LegalDocumentsSection]
   G -->|session Conta| O[DangerZoneSection]
@@ -88,7 +90,7 @@ flowchart TD
 2. **Informações pessoais** (`personal-info`): nome, e-mail (somente leitura) e telefone — **sem CPF** (`DadosPessoaisSection` com `showCpf={false}`; header: “Nome, foto e telefone de contato”). Auto-save com debounce 2000 ms.
 3. **Identidade legal** (`legal-identity`): header “Identidade legal” / “Como você atua na Prestway e os documentos do cadastro”. `EntityTypeSection`: escolha PF/PJ em `radiogroup` (tiles com `aria-checked` e check no canto; sem card aninhado; **sem** botão/dialog “Preciso de ajuda para escolher”); a troca **não** aplica imediatamente — ao clicar no tipo **diferente** do `entity_type` atual, abre `AlertDialog` (`alertdialog`) **antes** de `onChange`/auto-save (padrão `LogoutConfirmDialog`, não bottom sheet). Copy PJ: título “Trocar para pessoa jurídica?”; descrição: documentos do cadastro passam a ser os da empresa (CNPJ, razão social e representante legal). Copy PF: título “Trocar para pessoa física?”; descrição: documentos passam a ser os de pessoa física (CPF); dados da empresa deixam de ser o documento principal. Botões: **Cancelar** (fecha, não chama `onChange`, seleção permanece) | **Trocar** (`onChange` com o tipo pendente → `ProviderLegalIdentityPage` faz `form.setValue("entity_type", v, { shouldDirty: true })` e o auto-save existente segue). Clicar no tipo já selecionado ou com `disabled`: não abre dialog / não chama `onChange`. **Não** limpa os campos da outra entidade. Disclaimer visível abaixo: “A Prestway não fornece assessoria jurídica ou contábil…”. `LegalIdentitySection`: um painel — PF: grupo “Documento” + CPF (`cpf`); PJ: “Empresa” (CNPJ, razão social, nome fantasia), “Representante legal” (nome completo, CPF do representante — `legal_representative_cpf`, não o campo `cpf` de PF), “Contato comercial” (telefone ou e-mail). Loading: `LegalIdentityFormSkeleton`. Auto-save via `useProviderSettingsForm` (debounce/grupos dirty inalterados). Sem mudança de persistência/API.
 4. **Perfil profissional** (`professional-profile`): header desktop “Perfil profissional” / “Pedidos que você recebe e como os clientes te veem” (nav e stack mobile: “Perfil profissional”). Layout em **Tabs** (`aria-label="Seções do perfil profissional"`), mesmo padrão de Pagamentos (`ClientPaymentsPage`: `TabsList` grid 2 colunas, `rounded-xl bg-canvas-soft`): (1) aba **Pedidos** (ícone Briefcase, value `orders`, default) — `OfferedServicesSection` (**Serviços oferecidos**: “Tipos de pedido que entram no seu feed”; busca com ícone; chips pill; empty “Nenhum serviço selecionado ainda. Busque acima para receber pedidos desses tipos.”; add/remove com mutação explícita `setServiceIdsAsync`) + `ServiceAreaSection` (**Área de atuação**: “Cidades e bairros em que você atende”; cidades em artigos com MapPin; empty “Nenhuma cidade adicionada. Inclua onde você atende para receber pedidos da região.”; no mobile, “Alterar bairros” abre Drawer (vaul), no desktop Popover) + `SettingsAutosaveHint`; (2) aba **Vitrine** (ícone Eye, value `showcase`) — `PublicProfileSettingsSection` (**Perfil público**: “Nome, bio e visibilidade do perfil”; visibilidade em tiles `radiogroup` **Público** / **Restrito**, padrão visual de `EntityTypeSection`: check no canto, ícones Globe/Lock; descrições sem prefixo “Público —”; barra “Ver como os clientes veem” com **Visualizar perfil** / **Copiar link** quando há slug; **não** inclui área de atuação neste card), `SettingsAutosaveHint`, `PortfolioManagementSection` (**Portfólio**: “Trabalhos exibidos no perfil público”; cards capa + título; empty ilustrado “Nenhum item no portfólio”; DnD `@dnd-kit` inalterado; overlay add/edit no padrão Endereços (`AddressFormDialog`) e cartão em settings (`AddCardSheetDialog` com `desktopPresentation="sheet"`): desktop (`useBreakpointMd`) **Sheet** `side="right"` (título Manrope; footer **Cancelar** / **Adicionar**|**Salvar**; close nativo sr-only “Fechar”); mobile **Drawer** (vaul, `shouldScaleBackground={false}`, `handleOnly`, `dismissible={!isWorking}`) com handle, botão “Fechar” e footer acima do teclado (`safe-area-inset-bottom`, blur); enquanto `isWorking` (criar/atualizar/submit), Cancelar disabled e overlay não fecha; contrato do formulário inalterado — título, descrição, imagens, create/update; `visibility: "public"` forçado no create/update pela página). Cards empilhados com `space-y-5`. `SettingsConsequenceGroup` **removido** (sem capítulos editoriais “Como você atua” / “Como os clientes te veem”). Loading: `ProfessionalProfileFormSkeleton` (barra de abas + cards da aba Pedidos: ofertados + área + hint — não o skeleton monolítico `ProviderFormSkeleton`). Auto-save do form (debounce 2000 ms / grupos dirty) e APIs de ofertados/área/portfólio **inalterados**. Sem rota nova e sem item novo na nav.
-5. Recebimentos (captura); Ganhos (liquidação bancária — feature externa hospedada).
+5. **Ganhos** (`ProviderEarningsSectionPage`): header “Ganhos” / “O valor combinado com o cliente e o que cai na sua conta”; ledger `EarningsLedgerSwitch` (os dois painéis **são** as abas, `aria-label="Visões de ganhos"`). Query `view=charges` abre **Cobranças**; ausência ou outro valor = **Depósitos** (default). `useEarningsViewParam` + `parseEarningsView`. Aba Depósitos: `EarningsPage` (filtros Todos/Previsto/Liquidado + lista; sem header próprio e sem link para Recebimentos). Aba Cobranças: `PaymentHistorySection role="provider"`. Totais do ledger via `useEarningsLedgerSummary` (Public API de payments + `useProviderSettlements`). Deep link legado `/dashboard/settings/receivables` → Cobranças.
 6. Privacidade; Jurídico (termos + política + **Contrato de uso da plataforma**); Conta (DPO); ou **Sair da conta** no rodapé da nav.
 
 ## 6. Fluxos alternativos e exceções
@@ -124,7 +126,7 @@ flowchart TD
 11. Slug: em `updateProviderPublicProfile`, se `display_name` atualiza e slug atual é null ou igual a `providerId`, gera slug único; após slug “real”, alterações de nome não mudam o slug (código analisado).
 12. Prestador: `useUpdateAccountProfile({ silent: true })` — toasts de profile base silenciados no fluxo de grupos.
 13. Cliente — seção payments: header “Pagamentos”; abas **Formas de pagamento** (`SavedCardsList` com `tokenizeContext="profile"` e `phone` do perfil) e **Histórico** (`PaymentHistorySection role="client"`). Listas Prestway sem card/título aninhado (título só no header da página).
-14. Prestador — receivables: header “Recebimentos” + `PaymentHistorySection role="provider"` (sem abas). Contratos/views no módulo payments.
+14. Prestador — Ganhos (`ProviderEarningsSectionPage`): uma página, dois conceitos. Ledger: **Cobranças** = soma client-side de `amountReceivedAtCapture` (valor combinado); se houver clawback, linha “Líquido após estornos: {net}”. **Depósitos** (default) = **contagem** de movements (`totalCount` da RPC com filtro `all` / CREDIT), não soma em R$. Seta desktop entre os painéis (fluxo cobrança → depósito). Caption: D+30 + `PROVIDER_SETTLEMENT_COMPLETION_NOTE`. Settings **compõe** (não importa internals cruzados). Contratos/views de captura no módulo payments; lista/filtros de liquidação em `provider-earnings`. Sem RPC/migration nova nesta unificação. Sem filtro por serviço.
 15. Logout: item **Sair da conta** no rodapé de `SettingsNavList` (sidebar desktop + índice mobile) → `LogoutConfirmDialog` (`AlertDialog`) → `signOut()` (`useAuth`). Não é rota/`session`.
 16. Seção Conta (`/dashboard/settings/session`): header “Conta” / “Exclusão permanente da sua conta”; só `DangerZoneSection` (orientação DPO). `LogoutSection` removida.
 17. Seção Jurídico (`/dashboard/settings/legal`): header “Jurídico” / “Documentos oficiais da Prestway”; `LegalDocumentsSection` (`aria-label="Documentos jurídicos"`). Links (mesmo padrão do cadastro; `null` se `VITE_MAIN_SITE_URL` ausente): Termos de uso → `TERMS_OF_USE_URL` (`…/juridico/termos-de-uso`); Política de privacidade → `PRIVACY_POLICY_URL`; **só prestador** (`showProviderContract` via `profile.role === "provider"`): Contrato de uso da plataforma → `PROVIDER_PLATFORM_CONTRACT_URL` (`…/juridico/adesao-prestador`, mesmo path do “Contrato de Adesão” no signup). **Não** lista política de comissões nem adesão-cliente. Sem `SettingsRoleGate`, sem persistência/API/migration. Privacidade permanece com DPO / exportar / atalho da política — Jurídico não a substitui.
@@ -199,8 +201,8 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 |---------|------|
 | `auth` | Perfil base, update, signOut |
 | `addresses` | `/dashboard/settings/addresses` — [gestão de endereços](../../addresses/features/gestao-de-enderecos.md) |
-| `payments` | Cartões + histórico — [histórico e reembolso](../../payments/features/historico-e-reembolso.md); erros de cartão em [checkout](../../payments/features/checkout-e-cobranca.md) |
-| `provider-earnings` | Hospedado em `/dashboard/settings/earnings` (`ProviderEarningsSectionPage` → `EarningsPage`); `ROUTE_PROVIDER_EARNINGS` |
+| `payments` | Cartões + histórico cliente em `/dashboard/settings/payments`; captura do prestador na aba Cobranças de Ganhos — [histórico e reembolso](../../payments/features/historico-e-reembolso.md); erros de cartão em [checkout](../../payments/features/checkout-e-cobranca.md) |
+| `provider-earnings` | Hospedado em `/dashboard/settings/earnings` (`ProviderEarningsSectionPage`: `EarningsLedgerSwitch` + `EarningsPage` / captura via payments); `ROUTE_PROVIDER_EARNINGS`; `providerEarningsPath("charges")` |
 | `provider-profile` | Link `/perfil/{slug}` |
 | Site jurídico | Com `VITE_MAIN_SITE_URL`: `TERMS_OF_USE_URL` = `…/juridico/termos-de-uso`; `PRIVACY_POLICY_URL` = `…/juridico/politica-de-privacidade`; `PROVIDER_PLATFORM_CONTRACT_URL` = `…/juridico/adesao-prestador` (UI Jurídico só prestador). Sem env → `null` / “em breve”. Sem política de comissões nem adesão-cliente nesta seção. |
 
@@ -209,7 +211,7 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - **Ofertados:** busca em `platform_services` — até 20 resultados com query / 10 sem query (`OfferedServicesSection`).
 - **Portfólio:** lista do prestador + reorder DnD (`@dnd-kit`); sem paginação server-side evidenciada no hook de conta.
 - **Histórico de pagamentos:** listagem/paginação no módulo `payments` (não duplicar aqui).
-- **Ganhos:** listagem/filtros no módulo `provider-earnings`.
+- **Ganhos:** ledger + listagem/filtros de liquidação no módulo `provider-earnings`; lista de captura no módulo `payments` (aba Cobranças).
 - **Endereços:** CRUD no módulo `addresses`.
 
 ## 15. Ações disponíveis
@@ -221,8 +223,8 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 | Upload / remover foto | Ambos | Arquivo válido / path existe | Storage + profile path |
 | CRUD endereços | Cliente | Seção addresses | Feature addresses |
 | Cartões salvos | Cliente | Seção payments → aba Formas de pagamento | Feature payments |
-| Ver histórico captura | Cliente / Prestador | payments → aba Histórico / receivables | `PaymentHistorySection` |
-| Ver Ganhos | Prestador | Seção earnings | `EarningsPage` |
+| Ver histórico captura | Cliente / Prestador | payments → aba Histórico / Ganhos → aba Cobranças (`?view=charges`) | `PaymentHistorySection` |
+| Ver Ganhos | Prestador | Seção earnings (default Depósitos) | `ProviderEarningsSectionPage` + `EarningsPage` |
 | Add/remove serviços | Prestador | professional-profile | `setOfferedServices` |
 | Copiar / abrir perfil | Prestador | slug | Clipboard / nova URL |
 | CRUD portfólio | Prestador | Título | Items + imagens |
@@ -260,7 +262,8 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 ## 19. Evidências
 
 - Shell: `SettingsLayout.tsx`, `SettingsIndexPage.tsx`, `SettingsNavList.tsx`, `SettingsSectionHeader.tsx`, `SettingsRoleGate.tsx`
-- Seções: `components/sections/PersonalInfoPage.tsx`, `ClientPersonalInfoPage.tsx`, `ProviderPersonalInfoPage.tsx`, `ClientAddressesPage.tsx`, `ClientPaymentsPage.tsx`, `ProviderLegalIdentityPage.tsx`, `ProviderProfessionalProfilePage.tsx`, `ProviderReceivablesPage.tsx`, `ProviderEarningsSectionPage.tsx`, `AccountPrivacyPage.tsx`, `AccountLegalPage.tsx`, `AccountSessionPage.tsx`
+- Seções: `components/sections/PersonalInfoPage.tsx`, `ClientPersonalInfoPage.tsx`, `ProviderPersonalInfoPage.tsx`, `ClientAddressesPage.tsx`, `ClientPaymentsPage.tsx`, `ProviderLegalIdentityPage.tsx`, `ProviderProfessionalProfilePage.tsx`, `ProviderReceivablesPage.tsx` (redirect legado), `ProviderEarningsSectionPage.tsx`, `AccountPrivacyPage.tsx`, `AccountLegalPage.tsx`, `AccountSessionPage.tsx`
+- Hooks do hub Ganhos: `hooks/useEarningsLedgerSummary.ts` (Public API de `payments` + `useProviderSettlements`)
 - Blocos reutilizados: `DadosPessoaisSection`, `ContatoIdentidadeSection`, `EntityTypeSection`, `LegalIdentitySection`, `LegalIdentityFormSkeleton`, `OfferedServicesSection`, `PublicProfileSettingsSection`, `ServiceAreaField` / `ServiceAreaSection`, `PortfolioManagementSection`, `ProfessionalProfileFormSkeleton`, `SettingsAutosaveHint`, `PrivacySection`, `LegalDocumentsSection`, `DangerZoneSection`, `LogoutConfirmDialog`, `AccountSummaryCard`, `AccountErrorState`
 - E2E POM: `e2e/pages/settings.page.ts` — `getPedidosTab()`, `getVitrineTab()`, `openVitrineTab()` (não headings “Como você atua”)
 - Nav: `SettingsNavList` (variantes sidebar/list) + `constants/settingsNav.ts` (item logout de rodapé)
@@ -305,8 +308,8 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 | personal-info | Header “Informações pessoais” / “Nome, foto e telefone de contato”; Summary (só desktop); `DadosPessoaisSection` com `showCpf={false}` (nome, e-mail) + card Contato (telefone) — **sem CPF** |
 | legal-identity | Header “Identidade legal” / “Como você atua na Prestway e os documentos do cadastro”; `EntityTypeSection` (tiles PF/PJ `radiogroup` + check; disclaimer assessoria jurídica/contábil; **sem** dialog “Preciso de ajuda para escolher”; troca para tipo diferente → `AlertDialog` “Trocar para pessoa jurídica?” / “Trocar para pessoa física?” com **Cancelar** / **Trocar** **antes** de `onChange`/auto-save; tipo já selecionado ou `disabled` não abre; **não** limpa campos da outra entidade); `LegalIdentitySection` (um painel — ≠ Jurídico): PF → grupo “Documento” + CPF (`cpf`); PJ → “Empresa” (CNPJ, razão social, nome fantasia), “Representante legal” (nome completo, CPF), “Contato comercial” (telefone ou e-mail); loading `LegalIdentityFormSkeleton`; auto-save `useProviderSettingsForm` |
 | professional-profile | Header desktop “Perfil profissional” / “Pedidos que você recebe e como os clientes te veem”; Tabs **Pedidos** (default) / **Vitrine** (padrão Pagamentos: `TabsList` grid 2 colunas, `rounded-xl bg-canvas-soft`; `aria-label="Seções do perfil profissional"`); aba Pedidos: `OfferedServicesSection` (copy “Tipos de pedido que entram no seu feed”; busca + chips + empty) + `ServiceAreaSection` (copy “Cidades e bairros em que você atende”; cidades MapPin + empty; mobile Drawer vaul para Alterar bairros) + `SettingsAutosaveHint`; aba Vitrine: `PublicProfileSettingsSection` (copy “Nome, bio e visibilidade do perfil”; tiles Público/Restrito `radiogroup` Globe/Lock; barra Visualizar/Copiar com slug; **sem** área) + `SettingsAutosaveHint` + `PortfolioManagementSection` (copy “Trabalhos exibidos no perfil público”; cards capa+título; empty ilustrado; DnD + overlay add/edit Sheet direita desktop / Drawer vaul mobile); loading `ProfessionalProfileFormSkeleton` (barra de abas + cards da aba Pedidos); auto-save/API inalterados |
-| receivables | `PaymentHistorySection role="provider"` |
-| earnings | `SettingsSectionHeader` + `EarningsPage` (header interno oculto no host) |
+| receivables | `ProviderReceivablesPage`: `Navigate replace` para `/dashboard/settings/earnings?view=charges` (não renderiza lista) |
+| earnings | Header “Ganhos” / “O valor combinado com o cliente e o que cai na sua conta”; `EarningsLedgerSwitch` (abas = painéis); Depósitos = `EarningsPage`; Cobranças = `PaymentHistorySection role="provider"` |
 | privacy | `PrivacySection` |
 | legal (Jurídico) | Igual cliente + linha **Contrato de uso da plataforma** (`PROVIDER_PLATFORM_CONTRACT_URL`) |
 | session (Conta) | Header “Conta” / “Exclusão permanente da sua conta”; só `DangerZoneSection` |
@@ -343,9 +346,12 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - [ ] Identidade legal PF: grupo “Documento” + CPF; PJ: grupos “Empresa”, “Representante legal”, “Contato comercial” (telefone ou e-mail) no mesmo painel
 - [ ] Identidade legal loading: `LegalIdentityFormSkeleton` (não skeleton monolítico de todas as seções do prestador)
 - [ ] Cliente: CPF permanece em Dados pessoais (personal-info)
-- [ ] Endereços / pagamentos só cliente; receivables / earnings só prestador
+- [ ] Endereços / pagamentos só cliente; Ganhos (`earnings`) só prestador; rota legado `receivables` redireciona para Ganhos → Cobranças
 - [ ] Cliente payments: abas Formas de pagamento / Histórico sob header Pagamentos
-- [ ] Ganhos em `/dashboard/settings/earnings` (não top-level)
+- [ ] Nav prestador: um item **Ganhos** (`Wallet`); **sem** Recebimentos
+- [ ] Ganhos em `/dashboard/settings/earnings` (não top-level); `?view=charges` abre Cobranças; default Depósitos
+- [ ] Ledger: Cobranças = soma R$ do valor combinado; Depósitos = contagem de movements (não soma em R$)
+- [ ] Lista de captura: copy “cobranças”; empty “Nenhuma cobrança ainda”; sem parágrafo educativo, sem link para Ganhos, sem disclosure por card
 - [ ] Menu sem Endereços / Ganhos; Configurações → `/dashboard/settings`
 - [ ] `/dashboard/conta`, `/dashboard/earnings`, `/dashboard/addresses` 404 (sem redirect)
 - [ ] Prestador sem KYC ACTIVE ainda acessa `/dashboard/settings*`
@@ -376,3 +382,4 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - **UI Identidade legal (redesign, sem mudança de API):** `ProviderLegalIdentityPage` — `EntityTypeSection` em tiles `radiogroup` + disclaimer jurídico (**sem** dialog de ajuda); confirmação de troca PF↔PJ via `AlertDialog` (Cancelar / Trocar) **antes** de `onChange`/auto-save; **não** limpa campos da outra entidade; `LegalIdentitySection` em um painel com grupos PF/PJ; skeleton `LegalIdentityFormSkeleton`; auto-save `useProviderSettingsForm` inalterado.
 - **UI Perfil profissional (abas, sem mudança de API):** `ProviderProfessionalProfilePage` — Tabs **Pedidos** / **Vitrine** (padrão Pagamentos/`ClientPaymentsPage`; `SettingsConsequenceGroup` e capítulos “Como você atua” / “Como os clientes te veem” **removidos**). Aba Pedidos (default): Serviços oferecidos + Área de atuação + `SettingsAutosaveHint`. Aba Vitrine: Perfil público + `SettingsAutosaveHint` + Portfólio. Cards `space-y-5`. Copy curto dos cards (como Dados pessoais). Skeleton `ProfessionalProfileFormSkeleton` = barra de abas + cards da aba Pedidos. Header desktop inalterado. Rota, nav, persistência e auto-save inalterados. E2E POM: `getPedidosTab` / `getVitrineTab` / `openVitrineTab`.
 - **UI Portfólio overlay add/edit (2026-08-12):** `PortfolioManagementSection` deixa de usar Dialog centrado (`ShellDialogContent`). Desktop (`useBreakpointMd`): **Sheet** `side="right"` (título Manrope; footer **Cancelar** / **Adicionar**|**Salvar**; close nativo sr-only “Fechar”). Mobile: **Drawer** (vaul, `shouldScaleBackground={false}`, `handleOnly`, `dismissible={!isWorking}`) com handle, botão “Fechar” e footer acima do teclado (`safe-area-inset-bottom`, blur). Enquanto `isWorking` (criar/atualizar/submit), Cancelar disabled e overlay não fecha. Contrato do formulário inalterado (título, descrição, imagens, create/update, `visibility: "public"` na página). Padrão de Endereços (`AddressFormDialog`) e cartão em settings (`AddCardSheetDialog` com `desktopPresentation="sheet"`).
+- **UI Ganhos unificado (2026-08-12):** `ProviderEarningsSectionPage` passa a hospedar captura (Cobranças) e liquidação (Depósitos) na mesma página; nav sem Recebimentos; `/dashboard/settings/receivables` redireciona para `?view=charges`. Sem RPC/migration nova. Cliente Pagamentos inalterado.

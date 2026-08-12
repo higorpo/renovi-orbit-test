@@ -27,8 +27,9 @@ export const ROUTE_SETTINGS_LEGAL_IDENTITY = settingsSectionPath(SETTINGS_SECTIO
 export const ROUTE_SETTINGS_PROFESSIONAL_PROFILE = settingsSectionPath(
   SETTINGS_SECTION.professionalProfile,
 );
-export const ROUTE_SETTINGS_RECEIVABLES = settingsSectionPath(SETTINGS_SECTION.receivables);
 export const ROUTE_SETTINGS_EARNINGS = settingsSectionPath(SETTINGS_SECTION.earnings);
+/** Canonical capture history: Ganhos with the Cobranças panel. Legacy `/receivables` redirects here. */
+export const ROUTE_SETTINGS_RECEIVABLES = `${ROUTE_SETTINGS_EARNINGS}?view=charges`;
 export const ROUTE_SETTINGS_PRIVACY = settingsSectionPath(SETTINGS_SECTION.privacy);
 export const ROUTE_SETTINGS_LEGAL = settingsSectionPath(SETTINGS_SECTION.legal);
 export const ROUTE_SETTINGS_SESSION = settingsSectionPath(SETTINGS_SECTION.session);

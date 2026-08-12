@@ -76,13 +76,11 @@ describe("EarningsPage", () => {
     mocks.settlements.totalCount = 0;
   });
 
-  it("renders page chrome and link to receivables", () => {
+  it("renders settlement filters without page chrome", () => {
     renderPage();
 
-    expect(screen.getByRole("heading", { name: "Ganhos" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: /Configurações → Recebimentos/i }),
-    ).toHaveAttribute("href", "/dashboard/settings/receivables");
+    expect(screen.queryByRole("heading", { name: "Ganhos" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Recebimentos/i })).not.toBeInTheDocument();
     expect(mocks.useProviderSettlementsArgs.at(-1)).toEqual({ filterId: "all" });
   });
 

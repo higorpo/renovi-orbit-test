@@ -2,43 +2,47 @@
 
 Documentação baseada em `src/features/provider-earnings/`, rota hospedada `/dashboard/settings/earnings` (`ROUTE_PROVIDER_EARNINGS`), RPC `list_provider_settlement_movements`, tabela/view de settlements e ingestão NetCred (webhooks `PAYOUT_*`, enrich GraphQL pós-`TRANSACTION_CAPTURE`/`TRANSACTION_REFUND`, Edge `sync-netcred-settlements`). Idioma de produto na UI: pt-BR.
 
-> **Não confundir** com **Recebimentos** (captura / `provider_payout` em Configurações → `/dashboard/settings/receivables`). Ver [historico-e-reembolso](../../payments/features/historico-e-reembolso.md). Este doc **não** redefine checkout, T-2 ou reembolso ToS — só links para [payments](../../payments/README.md).
+> **Não confundir** os dois painéis da mesma página: **Cobranças** = captura / `provider_payout` (lista em `payments`); **Depósitos** = liquidação bancária (esta feature). Ver [historico-e-reembolso](../../payments/features/historico-e-reembolso.md). Este doc **não** redefine checkout, T-2 ou reembolso ToS — só links para [payments](../../payments/README.md).
 
 ---
 
 ## 1. Resumo executivo
 
-- **O que é:** tela **Ganhos** com lista paginada de **linhas de liquidação bancária** (movements do payout NetCred) e componente reutilizável de **previsão de depósito**.
-- **Problema que resolve:** prestador precisa ver **quando o valor cai na conta** (previsto / liquidado / estorno na liquidação), separado do momento em que o cartão do cliente foi capturado.
-- **Quem usa:** prestador autenticado; conteúdo da lista só após KYC `ACTIVE` (gate do shell nas rotas operacionais); entrada via **Configurações → Ganhos** (sem item no menu top-level).
+- **O que é:** tela **Ganhos** unificada: ledger com visões **Cobranças** e **Depósitos**, lista paginada de **linhas de liquidação bancária** (movements do payout NetCred) e componente reutilizável de **previsão de depósito** (outras superfícies).
+- **Problema que resolve:** prestador precisa ver o **valor combinado** com o cliente e **quando o valor cai na conta** (previsto / liquidado), sem misturar os dois números — a liquidação pode ser N parcelas.
+- **Quem usa:** prestador autenticado; conteúdo da lista só após KYC `ACTIVE` (gate do shell nas rotas operacionais); entrada via **Configurações → Ganhos** (sem item no menu top-level; sem item Recebimentos na nav do hub).
 - **Quem não usa:** cliente, visitante; admin sem UI dedicada nesta feature.
-- **Resultado esperado:** lista com valor líquido, título do serviço (link para detalhe), status Previsto/Liquidado, previsão/data de liquidação, parcela e máscara de conta; abas de filtro (Todos/Previsto/Liquidado = só CREDIT, sem aba Estorno); disclosure de previsão em outras superfícies.
-- **Impacto se indisponível:** prestador perde a visão de depósito bancário; Recebimentos (captura) e detalhe do serviço continuam; ingestão backend independente da UI.
+- **Resultado esperado:** ledger (Cobranças = soma R$ acordada; Depósitos = contagem de movements CREDIT); lista com valor líquido, título do serviço (link para detalhe), status Previsto/Liquidado, previsão/data de liquidação, parcela e máscara de conta; abas de filtro da lista (Todos/Previsto/Liquidado = só CREDIT, sem aba Estorno); disclosure de previsão em `ProviderSettlementStatus`.
+- **Impacto se indisponível:** prestador perde a visão de depósito bancário; a aba Cobranças (captura) e o detalhe do serviço continuam; ingestão backend independente da UI.
 
 ## 2. Objetivo de negócio
 
-- **Finalidade:** transparência de **liquidação bancária** pós-captura.
-- **Valor:** reduzir dúvida “já recebi na plataforma, mas quando cai na conta?”.
-- **Não cobre:** alterar calendário NetCred, forçar depósito, editar movements, histórico de captura, checkout, KYC.
-- **Contexto:** complementa [payments](../../payments/README.md) (persistência/ingestão) e [settings](../../settings/README.md) (Recebimentos).
+- **Finalidade:** transparência de **captura** e **liquidação bancária** na mesma página, com métricas distintas.
+- **Valor:** reduzir dúvida “já combinei o valor, mas quando cai na conta?” e ensinar que uma captura pode virar N depósitos.
+- **Não cobre:** alterar calendário NetCred, forçar depósito, editar movements, checkout, KYC, filtro por serviço.
+- **Contexto:** complementa [payments](../../payments/README.md) (persistência/ingestão + lista de captura) e [settings](../../settings/README.md) (host).
 
 ## 3. Localização na plataforma
 
 | Superfície | Rota / componente | Perfil | Observação |
 |------------|-------------------|--------|------------|
-| Página Ganhos | `/dashboard/settings/earnings` → `ProviderEarningsSectionPage` → `EarningsPage` | Prestador | Lazy via hub `settings` em `router.tsx`; `SettingsRoleGate allow={['provider']}` |
+| Página Ganhos | `/dashboard/settings/earnings` → `ProviderEarningsSectionPage` | Prestador | Lazy via hub `settings`; `SettingsRoleGate allow={['provider']}`; settings **compõe** Public API |
+| Ledger | `EarningsLedgerSwitch` | Prestador | Os dois painéis **são** as abas (`aria-label="Visões de ganhos"`); seta desktop entre painéis |
+| Aba Depósitos (default) | `EarningsPage` | Prestador | Filtros Todos/Previsto/Liquidado + lista; **sem** header próprio e **sem** link para Recebimentos |
+| Aba Cobranças | `PaymentHistorySection role="provider"` | Prestador | Código em **payments**; `?view=charges` |
+| Rota legado | `/dashboard/settings/receivables` → `ProviderReceivablesPage` | Prestador | `Navigate replace` para `ROUTE_SETTINGS_RECEIVABLES` = `/dashboard/settings/earnings?view=charges` |
+| Nav do hub | Item **Ganhos** (`Wallet`) | Prestador | **Sem** item Recebimentos (`settingsNav.ts`) |
 | Menu dashboard | **Sem** item Ganhos | — | Removido de `dashboardMenu.ts`; acesso só pelo hub Configurações |
-| Disclosure (Public API) | `ProviderSettlementDisclosure` | Prestador | Export `@/features/provider-earnings` |
-| Recebimentos (captura) | `/dashboard/settings/receivables` → `ProviderPaymentHistoryList` | Prestador | Importa disclosure + link para Ganhos (**código em payments**) |
+| Disclosure (Public API) | `ProviderSettlementDisclosure` | Prestador | Export `@/features/provider-earnings`; **não** nos cards da lista de captura |
 | `ProviderSettlementStatus` | Componente em **payments** (Public API) | Prestador | Holds estorno / chargeback / `service_dispute`; **não** montado no card `ServiceContractedSection` (view-services) após redesign |
 
-**Constante de rota:** `ROUTE_PROVIDER_EARNINGS = "/dashboard/settings/earnings"`.
+**Constante de rota:** `ROUTE_PROVIDER_EARNINGS = "/dashboard/settings/earnings"`. Helper `providerEarningsPath("charges")` = `/dashboard/settings/earnings?view=charges`.
 
-**Chrome mobile:** seção do hub → modo **stack** com `backFallback` `/dashboard/settings` (`mobileNavigation.config.ts` + `SETTINGS_SECTION_STACK_TITLE.earnings`).
+**Chrome mobile:** seção do hub → modo **stack** com `backFallback` `/dashboard/settings` (`mobileNavigation.config.ts` + `SETTINGS_SECTION_STACK_TITLE.earnings` e `.receivables` = “Ganhos”).
 
-**Deep links / query params:** nenhum path/query param de filtro ou deep link documentado na feature; filtro é estado React local (`useState`), **não** sincronizado com URL. Rota top-level `/dashboard/earnings` **removida** (sem redirect).
+**Deep links / query params:** `view=charges` abre Cobranças; ausência ou qualquer outro valor = Depósitos (`parseEarningsView` / `useEarningsViewParam`, `replace: true`). Filtro da lista de liquidação é estado React local (`useState`), **não** sincronizado com URL. Rota top-level `/dashboard/earnings` **removida** (sem redirect).
 
-**Diferença mobile vs desktop:** mesma UI de lista dentro do hub (sidebar desktop / stack mobile do hub Configurações).
+**Diferença mobile vs desktop:** mesma UI de lista dentro do hub (sidebar desktop / stack mobile do hub Configurações). Seta entre painéis do ledger só em `sm+`.
 
 ## 4. Perfis envolvidos
 
@@ -59,20 +63,25 @@ flowchart TD
   A[Configurações / Ganhos / deep link] --> B["/dashboard/settings/earnings"]
   B --> C{SettingsRoleGate provider?}
   C -->|Não| D[Redirect / bloqueio papel]
-  C -->|Sim| E[EarningsPage + filtro default Todos]
-  E --> F[useProviderSettlements infinite query]
-  F --> G["RPC list_provider_settlement_movements"]
-  G --> H{Loading / erro / vazio / itens}
-  H -->|Loading| I[Spinner Carregando ganhos…]
-  H -->|Erro| J[ErrorState + Tentar novamente]
-  H -->|Vazio| K[EmptyState]
-  H -->|Itens| L[groupSettlementsBySchedule]
-  L --> M[Cards SettlementMovementCard]
-  M --> N{hasNextPage?}
-  N -->|Sim| O[Carregar mais]
-  O --> F
-  E --> P[Troca aba filtro]
-  P --> F
+  C -->|Sim| E[Header Ganhos + EarningsLedgerSwitch]
+  E --> F{view}
+  F -->|deposits default| G[EarningsPage + filtro Todos]
+  F -->|charges| H[PaymentHistorySection provider]
+  G --> I[useProviderSettlements infinite query]
+  I --> J["RPC list_provider_settlement_movements"]
+  J --> K{Loading / erro / vazio / itens}
+  K -->|Loading| L[Spinner Carregando ganhos…]
+  K -->|Erro| M[ErrorState + Tentar novamente]
+  K -->|Vazio| N[EmptyState]
+  K -->|Itens| O[groupSettlementsBySchedule]
+  O --> P[Cards SettlementMovementCard]
+  P --> Q{hasNextPage?}
+  Q -->|Sim| R[Carregar mais]
+  R --> I
+  G --> S[Troca aba filtro liquidação]
+  S --> I
+  E --> T[Troca painel ledger]
+  T --> F
 ```
 
 **Ingestão (fora da UI, pré-condição de dados):** captura → `payment_schedules` com `gateway_transaction_id` → (1) webhook `PAYOUT_CREATE`/`PAYOUT_SETTLE` → `payment_webhook_handle_payout`; (2) após processar com sucesso `TRANSACTION_CAPTURE` ou `TRANSACTION_REFUND`, `netcred-webhook` faz enrich best-effort GraphQL `movements(transactionId)` → `payment_upsert_settlement_movements` (mesmo pipeline do sync; cobre movements que entram em lote de payout já existente e **não** disparam `PAYOUT_CREATE`; falha do enrich **não** falha o ACK); (3) cron `sync-netcred-settlements` como backfill → linhas visíveis na lista.
@@ -97,10 +106,14 @@ flowchart TD
 | Idempotência / double-submit | N/A — sem mutações na feature | — |
 | Duas abas | Cache React Query por filtro; `staleTime` 30s; `refetchOnWindowFocus: false` | `useProviderSettlements` |
 | Filtros de data RPC | Aceitos pela API TS/RPC; **UI não envia** | `ListProviderSettlementsParams` vs hook |
+| Ledger loading | Skeleton no número do painel | `EarningsLedgerSwitch` |
+| Ledger erro | “Indisponível” | idem |
+| Ledger Cobranças com clawback | Linha “Líquido após estornos: {net}” | `hasClawback` de `summarizeProviderReceivables` |
+| Caption do ledger | “O depósito costuma levar cerca de 30 dias após o pagamento e pode ser parcelado.” + `PROVIDER_SETTLEMENT_COMPLETION_NOTE` | `EarningsLedgerSwitch` |
 
 ## 7. Regras de negócio
 
-1. Ganhos = **liquidação bancária** (movement); Recebimentos = **captura** (`provider_payout` / view de receivables) — cópia explícita na página e link cruzado.
+1. Ganhos = **página unificada**. **Cobranças** = captura (`provider_payout` / view de receivables); **Depósitos** = liquidação bancária (movement). Números **não** se misturam: Cobranças mostra soma em R$ de `amountReceivedAtCapture` (client-side, lista completa); Depósitos mostra **contagem** (`total_count` da RPC com filtro `all` / CREDIT), não soma em R$.
 2. Somente o prestador dono (`provider_id = auth.uid()`) lista movements na RPC.
 3. Filtros UI → RPC: Todos / Previsto / Liquidado enviam `record_type = CREDIT`; a RPC **esconde** CREDITS de schedules `REFUNDED`/`REFUND_REQUESTED` e parcelas cujo somatório de DEBIT ≥ CREDIT (clawback total). Previsto também `movement_status = PENDING`; Liquidado → `PAID_OUT`. Não há aba Estorno na UI.
 4. Paginação: `page` ≥ 1; `page_size` entre 1 e **100** (front fixa **20**).
@@ -110,8 +123,8 @@ flowchart TD
 8. `is_refund_clawback` true quando `record_type = DEBIT` (ou flag no payload).
 9. Valores `gross_amount` / `net_amount` ≥ 0; parcela 1–48 ou null; `record_type` só `CREDIT`/`DEBIT`.
 10. `raw_snapshot` é ops-only (CLS / sem grant a authenticated na tabela).
-11. Marcar serviço como concluído **não** antecipa depósito (`PROVIDER_SETTLEMENT_COMPLETION_NOTE`).
-12. Em hold (reembolso, chargeback ou **disputa de serviço**), disclosure **suspende** a previsão (consumidor: `ProviderSettlementStatus` / Recebimentos em payments — **não** no card Serviço contratado de view-services).
+11. Marcar serviço como concluído **não** antecipa depósito (`PROVIDER_SETTLEMENT_COMPLETION_NOTE` no caption do ledger).
+12. Em hold (reembolso, chargeback ou **disputa de serviço**), disclosure **suspende** a previsão (consumidor: `ProviderSettlementStatus` em payments — **não** nos cards da lista de captura nem no card Serviço contratado de view-services).
 13. Agrupamento visual só une itens **consecutivos** com o mesmo `paymentScheduleId` (não reordena a lista).
 
 ## 8. Campos e dados (shape)
@@ -235,7 +248,7 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 |-----------|---------|
 | React Query | Key `["provider-earnings","provider-settlements", filterId]`; `staleTime` 30s; infinite pages |
 | Preferences / draft / localStorage | **Não usado** |
-| URL state | **Não usado** (filtro só em memória do componente) |
+| URL state | Query `view` (Cobranças/Depósitos) via `useEarningsViewParam`; filtro de liquidação só em memória do `EarningsPage` |
 
 ## 13. Integrações
 
@@ -253,6 +266,7 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 |---------|---------------|
 | Listagem | Infinite query; flatten de páginas |
 | Busca textual | **Não há** |
+| Filtro por serviço | **Não há** (o título do serviço aparece no card; não filtra a lista) |
 | Filtros | Abas: Todos / Previsto / Liquidado (= CREDIT); server-side |
 | Serviço | Título + link sheet para `/dashboard/services/:id` (RPC devolve `service_request_id` / `service_request_title`) |
 | Paginação | `PAGE_SIZE = 20`; botão Carregar mais |
@@ -263,13 +277,13 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 
 | Ação | Quem | Pré-condição | Resultado | Erro |
 |------|------|--------------|-----------|------|
-| Abrir Ganhos | Prestador | Hub Configurações; conteúdo operacional só se KYC `ACTIVE` fora da allowlist | Carrega lista | Gate / role |
-| Trocar filtro | Prestador | Página carregada | Refetch página 1 do filtro | ErrorState se falhar |
+| Abrir Ganhos | Prestador | Hub Configurações; conteúdo operacional só se KYC `ACTIVE` fora da allowlist | Carrega ledger + lista Depósitos (default) | Gate / role |
+| Abrir Cobranças | Prestador | `?view=charges` ou clique no painel | Lista de captura (`PaymentHistorySection`) | — |
+| Trocar filtro | Prestador | Aba Depósitos carregada | Refetch página 1 do filtro | ErrorState se falhar |
 | Carregar mais | Prestador | `hasNextPage` | Append itens | Erro na query de página |
 | Tentar novamente | Prestador | Estado de erro | `refetch` | — |
 | Limpar filtros | Prestador | Empty com filtro ativo | Volta para Todos | — |
-| Ir para Recebimentos | Prestador | Link no header | Navigate `/dashboard/settings/receivables` | — |
-| Ver disclosure | Prestador | Superfície consumidora | Texto previsão ou hold | `null` se data inválida |
+| Ver disclosure | Prestador | Superfície consumidora (`ProviderSettlementStatus`) | Texto previsão ou hold | `null` se data inválida |
 
 **Sem ações de escrita** (criar/editar/cancelar liquidação) nesta feature.
 
@@ -279,15 +293,15 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 |---------|--------------|---------|
 | Upstream dados | **payments** (schedules, webhooks, upsert, cron) | Persistência e ingestão |
 | Shell | **dashboard-shell**, **provider-kyc**, **settings** (host) | Hub Configurações, gate, chrome mobile stack |
-| Downstream UI | **payments** (`ProviderPaymentHistoryList`, `ProviderSettlementStatus`) | Consomem Public API do disclosure; view-services **não** monta settlement no card contratado |
-| Cruzado | **settings** | Destino do link Recebimentos (`/dashboard/settings/receivables`) |
+| Downstream UI | **payments** (`ProviderPaymentHistoryList` na aba Cobranças; `ProviderSettlementStatus`) | Lista de captura **sem** disclosure por card; view-services **não** monta settlement no card contratado |
+| Cruzado | **settings** | Host `ProviderEarningsSectionPage`; redirect legado `ProviderReceivablesPage`; `useEarningsLedgerSummary` |
 | Libs | `@/lib/supabase/client`, `@/lib/logger`, `@/lib/formatCurrency`, `@/lib/utils/calendarDate`, TanStack Query, UI shadcn |
 
 **Não editar payments neste escopo documental** — apenas links.
 
 ## 17. Regras implícitas
 
-1. `ProviderPaymentHistoryList` e `ProviderSettlementStatus` **não passam `settlingAt`** → disclosure embutido usa **sempre** fallback D+30 (ou hold), mesmo que já exista movement com data real (visível só na lista Ganhos).
+1. `ProviderPaymentHistoryList` **não** monta `ProviderSettlementDisclosure` por card (previsão ficou no caption do ledger / aba Depósitos). `ProviderSettlementStatus` **não passa `settlingAt`** → usa **sempre** fallback D+30 (ou hold), mesmo que já exista movement com data real (visível na lista Depósitos).
 2. Filtro Estorno usa só `record_type = DEBIT`; um CREDIT com `isRefundClawback` true (se existisse) ainda poderia aparecer como estorno **no card** via `isSettlementDebit`, mas **não** na aba Estorno.
 3. Troca de filtro reseta a experiência de lista (nova query), sem preservar scroll.
 4. `refetchOnWindowFocus: false` — voltar à aba do browser não atualiza sozinho até stale/manual.
@@ -301,7 +315,7 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 |-------|---------|------------------------------|
 | Atraso PAYOUT_* / enrich / reconcile | Lista vazia ou só D+30 no disclosure | Enrich pós-CAPTURE/REFUND; cron `15,45 * * * *`; retry `not_found` no payout |
 | Orphan skip (`skipped_not_found`) | Movement NetCred sem schedule local | Retry fila webhook; claim GraphQL |
-| Confusão captura × liquidação | Suporte / prestador | Copy + links cruzados |
+| Confusão captura × liquidação | Suporte / prestador | Ledger com métricas distintas (R$ vs contagem) |
 | Disclosure desatualizado vs Ganhos | Expectativa de data errada | **Pendência:** consumidores não passam `settlingAt` |
 | Sem analytics | Funil de uso da tela invisível | Pendência de produto |
 | Filtro de datas na RPC sem UI | Ops/produto sem range na tela | Pendência se desejado |
@@ -310,12 +324,13 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 
 ### Front
 
-- `src/features/provider-earnings/` — `components/` (`EarningsPage`, filtros, lista, cards, empty/error, `ProviderSettlementDisclosure`), `api/settlements.api.ts`, `api/settlements.rpc.ts`, `hooks/useProviderSettlements.ts`, `types/settlements.types.ts`, `utils/*`, `constants/*` (`ROUTE_PROVIDER_EARNINGS`), `index.ts`
+- `src/features/provider-earnings/` — `components/` (`EarningsPage`, `EarningsLedgerSwitch`, filtros, lista, cards, empty/error, `ProviderSettlementDisclosure`), `api/settlements.api.ts`, `api/settlements.rpc.ts`, `hooks/useProviderSettlements.ts`, `hooks/useEarningsViewParam.ts`, `types/settlements.types.ts`, `utils/*`, `constants/*` (`ROUTE_PROVIDER_EARNINGS`, `earningsView.ts`, `providerEarningsPath`), `index.ts`
 - Testes Vitest sob `**/__tests__/` na feature
-- `src/router.tsx` — `settings/earnings` via `ProviderEarningsSectionPage`
-- `src/features/settings/components/sections/ProviderEarningsSectionPage.tsx`
+- `src/router.tsx` — `settings/earnings` via `ProviderEarningsSectionPage`; `settings/receivables` via `ProviderReceivablesPage` (redirect)
+- `src/features/settings/components/sections/ProviderEarningsSectionPage.tsx`, `ProviderReceivablesPage.tsx`
+- `src/features/settings/hooks/useEarningsLedgerSummary.ts`
 - `src/layouts/DashboardLayout/dashboardMenu.ts` (sem Ganhos), `mobileNavigation.config.ts`, `DashboardLayout.tsx`
-- Consumidores: `src/features/payments/components/PaymentHistory/ProviderPaymentHistoryList.tsx`, `ProviderSettlementStatus.tsx` (**não** `ServiceContractedSection`)
+- Consumidores: `src/features/payments/components/PaymentHistory/ProviderPaymentHistoryList.tsx` (lista de captura, sem disclosure por card), `ProviderSettlementStatus.tsx` (**não** `ServiceContractedSection`)
 
 ### Backend
 
@@ -335,7 +350,7 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 
 ## 20. Pendências
 
-1. **`settlingAt` nos consumidores do disclosure** — Recebimentos e `ProviderSettlementStatus` não passam a data real do movement; evidência de gap de UX vs lista Ganhos.
+1. **`settlingAt` em `ProviderSettlementStatus`** — o componente não passa a data real do movement; a lista de captura **não** mostra mais disclosure por card. Gap residual só nesse consumidor.
 2. **Filtros de intervalo de datas** — RPC/API prontos; UI ausente. Necessidade de produto não comprovada no front.
 3. **Analytics** — nenhum evento GA na feature; impacto de adoção não mensurado no código.
 4. **Checagem explícita de role `provider` na RPC** — isolamento só por `provider_id`; suficiente na prática, diferente de outras RPCs provider-only.
@@ -360,10 +375,14 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 
 ## Anexo B — Checklist QA (cenários)
 
-- [ ] Prestador: abre Configurações → Ganhos em `/dashboard/settings/earnings`; link para Recebimentos (`/dashboard/settings/receivables`).
+- [ ] Prestador: abre Configurações → Ganhos em `/dashboard/settings/earnings` (default Depósitos); nav **sem** Recebimentos.
+- [ ] `?view=charges` abre Cobranças; `/dashboard/settings/receivables` redireciona (replace) para essa URL.
 - [ ] Cliente: sem seção Ganhos; URL earnings bloqueada pelo `SettingsRoleGate`.
 - [ ] Menu dashboard **sem** item Ganhos; `/dashboard/earnings` inexistente (sem redirect).
 - [ ] Prestador KYC não ACTIVE: menus **ocultos**; `/dashboard/settings/earnings` na allowlist do gate.
+- [ ] Ledger Cobranças: soma R$ de `amountReceivedAtCapture`; se clawback, “Líquido após estornos”.
+- [ ] Ledger Depósitos: contagem (`N depósitos`), não soma em R$.
+- [ ] `EarningsPage` sem heading “Ganhos” e sem link Recebimentos.
 - [ ] Lista com CREDIT PENDING: badge Previsto + previsão.
 - [ ] Lista com PAID_OUT + `settledAt`: badge Liquidado + “Liquidado em …”.
 - [ ] DEBIT/clawback não aparece nas abas Todos/Previsto/Liquidado (RPC).
@@ -371,14 +390,14 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 - [ ] Filtro sem resultados: empty + limpar filtros volta a Todos.
 - [ ] Erro simulado: ErrorState + retry.
 - [ ] Carregar mais quando `total_count` > 20.
-- [ ] Disclosure em Recebimentos: D+30 a partir de `receivedAt` (sem settling real).
+- [ ] Lista de captura: primário = valor combinado; sem disclosure por card; empty “Nenhuma cobrança ainda”.
 - [ ] `ProviderSettlementStatus` (payments): hold em chargeback / disputa de serviço (`service_dispute`) / REFUND_* quando montado; **não** esperado no card Serviço contratado (view-services).
-- [ ] Confirmar que marcar concluído **não** muda texto de previsão (nota de produto).
+- [ ] Confirmar que marcar concluído **não** muda texto de previsão (nota no caption do ledger).
 
 ## Anexo C — Distinção captura × liquidação
 
 | Conceito | O que é | Onde |
 |----------|---------|------|
-| **Recebimento (captura)** | `provider_payout` no momento da captura (`paid_at`) | Configurações → `provider_payment_receivables_v` ([payments](../../payments/features/historico-e-reembolso.md)) |
-| **Ganho / liquidação bancária** | Movement do payout: previsto (`settling_at`) ou efetivo (`settled_at`) | Ganhos → `list_provider_settlement_movements` |
-| **Fallback D+30** | Estimativa UI `paid_at + 30 dias` se não há `settling_at` no disclosure | `estimateProviderBankSettlementDate` |
+| **Cobrança (captura)** | `provider_payout` no momento da captura (`paid_at`); UI: valor combinado | Ganhos → aba Cobranças → `provider_payment_receivables_v` ([payments](../../payments/features/historico-e-reembolso.md)) |
+| **Depósito / liquidação bancária** | Movement do payout: previsto (`settling_at`) ou efetivo (`settled_at`); pode ser N parcelas | Ganhos → aba Depósitos → `list_provider_settlement_movements` |
+| **Fallback D+30** | Estimativa UI `paid_at + 30 dias` se não há `settling_at` no disclosure; caption do ledger também cita ~30 dias | `estimateProviderBankSettlementDate`; `EarningsLedgerSwitch` |

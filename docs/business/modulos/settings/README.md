@@ -2,11 +2,11 @@
 
 ## 1. Leitura para negócio
 
-- **Para que serve:** hub responsivo de configurações da conta (**cliente** e **prestador**) sob `/dashboard/settings/*` (slugs em inglês): dados cadastrais, foto, privacidade/LGPD, documentos oficiais (seção **Jurídico**), exclusão de conta (seção Conta); no prestador, identidade legal (`legal-identity`, cadastro PF/PJ e documentos — CPF só aqui, não em Informações pessoais), perfil profissional (público `/perfil/:slug`, ofertados, área, portfólio), recebimentos na captura e hospedagem da UI de Ganhos. Logout fica no rodapé da navegação do hub (não é rota).
+- **Para que serve:** hub responsivo de configurações da conta (**cliente** e **prestador**) sob `/dashboard/settings/*` (slugs em inglês): dados cadastrais, foto, privacidade/LGPD, documentos oficiais (seção **Jurídico**), exclusão de conta (seção Conta); no prestador, identidade legal (`legal-identity`, cadastro PF/PJ e documentos — CPF só aqui, não em Informações pessoais), perfil profissional (público `/perfil/:slug`, ofertados, área, portfólio) e **Ganhos** (página unificada: captura/valor combinado + liquidações bancárias). Logout fica no rodapé da navegação do hub (não é rota).
 - **Quem usa:** `client` e `provider` autenticados (`ProtectedRoute` no dashboard).
 - **Valor:** qualidade cadastral para matching/confiança; conformidade LGPD (exportação/exclusão via DPO); um único hub de conta no menu (sem itens separados Endereços / Ganhos).
 - **Fase 1 (shell):** navegação por seções; formulários/UIs existentes reutilizados; auto-save inalterado. ADR: [`docs/adr/0002-account-settings-hub.md`](../../../adr/0002-account-settings-hub.md).
-- **Embutidos (não documentar aqui em profundidade):** endereços (`addresses`) e histórico/cartões (`payments`) — apenas links. Ganhos: UI de `provider-earnings` hospedada em `/dashboard/settings/earnings`.
+- **Embutidos (não documentar aqui em profundidade):** endereços (`addresses`) e histórico/cartões do **cliente** (`payments`) — apenas links. Prestador: página **Ganhos** em `/dashboard/settings/earnings` — settings **compõe** Public API de `provider-earnings` (ledger + depósitos) e `payments` (lista de captura na aba Cobranças), no mesmo padrão de Pagamentos do cliente.
 - **Riscos:** dados sensíveis (CPF/CNPJ); exclusão **não** apaga via API — fluxo por e-mail ao DPO.
 
 ## 2. Visão geral funcional
@@ -28,7 +28,7 @@
 | Perfil | Hub `/dashboard/settings` | Seções |
 |--------|--------------------------|--------|
 | Cliente | Sim | personal-info, addresses, payments, privacy, legal, session |
-| Prestador | Sim | personal-info, legal-identity, professional-profile, receivables, earnings, privacy, legal, session |
+| Prestador | Sim | Nav: personal-info, legal-identity, professional-profile, **earnings** (Ganhos), privacy, legal, session. Slug/rota legado `receivables` permanece (`PROVIDER_ONLY_SETTINGS_SECTIONS`; stack title “Ganhos”) e redireciona para Ganhos → Cobranças |
 | Prestador sem KYC `ACTIVE` | Sim (allowlist `ProviderKycGate` = `/dashboard/settings`) | Logout/ajustes enquanto shell operacional bloqueado — ver [provider-kyc](../provider-kyc/features/gate-e-acesso-operacional.md) |
 
 ## 5. Principais fluxos
@@ -37,7 +37,7 @@
 2. Abrir seção → carregar/editar (auto-save / ações explícitas conforme seção).
 3. Foto → upload/remove storage + path em `profiles` (summary no índice mobile / personal-info desktop).
 4. Cliente: endereços / pagamentos (Tabs **Formas de pagamento** + **Histórico** de captura).
-5. Prestador: Informações pessoais (nome, e-mail, telefone — sem CPF); identidade legal (`/dashboard/settings/legal-identity`: escolha PF/PJ em tiles `radiogroup` — troca para o tipo **diferente** do atual abre `AlertDialog` de confirmação **antes** de `onChange`/auto-save; Cancelar fecha sem mudar; Trocar chama `onChange` e o auto-save segue; clicando no já selecionado ou com `disabled` não abre dialog; **não** limpa campos da outra entidade; **não** é o dialog antigo de ajuda; + painel de documentos; PF: grupo Documento/CPF; PJ: Empresa, Representante legal, Contato comercial; disclaimer jurídico abaixo das tiles; auto-save via `useProviderSettingsForm` inalterado); perfil profissional (`/dashboard/settings/professional-profile`: Tabs **Pedidos** (default) / **Vitrine**, padrão Pagamentos/`ClientPaymentsPage`; aba Pedidos: Serviços oferecidos + Área de atuação + hint auto-save; aba Vitrine: Perfil público + hint auto-save + Portfólio; skeleton `ProfessionalProfileFormSkeleton`; API inalterada); recebimentos (captura); ganhos (liquidação — feature `provider-earnings`).
+5. Prestador: Informações pessoais (nome, e-mail, telefone — sem CPF); identidade legal (`/dashboard/settings/legal-identity`: escolha PF/PJ em tiles `radiogroup` — troca para o tipo **diferente** do atual abre `AlertDialog` de confirmação **antes** de `onChange`/auto-save; Cancelar fecha sem mudar; Trocar chama `onChange` e o auto-save segue; clicando no já selecionado ou com `disabled` não abre dialog; **não** limpa campos da outra entidade; **não** é o dialog antigo de ajuda; + painel de documentos; PF: grupo Documento/CPF; PJ: Empresa, Representante legal, Contato comercial; disclaimer jurídico abaixo das tiles; auto-save via `useProviderSettingsForm` inalterado); perfil profissional (`/dashboard/settings/professional-profile`: Tabs **Pedidos** (default) / **Vitrine**, padrão Pagamentos/`ClientPaymentsPage`; aba Pedidos: Serviços oferecidos + Área de atuação + hint auto-save; aba Vitrine: Perfil público + hint auto-save + Portfólio; skeleton `ProfessionalProfileFormSkeleton`; API inalterada); **Ganhos** (`/dashboard/settings/earnings`: ledger Cobranças = valor combinado na captura / Depósitos = liquidações bancárias — conceitos distintos, números não misturados; feature `provider-earnings` + lista de captura de `payments`). Rota legado `/dashboard/settings/receivables` faz `Navigate replace` para `/dashboard/settings/earnings?view=charges`.
 6. Privacidade → exportação/mailto DPO (+ atalho da política); Jurídico (`/dashboard/settings/legal`) → hub de documentos oficiais (termos, política; prestador também contrato de uso); Conta (`/dashboard/settings/session`) → exclusão via `DangerZoneSection` (mailto DPO); **Sair da conta** (item de rodapé da nav, sem rota) → `LogoutConfirmDialog` → `signOut`.
 
 ## 6. Regras transversais
@@ -71,11 +71,11 @@
 |--------|----------------|
 | `auth` | `useAuth`, `profileApi.updateProfile`, `signOut` |
 | `addresses` | Seção `/dashboard/settings/addresses` (só cliente) — ver [addresses](../addresses/README.md) |
-| `payments` | Seção payments (cliente: abas Formas de pagamento / Histórico) e receivables (prestador: histórico captura) — ver [historico-e-reembolso](../payments/features/historico-e-reembolso.md) |
+| `payments` | Seção payments (cliente: abas Formas de pagamento / Histórico); prestador: lista de captura na aba **Cobranças** de Ganhos (`PaymentHistorySection role="provider"`) — ver [historico-e-reembolso](../payments/features/historico-e-reembolso.md) |
 | `request-quote` | Estilo de card em ofertados (`getServiceCardStyle`) |
 | `provider-profile` | Página pública `/perfil/:slug` (destino do link) |
 | `provider-kyc` | Allowlist prefix `/dashboard/settings` |
-| `provider-earnings` | UI Ganhos hospedada em `/dashboard/settings/earnings` (`ProviderEarningsSectionPage` → `EarningsPage`); ownership da feature permanece em `provider-earnings` |
+| `provider-earnings` | Página unificada Ganhos em `/dashboard/settings/earnings` (`ProviderEarningsSectionPage`: header + `EarningsLedgerSwitch` + `EarningsPage` / `PaymentHistorySection`); ownership da liquidação permanece em `provider-earnings`; captura em `payments` |
 
 ## 9. Riscos e lacunas
 
@@ -87,7 +87,7 @@
 
 ## 10. Evidências
 
-- `src/features/settings/` — `SettingsLayout`, `SettingsIndexPage`, `SettingsNavList`, `LogoutConfirmDialog`, `constants/routes.ts`, `constants/settingsNav.ts`, `components/sections/*` (Jurídico = `AccountLegalPage` + `LegalDocumentsSection`; Conta = `AccountSessionPage` + `DangerZoneSection`; Identidade legal = `ProviderLegalIdentityPage` + `EntityTypeSection` + `LegalIdentitySection` + `LegalIdentityFormSkeleton`; Perfil profissional = `ProviderProfessionalProfilePage` + Tabs Pedidos/Vitrine + `OfferedServicesSection` + `PublicProfileSettingsSection` + `ServiceAreaSection`/`ServiceAreaField` + `PortfolioManagementSection` + `SettingsAutosaveHint` + `ProfessionalProfileFormSkeleton`)
+- `src/features/settings/` — `SettingsLayout`, `SettingsIndexPage`, `SettingsNavList`, `LogoutConfirmDialog`, `constants/routes.ts`, `constants/settingsNav.ts`, `hooks/useEarningsLedgerSummary.ts`, `components/sections/*` (Jurídico = `AccountLegalPage` + `LegalDocumentsSection`; Conta = `AccountSessionPage` + `DangerZoneSection`; Identidade legal = `ProviderLegalIdentityPage` + `EntityTypeSection` + `LegalIdentitySection` + `LegalIdentityFormSkeleton`; Perfil profissional = `ProviderProfessionalProfilePage` + Tabs Pedidos/Vitrine + `OfferedServicesSection` + `PublicProfileSettingsSection` + `ServiceAreaSection`/`ServiceAreaField` + `PortfolioManagementSection` + `SettingsAutosaveHint` + `ProfessionalProfileFormSkeleton`; Ganhos = `ProviderEarningsSectionPage`; legado = `ProviderReceivablesPage` redirect)
 - `src/router.tsx` — `path: 'settings'` + children
 - `src/layouts/DashboardLayout/dashboardMenu.ts` — Configurações → `ROUTE_SETTINGS`
 - `src/layouts/DashboardLayout/mobileNavigation.config.ts` — índice tab-root; seções stack → `/dashboard/settings`

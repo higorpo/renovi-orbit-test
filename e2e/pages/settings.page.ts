@@ -249,6 +249,24 @@ export class SettingsPage {
     await this.getOfferedServicesSection().waitFor({ state: "visible", timeout: 20_000 });
   }
 
+  async gotoEarnings() {
+    await this.page.goto("/dashboard/settings/earnings");
+    await this.getDepositosTab().waitFor({ state: "visible", timeout: 20_000 });
+  }
+
+  getCobrancasTab() {
+    return this.page.getByRole("tab", { name: /Cobranças/ });
+  }
+
+  getDepositosTab() {
+    return this.page.getByRole("tab", { name: /Depósitos/ });
+  }
+
+  async openCobrancasTab() {
+    await this.getCobrancasTab().click();
+    await this.page.getByLabel("Histórico de cobranças").waitFor({ state: "visible", timeout: 10_000 });
+  }
+
   getPedidosTab() {
     return this.page.getByRole("tab", { name: "Pedidos" });
   }

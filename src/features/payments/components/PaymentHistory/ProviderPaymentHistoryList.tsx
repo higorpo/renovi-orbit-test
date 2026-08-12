@@ -1,10 +1,4 @@
 import { Wallet } from "lucide-react";
-import { Link } from "react-router";
-import {
-  ProviderSettlementDisclosure,
-  PROVIDER_SETTLEMENT_COMPLETION_NOTE,
-  ROUTE_PROVIDER_EARNINGS,
-} from "@/features/provider-earnings";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -17,7 +11,7 @@ import { PaymentDisputeBadge } from "../PaymentDisputeBadge";
 
 function ProviderPaymentHistorySkeleton() {
   return (
-    <div className="space-y-3" aria-busy="true" aria-label="Carregando recebimentos">
+    <div className="space-y-3" aria-busy="true" aria-label="Carregando cobranças">
       <Skeleton className="h-16 w-full rounded-2xl" />
       <Skeleton className="h-[5.5rem] w-full rounded-2xl" />
       <Skeleton className="h-[5.5rem] w-full rounded-2xl" />
@@ -37,10 +31,10 @@ export function ProviderPaymentHistoryList() {
     return (
       <div
         className="rounded-2xl border border-destructive/20 bg-destructive/5 px-4 py-5"
-        aria-label="Histórico de recebimentos"
+        aria-label="Histórico de cobranças"
       >
         <p className="text-sm text-destructive" role="alert">
-          Não foi possível carregar o histórico de recebimentos.
+          Não foi possível carregar o histórico de cobranças.
         </p>
         <Button
           type="button"
@@ -56,26 +50,13 @@ export function ProviderPaymentHistoryList() {
   }
 
   return (
-    <div className="space-y-4" aria-label="Histórico de recebimentos">
-      <p className="text-sm leading-relaxed text-body">
-        Valores pagos pelo cliente na plataforma. O depósito na sua conta costuma levar cerca de 30
-        dias após a confirmação do pagamento. {PROVIDER_SETTLEMENT_COMPLETION_NOTE} Acompanhe
-        liquidações em{" "}
-        <Link
-          to={ROUTE_PROVIDER_EARNINGS}
-          className="font-medium text-ink underline-offset-4 hover:underline"
-        >
-          Ganhos
-        </Link>
-        .
-      </p>
-
+    <div className="space-y-4" aria-label="Histórico de cobranças">
       <p className="text-caption text-muted-foreground">
         {receivables.length === 0
           ? "Nenhum registrado"
           : receivables.length === 1
-            ? "1 recebimento"
-            : `${receivables.length} recebimentos`}
+            ? "1 cobrança"
+            : `${receivables.length} cobranças`}
       </p>
 
       {receivables.length === 0 ? (
@@ -87,10 +68,10 @@ export function ProviderPaymentHistoryList() {
             <Wallet className="h-6 w-6" strokeWidth={1.75} />
           </div>
           <p className="font-display text-base font-semibold tracking-tight text-ink">
-            Nenhum recebimento ainda
+            Nenhuma cobrança ainda
           </p>
           <p className="mt-1 max-w-xs text-sm leading-relaxed text-body">
-            Quando um cliente pagar um serviço seu, o valor aparece aqui.
+            Quando um cliente pagar um serviço seu, o valor combinado aparece aqui.
           </p>
         </div>
       ) : (
@@ -107,11 +88,11 @@ export function ProviderPaymentHistoryList() {
                   </div>
                   <div className="min-w-0 flex-1 space-y-1">
                     <p className="font-display text-[15px] font-semibold tracking-tight text-ink">
-                      {formatCurrency(receivable.netAmountReceived)}
+                      {formatCurrency(receivable.amountReceivedAtCapture)}
                     </p>
                     {receivable.netAmountReceived !== receivable.amountReceivedAtCapture ? (
                       <p className="text-sm text-muted-foreground">
-                        Valor original: {formatCurrency(receivable.amountReceivedAtCapture)}
+                        Líquido após estornos: {formatCurrency(receivable.netAmountReceived)}
                       </p>
                     ) : null}
                     <div className="flex flex-wrap items-center gap-2 text-caption text-muted-foreground">
@@ -121,7 +102,6 @@ export function ProviderPaymentHistoryList() {
                       </span>
                       {receivable.isDisputed ? <PaymentDisputeBadge /> : null}
                     </div>
-                    <ProviderSettlementDisclosure capturePaidAt={receivable.receivedAt} />
                   </div>
                 </div>
               </article>

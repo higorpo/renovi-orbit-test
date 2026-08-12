@@ -30,7 +30,7 @@ Evidência: `src/router.tsx` (árvore atual).
 | `/dashboard/services` | Herdado | `client`, `provider` | Real (`my-services`) | Slot por papel no layout |
 | `/dashboard/services/calendar` | Aninhado `provider` | **`provider` apenas** | Real (`provider-calendar`) | **Fora do menu**; entrada via banner em Meus Serviços |
 | `/dashboard/services/:id` | Herdado | `client`, `provider` | Real (`view-services`) | Detalhe; sheet ou stack; **fora do menu** |
-| `/dashboard/settings` (+ seções) | Herdado (+ `SettingsRoleGate` por seção) | `client`, `provider` | Real (`settings`; earnings host) | Item **Configurações** no menu; **Allowlist KYC**; Ganhos em `/dashboard/settings/earnings` |
+| `/dashboard/settings` (+ seções) | Herdado (+ `SettingsRoleGate` por seção) | `client`, `provider` | Real (`settings`; Ganhos unificado) | Item **Configurações** no menu; **Allowlist KYC**; Ganhos em `/dashboard/settings/earnings` (`?view=charges` = Cobranças); `/dashboard/settings/receivables` redireciona |
 | `/dashboard/jobs` | Aninhado `provider` | **`provider` apenas** | Real (`provider-jobs`) | |
 | `/dashboard/chats` | Aninhado `client`+`provider` | `client`, `provider` | Real (`chats`) | Inbox CNS |
 | `/dashboard/chats/:chatId` | Filho de chats | `client`, `provider` | Real (`chats`) | Thread; chrome mobile `custom` |
@@ -165,9 +165,9 @@ Fonte: [service-reschedule](./modulos/service-reschedule/README.md).
 | Ação | Cliente | Prestador | Admin |
 |------|---------|-----------|-------|
 | Checkout no aceite / cartões / cobrança manual | Sim | — (precisa estar credentialed `ACTIVE` + company + bank no backend) | — |
-| Histórico de pagamentos / recebimentos | Sim (captura) | Sim (recebíveis) | SELECT via `is_platform_admin()` em views |
+| Histórico de pagamentos / captura | Sim (Pagamentos → Histórico) | Sim (Ganhos → Cobranças) | SELECT via `is_platform_admin()` em views |
 | Cancelar serviço (ToS / refund path) | Sim (se elegível) | Sim (se elegível; estorno integral) | Sem UI dedicada no app |
-| Ganhos / liquidações UI | — | `/dashboard/settings/earnings` | — |
+| Ganhos (página unificada) | — | `/dashboard/settings/earnings` (Depósitos default; Cobranças `?view=charges`) | — |
 | Reset DEAD_LETTER / crons de cobrança | — | — | Ops `service_role` |
 
 Fonte: [payments](./modulos/payments/README.md), [checkout-e-cobranca](./modulos/payments/features/checkout-e-cobranca.md), [historico-e-reembolso](./modulos/payments/features/historico-e-reembolso.md).

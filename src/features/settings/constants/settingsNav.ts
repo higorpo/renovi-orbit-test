@@ -1,5 +1,4 @@
 import {
-  Banknote,
   Briefcase,
   CreditCard,
   IdCard,
@@ -113,12 +112,6 @@ const PROVIDER_ITEMS: SettingsNavItem[] = [
     icon: Briefcase,
   },
   {
-    slug: SETTINGS_SECTION.receivables,
-    path: settingsSectionPath(SETTINGS_SECTION.receivables),
-    label: "Recebimentos",
-    icon: Banknote,
-  },
-  {
     slug: SETTINGS_SECTION.earnings,
     path: settingsSectionPath(SETTINGS_SECTION.earnings),
     label: "Ganhos",
@@ -138,7 +131,7 @@ export const SETTINGS_SECTION_STACK_TITLE: Record<SettingsSectionSlug, string> =
   payments: "Pagamentos",
   "legal-identity": "Identidade legal",
   "professional-profile": "Perfil profissional",
-  receivables: "Recebimentos",
+  receivables: "Ganhos",
   earnings: "Ganhos",
   privacy: "Privacidade",
   legal: "Jurídico",

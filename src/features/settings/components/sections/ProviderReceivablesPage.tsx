@@ -1,18 +1,7 @@
-import { PaymentHistorySection } from "@/features/payments";
-import { SettingsRoleGate } from "../SettingsRoleGate";
-import { SettingsSectionHeader } from "../SettingsSectionHeader";
-import { SettingsSectionShell } from "../SettingsSectionShell";
+import { Navigate } from "react-router";
+import { ROUTE_SETTINGS_RECEIVABLES } from "../../constants/routes";
 
+/** Legacy Recebimentos URL — capture history now lives on Ganhos → Cobranças. */
 export function ProviderReceivablesPage() {
-  return (
-    <SettingsRoleGate allow={["provider"]}>
-      <SettingsSectionShell>
-        <SettingsSectionHeader
-          title="Recebimentos"
-          description="Valores capturados na plataforma (antes da liquidação bancária)"
-        />
-        <PaymentHistorySection role="provider" />
-      </SettingsSectionShell>
-    </SettingsRoleGate>
-  );
+  return <Navigate to={ROUTE_SETTINGS_RECEIVABLES} replace />;
 }

@@ -3,7 +3,7 @@
 ## 1. Leitura para negócio
 
 - **Para que serve:** checkout com cartão (tokenização NetCred), cobrança automática T-2 antes do serviço, cobrança manual pelo cliente, histórico de pagamentos/recebimentos **na captura** (com breakdown de reembolso), **requisito de KYC `ACTIVE` para cobrança** e notificações de cobrança. Ops: auto-cancel T-12h, void pós-`IN_ANALYSIS`, reconciliação stale e sync de liquidações. Liquidações bancárias do prestador (Ganhos) são UI em [`provider-earnings`](../provider-earnings/README.md); este módulo mantém a persistência (`payment_settlement_movements`, webhooks `PAYOUT_*`, enrich GraphQL pós-CAPTURE/REFUND, cron `sync-netcred-settlements`).
-- **Quem usa:** cliente (checkout, cartões salvos, histórico com reembolsos, cobrança manual); prestador (histórico de recebimentos líquidos na captura em Configurações; **UI/gate de KYC** em `provider-kyc`; Ganhos em `provider-earnings`); operação (crons/Edges de reconcile/void/webhook; runbooks em `docs/payment-system/`).
+- **Quem usa:** cliente (checkout, cartões salvos, histórico com reembolsos, cobrança manual); prestador (histórico de captura/cobranças na aba Cobranças de Ganhos; **UI/gate de KYC** em `provider-kyc`; Ganhos/Depósitos em `provider-earnings`); operação (crons/Edges de reconcile/void/webhook; runbooks em `docs/payment-system/`).
 - **Valor:** pagamento protegido integrado ao fluxo de aceite de proposta; repasse ao prestador após execução do serviço. O `charge_amount` no cartão usa **gross-up NetCred** (MDR% + PROCESSING + RISK_ANALYSIS) para o líquido da plataforma ≈ comissão Prestway; o split `FIXED_AMOUNT` do prestador não muda com essa regra.
 - **Rollout:** crons de pagamento ativos no deploy (incl. auto-cancel, reconcile, void IN_ANALYSIS, sync settlements, webhook retry); runbooks operacionais em `docs/payment-system/`.
 
@@ -41,7 +41,7 @@
 | Papel | Neste módulo |
 |-------|----------------|
 | Cliente | Checkout, cartões, cobrança manual, histórico captura, cancelamento ToS (fora de `IN_ANALYSIS`) |
-| Prestador | Histórico captura; KYC UI em `provider-kyc`; Ganhos em `provider-earnings` |
+| Prestador | Histórico captura (Ganhos → Cobranças); KYC UI em `provider-kyc`; Ganhos/Depósitos em `provider-earnings` |
 | Sistema / ops | Crons e Edges de cobrança, webhook, reconcile, void, sync settlements; reset `DEAD_LETTER` |
 | Admin | SELECT em views/audit conforme RLS; sem painel ops de DEAD_LETTER no app |
 
@@ -59,7 +59,7 @@
 - Parcelamento: 1x sempre; demais parcelas só se `installment_amount >= min_installment_value` (padrão R$ 150); HMAC só sobre opções filtradas.
 - Gate de cobrança: prestador `ACTIVE` + company + bank (`payment_provider_is_credentialed`).
 - Mensagens de erro ao usuário só por código mapeado (pt-BR).
-- Distinção **captura** (histórico em conta) vs **liquidação bancária** (Ganhos).
+- Distinção **captura** (Ganhos → Cobranças; cliente em Pagamentos → Histórico) vs **liquidação bancária** (Ganhos → Depósitos).
 - Ops de reconciliação/void **não** têm superfície de produto dedicada.
 
 ## 7. Entidades
@@ -102,8 +102,8 @@
 ## Relação com outros módulos
 
 - **`negotiation-proposals` / `chats`:** aceite de proposta cria `payment_schedules` e abre checkout.
-- **`settings`:** embute `SavedCardsList` e `PaymentHistorySection` no cliente em `/dashboard/settings/payments` (Tabs **Formas de pagamento** / **Histórico**); histórico do prestador em `/dashboard/settings/receivables`.
-- **`provider-earnings`:** UI de liquidações bancárias em `/dashboard/settings/earnings`; lê settlements deste domínio; disclosure de previsão importado da Public API (sem re-export em `payments`).
+- **`settings`:** embute `SavedCardsList` e `PaymentHistorySection` no cliente em `/dashboard/settings/payments` (Tabs **Formas de pagamento** / **Histórico**); histórico do prestador na aba **Cobranças** de `/dashboard/settings/earnings` (`?view=charges`; rota legado `/dashboard/settings/receivables` redireciona).
+- **`provider-earnings`:** UI unificada de Ganhos em `/dashboard/settings/earnings` (ledger Cobranças + Depósitos); lê settlements deste domínio; disclosure de previsão importado da Public API (sem re-export em `payments`; **não** nos cards da lista de captura).
 - **`provider-kyc`:** UI (gate + wizard de credenciamento) até onboarding `ACTIVE`; backend de submissão/detecção permanece nas RPCs/EFs NetCred deste domínio.
 - **`my-services` / `view-services`:** status do serviço contratado reflete ciclo de pagamento; cancelamento pós-pagamento dispara reembolso; aviso discreto de `far_recapture_pending` no detalhe.
 - **`service-completion`:** writers de produto `EXECUTED`/`COMPLETED`/`IN_DISPUTE` (`service_completion_*`) — **fora** deste módulo (ADR-0004 / ADR-0006). Removidos: `payment_mark_service_executed`, `payment_confirm_service_completed`, `payment_cron_auto_complete_*`. Chargeback/`is_disputed` permanece aqui; **Disputa de serviço** (`IN_DISPUTE`) é do service-completion (≠ chargeback).

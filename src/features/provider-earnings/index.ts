@@ -5,14 +5,16 @@
  * Internal modules (api/, hooks/, components/, utils/) must not be imported across features.
  */
 
-// Page — router lazy-loads the file path; export kept for typed consumers
 export { EarningsPage } from "./components/EarningsPage";
+export { EarningsLedgerSwitch } from "./components/EarningsLedgerSwitch";
+export type {
+  EarningsLedgerSwitchProps,
+  EarningsLedgerSummary,
+} from "./components/EarningsLedgerSwitch";
 
-// Cross-feature disclosure (payments Recebimentos / contracted-service status)
 export { ProviderSettlementDisclosure } from "./components/ProviderSettlementDisclosure";
 export type { ProviderSettlementDisclosureProps } from "./components/ProviderSettlementDisclosure";
 
-// Shared copy + hold resolution used by payments (Recebimentos / service detail)
 export {
   PROVIDER_SETTLEMENT_COMPLETION_NOTE,
   resolveProviderSettlementHold,
@@ -23,8 +25,18 @@ export type {
   ResolveProviderSettlementHoldResult,
 } from "./utils/providerSettlementDisclosure";
 
-// Routes & query keys
-export { ROUTE_PROVIDER_EARNINGS } from "./constants/routes";
+export { useProviderSettlements } from "./hooks/useProviderSettlements";
+export { useEarningsViewParam } from "./hooks/useEarningsViewParam";
+
+export {
+  EARNINGS_VIEW,
+  DEFAULT_EARNINGS_VIEW,
+  EARNINGS_VIEW_SEARCH_PARAM,
+  parseEarningsView,
+} from "./constants/earningsView";
+export type { EarningsView } from "./constants/earningsView";
+
+export { ROUTE_PROVIDER_EARNINGS, providerEarningsPath } from "./constants/routes";
 export {
   PROVIDER_SETTLEMENTS_QUERY_KEY,
   providerSettlementsQueryKey,

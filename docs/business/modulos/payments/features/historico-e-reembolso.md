@@ -2,15 +2,15 @@
 
 ## 1. Resumo executivo
 
-- **O que é:** leitura do **histórico de captura** (cliente: cobranças no cartão; prestador: recebimentos `provider_payout` na captura) e o fluxo de **cancelamento com reembolso** pós-pagamento (`process-refund`), inclusive cancelamento **pré-cobrança** sem estorno.
-- **Problema que resolve:** transparência do que foi cobrado/reembolsado e do que o prestador “recebeu” na captura; execução segura de cancelamento/estorno com política ToS e gateway-first.
-- **Quem usa:** cliente e prestador (histórico em Configurações; cancelamento no detalhe do serviço contratado).
+- **O que é:** leitura do **histórico de captura** (cliente: cobranças no cartão; prestador: cobranças / `provider_payout` na captura) e o fluxo de **cancelamento com reembolso** pós-pagamento (`process-refund`), inclusive cancelamento **pré-cobrança** sem estorno.
+- **Problema que resolve:** transparência do que foi cobrado/reembolsado e do valor combinado com o cliente na captura; execução segura de cancelamento/estorno com política ToS e gateway-first.
+- **Quem usa:** cliente e prestador (histórico em Configurações — cliente em Pagamentos; prestador na aba Cobranças de Ganhos; cancelamento no detalhe do serviço contratado).
 - **Resultado esperado:** lista atualizada de parcelas pós-captura; cancelamento pré-`PAID` sem custo; pós-`PAID` com estorno submetido ao gateway e serviço/chat cancelados só após ACK.
-- **Não confundir** com **Ganhos** (`/dashboard/settings/earnings`): liquidações bancárias — ver [ganhos-e-liquidacoes](../../provider-earnings/features/ganhos-e-liquidacoes.md).
+- **Não confundir** com **Depósitos** em Ganhos (`/dashboard/settings/earnings`, default): liquidações bancárias — ver [ganhos-e-liquidacoes](../../provider-earnings/features/ganhos-e-liquidacoes.md).
 
 ## 2. Objetivo de negócio
 
-- **Finalidade:** auditar cobranças/recebimentos na captura e permitir cancelamento com estorno conforme Termos (faixas de antecedência).
+- **Finalidade:** auditar cobranças na captura e permitir cancelamento com estorno conforme Termos (faixas de antecedência).
 - **Valor:** cliente vê breakdown de reembolso; prestador vê líquido após clawback confirmado; plataforma evita cancelar serviço antes do ACK do gateway (P-12).
 - **Impacto se falhar:** histórico vazio/erro; cancelamento bloqueado ou inconsistente (gateway ACK sem commit de domínio — recovery via `payment_mark_refund_gateway_acked` + reconcile/webhook).
 - **Contexto:** feature de `payments`; UI de cancelamento embutida em `view-services`; histórico embutido em `settings`.
@@ -20,21 +20,21 @@
 | Perfil | Superfície | Rota / entry | Componente |
 |--------|------------|--------------|------------|
 | Cliente | Histórico de pagamentos | `/dashboard/settings/payments` → aba **Histórico** | `PaymentHistorySection` → `ClientPaymentHistoryList` |
-| Prestador | Recebimentos (captura) | `/dashboard/settings/receivables` | `PaymentHistorySection` → `ProviderPaymentHistoryList` |
+| Prestador | Cobranças (captura) | `/dashboard/settings/earnings?view=charges` (aba **Cobranças** de Ganhos) | `PaymentHistorySection` → `ProviderPaymentHistoryList` |
 | Cliente / Prestador | Cancelar serviço | Detalhe do serviço (`ServiceDetailPage` → `ServiceDetailActionsBar`) | `ContractedServiceCancelAction` |
 
-- **Rota própria:** nenhuma — seções do hub Configurações (`settings`). Na página do cliente, o histórico divide espaço com cartões via Tabs (aba irmã **Formas de pagamento**); o título da página (“Pagamentos” / “Recebimentos”) fica no `SettingsSectionHeader` — as listas **não** repetem título de seção.
-- **Deep links / query params:** não há parâmetros específicos desta feature (aba padrão do cliente = Formas de pagamento; Histórico só ao selecionar a aba).
+- **Rota própria:** nenhuma — seções do hub Configurações (`settings`). Na página do cliente, o histórico divide espaço com cartões via Tabs (aba irmã **Formas de pagamento**); o título da página (“Pagamentos”) fica no `SettingsSectionHeader`. No prestador, o título da página é **Ganhos**; a lista de captura **não** tem header próprio. As listas **não** repetem título de seção.
+- **Deep links / query params:** cliente — aba padrão = Formas de pagamento (Histórico só ao selecionar a aba). Prestador — `view=charges` abre Cobranças; default da página Ganhos = Depósitos. Rota legado `/dashboard/settings/receivables` faz `Navigate replace` para `/dashboard/settings/earnings?view=charges`.
 - **Guards:** hub Configurações e detalhe de serviço sob dashboard autenticado; views de histórico filtram por `auth.uid()` (ou admin).
 
-Evidência: `src/router.tsx` (`settings/payments`, `settings/receivables`); `ClientPaymentsPage.tsx` (Tabs); `ProviderReceivablesPage.tsx`; `ServiceDetailActionsBar.tsx` (`ContractedServiceCancelAction` quando há contrato e papel client/provider).
+Evidência: `src/router.tsx` (`settings/payments`, `settings/earnings`, `settings/receivables` redirect); `ClientPaymentsPage.tsx` (Tabs); `ProviderEarningsSectionPage.tsx`; `ProviderReceivablesPage.tsx`; `ServiceDetailActionsBar.tsx` (`ContractedServiceCancelAction` quando há contrato e papel client/provider).
 
 ## 4. Perfis envolvidos
 
 | Papel | Histórico | Cancelamento / reembolso |
 |-------|-----------|---------------------------|
 | Cliente | Vê próprias parcelas em `client_payment_transactions_v` | Pode cancelar se elegível; motivo `CLIENT_INITIATED`; faixa ToS cliente |
-| Prestador | Vê próprios recebimentos em `provider_payment_receivables_v` | Pode cancelar se elegível; motivo `PROVIDER_INITIATED`; estorno integral (`PROVIDER_FULL_REFUND`) |
+| Prestador | Vê próprias cobranças em `provider_payment_receivables_v` | Pode cancelar se elegível; motivo `PROVIDER_INITIATED`; estorno integral (`PROVIDER_FULL_REFUND`) |
 | Admin plataforma | Views permitem SELECT via `is_platform_admin()` | **Evidência parcial:** não há UI dedicada de cancelamento admin neste módulo |
 | Anônimo / outro usuário | Sem SELECT nas views | `FORBIDDEN` se não for client/provider do serviço |
 
@@ -130,8 +130,8 @@ flowchart TD
 
 | Campo | Origem | Uso |
 |-------|--------|-----|
-| `amountReceivedAtCapture` | `provider_payout` | valor original se ≠ líquido |
-| `netAmountReceived` | fórmula clawback / payout | valor principal |
+| `amountReceivedAtCapture` | `provider_payout` | **Primário** — valor combinado / acordado |
+| `netAmountReceived` | fórmula clawback / payout | **Secundário** se diferente do primário: “Líquido após estornos: …” |
 | `receivedAt` | `paid_at` | data de captura (não liquidação bancária) |
 | demais | análogos ao cliente | estado, disputa |
 
@@ -233,7 +233,7 @@ Cancelamento pós-commit / side effects → `contracted_services.status = CANCEL
 | Webhook NetCred `TRANSACTION_REFUND` | Confirma valor/`refunded_at` e estado final |
 | Webhook void / `DEAD_LETTER` / reconcile | Ops de alinhamento gateway — [reconciliacao-e-voids](./reconciliacao-e-voids.md) (não altera fórmula de clawback da view) |
 | Reconciliação / `payment_complete_refund_domain_side_effects` | Recovery domínio se commit parcial |
-| `provider-earnings` (`ProviderSettlementDisclosure`, rota Ganhos) | Previsão de depósito D+30 no item do prestador |
+| `provider-earnings` (`ProviderSettlementDisclosure`, rota Ganhos) | Previsão de depósito no caption do ledger / aba Depósitos; `ProviderSettlementStatus` (não nos cards da lista de captura) |
 | Chats (`cns_close_contracted_service_chat`) | Fecha conversa no cancelamento |
 | `cns_cancel_active_service_reschedule_requests` | Cancela pedidos de reagendamento ativos |
 | Sentry / payment-logger | Erros críticos de gateway/commit |
@@ -247,11 +247,12 @@ Cancelamento pós-commit / side effects → `contracted_services.status = CANCEL
 | Ordenação | Cliente: `paid_at` desc; Prestador: `received_at` desc |
 | Filtros UI | Nenhum (todos os estados pós-captura elegíveis na view) |
 | Busca textual | Não |
-| Paginação | **Não** — lista completa no cliente |
+| Paginação | **Não** — lista completa no cliente (totais do ledger Cobranças = soma client-side de `amountReceivedAtCapture` via `summarizeProviderReceivables`; sem RPC nova) |
 | Loading | Skeleton Prestway (sem spinner textual) |
 | Empty (cliente) | Painel dashed: “Nenhum pagamento ainda” + copy de apoio |
-| Empty (prestador) | Painel dashed: “Nenhum recebimento ainda” + copy de apoio; intro com link para Ganhos permanece acima da lista |
-| Erro | Mensagem de load fail + **Tentar novamente** |
+| Empty (prestador) | Painel dashed: “Nenhuma cobrança ainda” + “Quando um cliente pagar um serviço seu, o valor combinado aparece aqui.”; **sem** parágrafo educativo, **sem** link para Ganhos, **sem** `ProviderSettlementDisclosure` por card |
+| Erro (cliente) | Mensagem de load fail + **Tentar novamente** |
+| Erro (prestador) | “Não foi possível carregar o histórico de cobranças.” + **Tentar novamente** |
 
 ## 15. Ações disponíveis
 
@@ -260,7 +261,6 @@ Cancelamento pós-commit / side effects → `contracted_services.status = CANCEL
 | Ver histórico | Cliente / Prestador | Autenticado; linhas na view | Lista / empty / erro de fetch (retry) | Mensagem de load fail + Tentar novamente |
 | Cancelar (pré-cobrança) | Cliente ou prestador do serviço | Elegibilidade UI + estados pré-charge | Toast “Serviço cancelado com sucesso.” | Matriz §Anexo A |
 | Cancelar (pós-`PAID`) | Idem | Parcela `PAID` + execução conhecida no servidor | Toast com janela 30–60 dias | `refund_failed`, guards 409, etc. |
-| Abrir Ganhos (link) | Prestador | — | Navegação `/dashboard/settings/earnings` | — |
 
 **Não há** ação de “solicitar reembolso” isolada do cancelamento do serviço neste módulo.
 
@@ -272,7 +272,7 @@ Cancelamento pós-commit / side effects → `contracted_services.status = CANCEL
 | Upstream UI | `view-services` | Embute `ContractedServiceCancelAction` |
 | Downstream | `chats` | Close conversation no cancel |
 | Downstream | `service-reschedule` | Cancela requests ativos; ToS usa slot vigente |
-| Lateral | `provider-earnings` | Disclosure + distinção captura vs liquidação |
+| Lateral | `provider-earnings` | Distinção captura (Cobranças) vs liquidação (Depósitos); disclosure **não** nos cards da lista |
 | Lateral | Checkout/cobrança | Estados de parcela; captura inicial — [checkout-e-cobranca](./checkout-e-cobranca.md) (não detalhado aqui) |
 | Eng. | `docs/payment-system/design.md` §3.13 / §4.8 | Norma técnica |
 
@@ -287,7 +287,8 @@ Cancelamento pós-commit / side effects → `contracted_services.status = CANCEL
 7. Payload `refund_failed` mesmo com HTTP ok é forçado a erro (CHK-008) — nunca toast de sucesso.
 8. `supportUrl` é anexado ao `Error` em falhas, mas o toast de `ContractedServiceCancelAction` exibe só `error.message` (URL não aparece na UI atual).
 9. Rate limit fail-closed: se o limiter falhar, a Edge rejeita (não “abre” o limite).
-10. Título da superfície fica no `SettingsSectionHeader` da página host; `ClientPaymentHistoryList` / `ProviderPaymentHistoryList` / `SavedCardsList` não repetem H2/título de seção.
+10. Título da superfície fica no `SettingsSectionHeader` da página host (cliente: Pagamentos; prestador: Ganhos); `ClientPaymentHistoryList` / `ProviderPaymentHistoryList` / `SavedCardsList` não repetem H2/título de seção.
+11. Copy da lista do prestador usa **“cobranças”** (não “recebimentos”): contagem “N cobranças” / empty “Nenhuma cobrança ainda”; loading `aria-label="Carregando cobranças"`.
 
 ## 18. Riscos
 
@@ -308,9 +309,9 @@ Cancelamento pós-commit / side effects → `contracted_services.status = CANCEL
 | UI cancel | `src/features/payments/components/ContractedServiceCancelAction.tsx` |
 | Hooks | `useClientPaymentHistory.ts`, `useProviderPaymentHistory.ts`, `useProcessRefund.ts`, `usePaymentScheduleLifecycle.ts` |
 | API | `api/history.api.ts`, `api/refund.api.ts`, `api/charges.api.ts` (lifecycle) |
-| Utils | `clientPaymentHistoryAmounts.ts`, `formatPaymentHistoryState.ts`, `contractedServiceCancellation.ts`, `mapCancellationError.ts`, `formatPostChargeCancelSuccessMessage.ts` |
+| Utils | `clientPaymentHistoryAmounts.ts`, `summarizeProviderReceivables.ts`, `formatPaymentHistoryState.ts`, `contractedServiceCancellation.ts`, `mapCancellationError.ts`, `formatPostChargeCancelSuccessMessage.ts` |
 | Tipos | `types/paymentHistory.types.ts` |
-| Conta | `src/features/settings/components/sections/ClientPaymentsPage.tsx` (Tabs), `ProviderReceivablesPage.tsx` |
+| Conta | `src/features/settings/components/sections/ClientPaymentsPage.tsx` (Tabs), `ProviderEarningsSectionPage.tsx` (aba Cobranças), `ProviderReceivablesPage.tsx` (redirect legado) |
 | Detalhe serviço | `src/features/view-services/components/ServiceDetailActionsBar.tsx`, `ServiceDetailPage.tsx` |
 | Edge | `supabase/functions/process-refund/{index,handleRequest,types}.ts` |
 | Views | `supabase/migrations/20260801140000_create_payment_history_views.sql` |
@@ -356,7 +357,7 @@ Fontes: `mapCancellationError.ts`, `refund.api.ts`, `process-refund/handleReques
 | `Unauthorized` / sem Bearer | 401 | Fallback genérico | |
 | `service_id` ausente / JSON inválido | 400 | Fallback genérico | |
 | `service_scheduled_at_missing` | 422 | Fallback genérico | `service_execution_at` nulo no contexto pós-PAID |
-| Erro de rede / fetch history | — | Não foi possível carregar o histórico de pagamentos/recebimentos. + **Tentar novamente** | Listas apenas |
+| Erro de rede / fetch history | — | Cliente: histórico de pagamentos; prestador: “Não foi possível carregar o histórico de cobranças.” + **Tentar novamente** | Listas apenas |
 | Código desconhecido | — | Não foi possível processar o cancelamento/reembolso. Tente novamente. | `FALLBACK_CANCELLATION_ERROR` |
 
 ### Outcomes de sucesso (não são erros)

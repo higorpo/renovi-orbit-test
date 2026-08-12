@@ -120,6 +120,8 @@ export type {
   ClientPaymentTransaction,
   ProviderPaymentReceivable,
 } from "./types/paymentHistory.types";
+export { summarizeProviderReceivables } from "./utils/summarizeProviderReceivables";
+export type { ProviderReceivablesSummary } from "./utils/summarizeProviderReceivables";
 export type { CpfStepFormData } from "./types/cpfStep.validation";
 export type { PhoneStepFormData } from "./types/phoneStep.validation";
 export type {

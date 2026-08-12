@@ -24,4 +24,14 @@ describe("getSettingsNavItems", () => {
       expect(logout?.label).toBe("Sair da conta");
     }
   });
+
+  it("keeps a single Ganhos item for providers and omits Recebimentos", () => {
+    const labels = getSettingsNavItems("provider")
+      .filter(isSettingsNavLink)
+      .map((item) => item.label);
+
+    expect(labels).toContain("Ganhos");
+    expect(labels).not.toContain("Recebimentos");
+    expect(labels.filter((label) => label === "Ganhos")).toHaveLength(1);
+  });
 });

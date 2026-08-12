@@ -9,15 +9,6 @@ vi.mock("../../../hooks/useProviderPaymentHistory", () => ({
   useProviderPaymentHistory: () => mockUseProviderPaymentHistory(),
 }));
 
-vi.mock("@/features/provider-earnings", () => ({
-  ProviderSettlementDisclosure: ({ capturePaidAt }: { capturePaidAt: string }) => (
-    <div data-testid="settlement">{capturePaidAt}</div>
-  ),
-  PROVIDER_SETTLEMENT_COMPLETION_NOTE:
-    "Marcar o serviço como concluído não antecipa quando o valor será depositado na sua conta.",
-  ROUTE_PROVIDER_EARNINGS: "/dashboard/settings/earnings",
-}));
-
 function renderList() {
   return render(
     <MemoryRouter>
@@ -35,7 +26,7 @@ describe("ProviderPaymentHistoryList", () => {
     });
 
     renderList();
-    expect(screen.getByLabelText(/Carregando recebimentos/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Carregando cobranças/i)).toBeInTheDocument();
   });
 
   it("shows error state", () => {
@@ -48,7 +39,7 @@ describe("ProviderPaymentHistoryList", () => {
 
     renderList();
     expect(screen.getByRole("alert")).toHaveTextContent(
-      /Não foi possível carregar o histórico de recebimentos/i,
+      /Não foi possível carregar o histórico de cobranças/i,
     );
   });
 
@@ -60,10 +51,10 @@ describe("ProviderPaymentHistoryList", () => {
     });
 
     renderList();
-    expect(screen.getByText(/Nenhum recebimento ainda/i)).toBeInTheDocument();
+    expect(screen.getByText(/Nenhuma cobrança ainda/i)).toBeInTheDocument();
   });
 
-  it("renders receivables with original amount when net differs", () => {
+  it("renders agreed amount and net when they differ", () => {
     mockUseProviderPaymentHistory.mockReturnValue({
       data: [{
         scheduleId: "sched-1",
@@ -83,12 +74,12 @@ describe("ProviderPaymentHistoryList", () => {
 
     renderList();
 
-    expect(screen.getByText(/Valor original/i)).toBeInTheDocument();
+    expect(screen.getByText(/Líquido após estornos/i)).toBeInTheDocument();
     expect(screen.getByText("Chargeback em análise")).toBeInTheDocument();
-    expect(screen.getByTestId("settlement")).toHaveTextContent("2026-07-01T12:00:00.000Z");
+    expect(screen.queryByRole("link", { name: /Ganhos/i })).not.toBeInTheDocument();
   });
 
-  it("hides original amount and dispute badge when values match", () => {
+  it("hides net breakdown and dispute badge when values match", () => {
     mockUseProviderPaymentHistory.mockReturnValue({
       data: [{
         scheduleId: "sched-2",
@@ -108,7 +99,7 @@ describe("ProviderPaymentHistoryList", () => {
 
     renderList();
 
-    expect(screen.queryByText(/Valor original/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Líquido após estornos/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Chargeback em análise")).not.toBeInTheDocument();
   });
 });
