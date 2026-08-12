@@ -1,12 +1,12 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { Loader2 } from "lucide-react";
 import {
-  Dialog,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { ShellDialogContent } from "@/components/ui/shell-dialog";
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Drawer,
   DrawerContent,
@@ -299,15 +299,30 @@ export function AddressFormDialog({
 
   if (isDesktop) {
     return (
-      <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-        <ShellDialogContent size="sm" className="gap-4 overflow-y-auto sm:p-6">
-          <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
-          </DialogHeader>
-          {formContent}
-          <DialogFooter>{footerContent}</DialogFooter>
-        </ShellDialogContent>
-      </Dialog>
+      <Sheet
+        open={open}
+        onOpenChange={(next) => {
+          if (!next && !submitting) onClose();
+        }}
+      >
+        <SheetContent
+          side="right"
+          className="flex w-full flex-col gap-0 border-l p-0 sm:max-w-lg md:max-w-xl"
+          aria-describedby={undefined}
+        >
+          <SheetHeader className="shrink-0 space-y-0 border-b px-6 py-4 pr-14 text-left">
+            <SheetTitle className="font-display text-lg font-semibold tracking-tight text-ink">
+              {title}
+            </SheetTitle>
+          </SheetHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-6 py-5">
+            {formContent}
+          </div>
+          <SheetFooter className="shrink-0 flex-row justify-end gap-2 space-x-0 border-t bg-canvas px-6 py-4">
+            {footerContent}
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     );
   }
 

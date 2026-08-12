@@ -52,6 +52,7 @@ flowchart TD
 ## 6. Fluxos alternativos e exceções
 
 - **Novo endereço com lista existente:** alternar para formulário completo e voltar à lista.
+- **Apresentação do add/edit (`AddressFormDialog`):** no desktop (breakpoint `md+`) o formulário abre em **Sheet lateral à direita** (`SheetContent side="right"`); no mobile permanece **Drawer inferior** (vaul, bottom sheet). O nome do componente continua `AddressFormDialog`; CRUD, CEP e mapa não mudam.
 - **Erro de API:** feedback via UI (toasts/dialogs nos componentes).
 - **CEP:** resolução parcial ou falha — **comportamento detalhado:** ver hooks `resolveFormDataFromCep` / APIs (evidência parcial neste documento).
 
@@ -115,9 +116,9 @@ flowchart TD
 
 | Ação | Quem | Pré-condição | Resultado | Efeitos |
 |------|------|--------------|-----------|---------|
-| Criar endereço | Cliente logado | Form válido | Novo registro | Aparece em listas |
-| Editar | Cliente | Endereço próprio | Atualização | — |
-| Excluir | Cliente | Endereço próprio | Remoção | Pode afetar pedidos futuros |
+| Criar endereço | Cliente logado | Form válido | Novo registro | Aparece em listas; UI via `AddressFormDialog` (Sheet direita no desktop / Drawer no mobile) |
+| Editar | Cliente | Endereço próprio | Atualização | Mesma apresentação do criar |
+| Excluir | Cliente | Endereço próprio | Remoção | Pode afetar pedidos futuros; dialog dedicado (`DeleteAddressDialog`) |
 | Definir padrão | Cliente | >1 endereço | Atualização de flags | Pré-seleção em fluxos |
 
 ## 16. Dependências
@@ -158,3 +159,7 @@ flowchart TD
 ## 22. Atualização de auditoria (2026-08-02)
 
 - Revalidado sem drift.
+
+## 23. Atualização de auditoria (2026-08-12)
+
+- **UX add/edit:** em desktop (`md+`), `AddressFormDialog` passa a abrir como **Sheet à direita** em vez de Dialog centrado; no mobile continua **Drawer** inferior (vaul). Comportamento de negócio (CRUD, CEP, mapa) inalterado.
