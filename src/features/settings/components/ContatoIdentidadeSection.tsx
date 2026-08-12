@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Phone } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import type { AccountFormData } from "../types/accountForm.validation";
-import { maskPhone, maskCPF } from "@/lib/masks";
+import { maskPhone } from "@/lib/masks";
 import { SettingsCardHeader } from "./SettingsCardHeader";
 
 export interface ContatoIdentidadeSectionProps {
@@ -23,9 +23,9 @@ export function ContatoIdentidadeSection({ form }: ContatoIdentidadeSectionProps
     <Card className="rounded-2xl border-border shadow-sm">
       <CardHeader className="pb-2">
         <SettingsCardHeader
-          title="Contato e identidade"
+          title="Contato"
           icon={Phone}
-          description="Telefone e documento para contato e verificação"
+          description="Telefone para comunicação sobre seus serviços"
         />
       </CardHeader>
       <CardContent className="space-y-4 pt-2">
@@ -49,31 +49,6 @@ export function ContatoIdentidadeSection({ form }: ContatoIdentidadeSectionProps
               </FormControl>
               <FormDescription>
                 Use um número de WhatsApp ou telefone para contato sobre seus serviços.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="cpf"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="account-cpf">CPF</FormLabel>
-              <FormControl>
-                <Input
-                  id="account-cpf"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="000.000.000-00"
-                  value={field.value}
-                  onChange={(e) => field.onChange(maskCPF(e.target.value))}
-                  onBlur={field.onBlur}
-                />
-              </FormControl>
-              <FormDescription>
-                Seu CPF é usado apenas para validação de identidade e proteção da sua
-                conta, em conformidade com a LGPD.
               </FormDescription>
               <FormMessage />
             </FormItem>

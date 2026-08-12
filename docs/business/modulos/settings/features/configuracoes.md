@@ -267,7 +267,7 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 | Seção | Conteúdo principal |
 |-------|-------------------|
 | Índice (mobile) | Summary + nav list |
-| personal-info | Header; Summary (só desktop); Dados pessoais + Contato + auto-save |
+| personal-info | Header; Summary (só desktop); Dados pessoais (nome, e-mail, CPF) + Contato (telefone) + auto-save |
 | addresses | `AddressesSection` |
 | payments | `SavedCardsList` + `PaymentHistorySection role="client"` |
 | privacy | `PrivacySection` |

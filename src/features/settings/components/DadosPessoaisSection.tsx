@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { User } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import type { AccountFormData } from "../types/accountForm.validation";
+import { maskCPF } from "@/lib/masks";
 import { SettingsCardHeader } from "./SettingsCardHeader";
 
 export interface DadosPessoaisSectionProps {
@@ -64,6 +65,31 @@ export function DadosPessoaisSection({ form, email }: DadosPessoaisSectionProps)
             contato com o suporte.
           </FormDescription>
         </div>
+        <FormField
+          control={form.control}
+          name="cpf"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel htmlFor="account-cpf">CPF</FormLabel>
+              <FormControl>
+                <Input
+                  id="account-cpf"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="000.000.000-00"
+                  value={field.value}
+                  onChange={(e) => field.onChange(maskCPF(e.target.value))}
+                  onBlur={field.onBlur}
+                />
+              </FormControl>
+              <FormDescription>
+                Seu CPF é usado apenas para validação de identidade e proteção da sua
+                conta, em conformidade com a LGPD.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
       </CardContent>
     </Card>
   );

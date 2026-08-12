@@ -19,18 +19,15 @@ describe("ContatoIdentidadeSection", () => {
     render(
       <Wrapper defaultValues={{ full_name: "Maria", phone: "", cpf: "" }} />
     );
-    expect(screen.getByText("Contato e identidade")).toBeInTheDocument();
+    expect(screen.getByText("Contato")).toBeInTheDocument();
     expect(screen.getByLabelText(/Telefone \/ WhatsApp/)).toBeInTheDocument();
   });
 
-  it("renders CPF field with description", () => {
+  it("does not render CPF (lives in Dados pessoais)", () => {
     render(
       <Wrapper defaultValues={{ full_name: "Maria", phone: "", cpf: "" }} />
     );
-    expect(screen.getByLabelText(/CPF/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/Seu CPF é usado apenas para validação/)
-    ).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^CPF$/)).not.toBeInTheDocument();
   });
 
   it("applies phone mask on change", () => {
@@ -40,14 +37,5 @@ describe("ContatoIdentidadeSection", () => {
     const phoneInput = screen.getByLabelText(/Telefone \/ WhatsApp/);
     fireEvent.change(phoneInput, { target: { value: "11987654321" } });
     expect(phoneInput).toHaveValue("(11) 98765-4321");
-  });
-
-  it("applies CPF mask on change", () => {
-    render(
-      <Wrapper defaultValues={{ full_name: "Maria", phone: "", cpf: "" }} />
-    );
-    const cpfInput = screen.getByLabelText(/CPF/);
-    fireEvent.change(cpfInput, { target: { value: "12345678900" } });
-    expect(cpfInput).toHaveValue("123.456.789-00");
   });
 });

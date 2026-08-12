@@ -67,7 +67,7 @@ export class SettingsPage {
     return this.page.locator("#account-phone");
   }
 
-  /** Client: CPF in Contato e identidade */
+  /** Client: CPF in Dados pessoais */
   getCpfInput() {
     return this.page.locator("#account-cpf");
   }
@@ -84,7 +84,7 @@ export class SettingsPage {
   }
 
   getSectionContatoIdentidade() {
-    return this.page.getByText("Contato e identidade").first();
+    return this.page.getByText("Contato").first();
   }
 
   getSectionEnderecos() {

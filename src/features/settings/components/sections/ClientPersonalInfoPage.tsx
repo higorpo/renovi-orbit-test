@@ -28,10 +28,18 @@ export function ClientPersonalInfoPage() {
   const isDesktop = useBreakpointMd();
   const { user } = useAuth();
   const { profile, isLoading: profileLoading, error: profileError, refetch } = useAccountProfile();
-  const { cpf: clientPrivateCpf, updateCpfAsync } = useClientPrivateProfile();
+  const {
+    cpf: clientPrivateCpf,
+    updateCpfAsync,
+    isLoading: privateLoading,
+  } = useClientPrivateProfile();
   const { updateProfileAsync, isUpdating } = useUpdateAccountProfile();
   const { uploadPhotoAsync, isUploading } = useUploadProfilePhoto();
   const { removePhotoAsync, isRemoving } = useRemoveProfilePhoto();
+
+  // Wait for private profile too — otherwise CPF hydrates empty and never updates
+  // (hydratedProfileIdRef locks after the first reset).
+  const isFormLoading = profileLoading || privateLoading;
 
   const defaultValues = useMemo(
     () =>
@@ -54,12 +62,11 @@ export function ClientPersonalInfoPage() {
 
   useEffect(() => {
     if (!profile?.id) return;
+    if (isFormLoading || !defaultValues) return;
     if (hydratedProfileIdRef.current === profile.id) return;
-    if (!profileLoading && defaultValues) {
-      form.reset(defaultValues);
-      hydratedProfileIdRef.current = profile.id;
-    }
-  }, [profile?.id, profileLoading, defaultValues, form]);
+    form.reset(defaultValues);
+    hydratedProfileIdRef.current = profile.id;
+  }, [profile?.id, isFormLoading, defaultValues, form]);
 
   const email = user?.email ?? "";
   const watchedValues = form.watch();
@@ -144,7 +151,7 @@ export function ClientPersonalInfoPage() {
 
       {isDesktop ? (
         <div>
-          {profileLoading ? (
+          {isFormLoading ? (
             <AccountSummaryCardSkeleton />
           ) : profile ? (
             <AccountSummaryCard
@@ -165,7 +172,7 @@ export function ClientPersonalInfoPage() {
         </div>
       ) : null}
 
-      {profileLoading ? (
+      {isFormLoading ? (
         <ClientFormSkeleton />
       ) : (
         <Form {...form}>

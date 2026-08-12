@@ -66,4 +66,12 @@ describe("defaultAccountFormData", () => {
     expect(data.phone).toBe("(48) 99999-9999");
     expect(data.cpf).toBe("529.982.247-25");
   });
+
+  it("masks unformatted CPF digits for display", () => {
+    const data = defaultAccountFormData({
+      full_name: "Maria",
+      cpf: "52998224725",
+    });
+    expect(data.cpf).toBe("529.982.247-25");
+  });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { useForm } from "react-hook-form";
 import { Form } from "@/components/ui/form";
 import { DadosPessoaisSection } from "../DadosPessoaisSection";
@@ -46,5 +46,30 @@ describe("DadosPessoaisSection", () => {
     expect(
       screen.getByText(/Seu e-mail não pode ser alterado/)
     ).toBeInTheDocument();
+  });
+
+  it("renders CPF field with description", () => {
+    render(
+      <Wrapper
+        defaultValues={{ full_name: "Maria", phone: "", cpf: "" }}
+        email="maria@example.com"
+      />
+    );
+    expect(screen.getByLabelText(/CPF/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Seu CPF é usado apenas para validação/)
+    ).toBeInTheDocument();
+  });
+
+  it("applies CPF mask on change", () => {
+    render(
+      <Wrapper
+        defaultValues={{ full_name: "Maria", phone: "", cpf: "" }}
+        email="maria@example.com"
+      />
+    );
+    const cpfInput = screen.getByLabelText(/CPF/);
+    fireEvent.change(cpfInput, { target: { value: "12345678900" } });
+    expect(cpfInput).toHaveValue("123.456.789-00");
   });
 });

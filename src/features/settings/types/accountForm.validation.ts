@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { validateFullName } from "@/features/auth";
 import { validateCPF, validateBrazilPhone } from "@/lib/validators";
+import { maskCPF } from "@/lib/masks";
 
 const FULL_NAME_MESSAGE = "Informe seu nome completo com nome e sobrenome";
 
@@ -27,6 +28,6 @@ export function defaultAccountFormData(profile: {
   return {
     full_name: profile.full_name.trim(),
     phone: profile.phone ?? "",
-    cpf: profile.cpf ?? "",
+    cpf: profile.cpf ? maskCPF(profile.cpf) : "",
   };
 }
