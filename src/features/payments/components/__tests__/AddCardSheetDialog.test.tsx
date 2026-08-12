@@ -124,6 +124,31 @@ describe("AddCardSheetDialog", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
+  it("renders right sheet on desktop when desktopPresentation is sheet", () => {
+    mockUseBreakpointMd.mockReturnValue(true);
+    const onOpenChange = vi.fn();
+
+    render(
+      <AddCardSheetDialog
+        open
+        onOpenChange={onOpenChange}
+        desktopPresentation="sheet"
+        tokenizeContext="profile"
+        onSuccess={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Adicionar cartão")).toBeInTheDocument();
+    expect(
+      screen.getByText(/enviados de forma segura/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Salvar cartão/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Fechar/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Cancelar/i }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
   it("blocks close and shows Salvando while tokenization is pending", () => {
     const onOpenChange = vi.fn();
     render(

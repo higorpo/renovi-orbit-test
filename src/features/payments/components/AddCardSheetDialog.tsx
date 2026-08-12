@@ -17,6 +17,14 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
@@ -25,6 +33,8 @@ import { CardForm } from "./CheckoutStepper/CardForm";
 
 export const ADD_CARD_FORM_ID = "add-card-sheet-form";
 
+export type AddCardDesktopPresentation = "dialog" | "sheet";
+
 export type AddCardSheetDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -32,6 +42,11 @@ export type AddCardSheetDialogProps = {
   tokenizeContext?: "checkout" | "profile";
   savedCpf?: string | null;
   phone?: string;
+  /**
+   * Desktop only. Default `dialog` keeps checkout unchanged.
+   * Settings passes `sheet` for a right-side panel.
+   */
+  desktopPresentation?: AddCardDesktopPresentation;
   onSuccess: (result: TokenizeCardSuccess) => void;
 };
 
@@ -42,6 +57,7 @@ export function AddCardSheetDialog({
   tokenizeContext = "checkout",
   savedCpf,
   phone,
+  desktopPresentation = "dialog",
   onSuccess,
 }: AddCardSheetDialogProps) {
   const isDesktop = useBreakpointMd();
@@ -99,6 +115,32 @@ export function AddCardSheetDialog({
       </Button>
     </>
   );
+
+  if (isDesktop && desktopPresentation === "sheet") {
+    return (
+      <Sheet open={open} onOpenChange={handleOpenChange}>
+        <SheetContent
+          side="right"
+          className="flex w-full flex-col gap-0 border-l p-0 sm:max-w-lg md:max-w-xl"
+        >
+          <SheetHeader className="shrink-0 space-y-1.5 border-b px-6 py-4 pr-14 text-left">
+            <SheetTitle className="font-display text-lg font-semibold tracking-tight text-ink">
+              Adicionar cartão
+            </SheetTitle>
+            <SheetDescription>
+              Seus dados de cartão são enviados de forma segura e não ficam salvos neste dispositivo.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-6 py-5">
+            {formContent}
+          </div>
+          <SheetFooter className="shrink-0 flex-row justify-end gap-2 space-x-0 border-t bg-canvas px-6 py-4">
+            {footerContent}
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+    );
+  }
 
   if (isDesktop) {
     return (

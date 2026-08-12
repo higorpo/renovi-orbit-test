@@ -197,6 +197,7 @@ export function SavedCardsList({
         onOpenChange={setAddCardOpen}
         providerServiceId={providerServiceId}
         tokenizeContext={tokenizeContext}
+        desktopPresentation="sheet"
         savedCpf={savedCpf}
         phone={resolvedPhone}
         onSuccess={handleAddSuccess}
