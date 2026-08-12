@@ -25,9 +25,9 @@
 
 - **Rota própria:** nenhuma — seções do hub Configurações (`settings`).
 - **Deep links / query params:** não há parâmetros específicos desta feature.
-- **Guards:** hub account e detalhe de serviço sob dashboard autenticado; views de histórico filtram por `auth.uid()` (ou admin).
+- **Guards:** hub Configurações e detalhe de serviço sob dashboard autenticado; views de histórico filtram por `auth.uid()` (ou admin).
 
-Evidência: `src/router.tsx` (`account/payments`, `account/receivables`); `ClientPaymentsPage.tsx`; `ProviderReceivablesPage.tsx`; `ServiceDetailActionsBar.tsx` (`ContractedServiceCancelAction` quando há contrato e papel client/provider).
+Evidência: `src/router.tsx` (`settings/payments`, `settings/receivables`); `ClientPaymentsPage.tsx`; `ProviderReceivablesPage.tsx`; `ServiceDetailActionsBar.tsx` (`ContractedServiceCancelAction` quando há contrato e papel client/provider).
 
 ## 4. Perfis envolvidos
 

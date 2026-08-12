@@ -68,7 +68,6 @@ export function ProviderPersonalInfoPage() {
           ) : profile ? (
             <AccountSummaryCard
               fullName={profile.full_name}
-              email={email}
               createdAt={profile.created_at}
               profileImagePath={profile.profile_image_path}
               onPhotoSelect={(file) => {
@@ -85,7 +84,7 @@ export function ProviderPersonalInfoPage() {
               onCopyProfileLink={profileUrl ? handleCopyProfileLink : undefined}
             />
           ) : null}
-    </SettingsSectionShell>
+        </div>
       ) : null}
 
       {profileLoading ? (
@@ -96,10 +95,7 @@ export function ProviderPersonalInfoPage() {
             <ProviderDadosPessoaisAdapter form={form} email={email} />
             <Card className="rounded-2xl border-border shadow-sm">
               <CardHeader className="pb-2">
-                <SettingsCardHeader
-                  title="Contato"
-                  icon={Phone}
-                />
+                <SettingsCardHeader title="Contato" icon={Phone} />
               </CardHeader>
               <CardContent className="pt-2">
                 <FormField

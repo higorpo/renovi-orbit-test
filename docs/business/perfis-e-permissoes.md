@@ -30,8 +30,7 @@ Evidência: `src/router.tsx` (árvore atual).
 | `/dashboard/services` | Herdado | `client`, `provider` | Real (`my-services`) | Slot por papel no layout |
 | `/dashboard/services/calendar` | Aninhado `provider` | **`provider` apenas** | Real (`provider-calendar`) | **Fora do menu**; entrada via banner em Meus Serviços |
 | `/dashboard/services/:id` | Herdado | `client`, `provider` | Real (`view-services`) | Detalhe; sheet ou stack; **fora do menu** |
-| `/dashboard/settings` (+ seções) | Herdado (+ `SettingsRoleGate` por seção) | `client`, `provider` | Real (`settings`; earnings host) | **Allowlist KYC**; Ganhos em `/dashboard/settings/earnings` |
-| `/dashboard/settings` | Herdado | `client`, `provider` | **Fake** | Sem item de menu |
+| `/dashboard/settings` (+ seções) | Herdado (+ `SettingsRoleGate` por seção) | `client`, `provider` | Real (`settings`; earnings host) | Item **Configurações** no menu; **Allowlist KYC**; Ganhos em `/dashboard/settings/earnings` |
 | `/dashboard/help` | Herdado | `client`, `provider` | **Fake** | No menu (overflow cliente: no main; prestador: overflow) |
 | `/dashboard/jobs` | Aninhado `provider` | **`provider` apenas** | Real (`provider-jobs`) | |
 | `/dashboard/chats` | Aninhado `client`+`provider` | `client`, `provider` | Real (`chats`) | Inbox CNS |
@@ -75,7 +74,7 @@ Evidência: `src/layouts/DashboardLayout/dashboardMenu.ts`. Bottom nav mobile = 
 | 5 | Configurações | `/dashboard/settings` | Sim | Real (hub; Ganhos dentro) |
 | 6 | Ajuda | `/dashboard/help` | Overflow | Fake |
 
-**Não estão no menu:** `/dashboard/services/calendar`, `/dashboard/services/:id`, `/dashboard/settings`, seções `/dashboard/settings/*` (acesso via Configurações). Não há itens Endereços / Ganhos / “Orçamentos”.
+**Não estão no menu (itens top-level):** `/dashboard/services/calendar`, `/dashboard/services/:id`; seções `/dashboard/settings/*` acessíveis pelo item Configurações (não como itens separados). Não há itens Endereços / Ganhos / “Orçamentos”.
 
 **Menu do prestador (definição):** `getDashboardMenu(role)` sempre retorna o menu completo do papel — sem filtro por status KYC na definição dos itens.
 
@@ -235,8 +234,8 @@ Para detalhes por tabela, ver arquivos em `supabase/migrations/` citados em [ras
 
 ## Resumo executivo para operações
 
-- O **painel** `/dashboard` é só para **`client` e `provider`**; cada área sensível reforça papel com `ProtectedRoute` aninhado (`addresses` → client; `jobs` / `earnings` / `services/calendar` → provider; `chats` / `conta` → ambos).
-- Rotas reais fora do menu: **calendário** (`/dashboard/services/calendar`), **detalhe** (`/dashboard/services/:id`), **settings** (fake).
+- O **painel** `/dashboard` é só para **`client` e `provider`**; cada área sensível reforça papel com `ProtectedRoute` aninhado (`jobs` / `services/calendar` → provider; `chats` / `settings` → ambos; seções do hub com `SettingsRoleGate`).
+- Rotas reais fora do menu top-level: **calendário** (`/dashboard/services/calendar`), **detalhe** (`/dashboard/services/:id`); Ganhos/Endereços só no hub Configurações.
 - **Prestador sem KYC `ACTIVE`:** conteúdo operacional bloqueado pelo gate; **menus ocultos** (desktop, bottom nav, hamburger); header/logo permanece; allowlist de conteúdo **`/dashboard/settings*`**.
 - **Push:** soft prompt para autenticados (copy por papel); **geo operacional só prestador** (device-beacon).
 - **CNS / propostas / reagendamento / pagamentos / conclusão:** matrizes acima; admin sem UI de mutação nesses fluxos.

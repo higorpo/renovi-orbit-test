@@ -26,7 +26,7 @@ Documentação baseada em `src/features/provider-earnings/`, rota hospedada `/da
 
 | Superfície | Rota / componente | Perfil | Observação |
 |------------|-------------------|--------|------------|
-| Página Ganhos | `/dashboard/settings/earnings` → `ProviderEarningsSectionPage` → `EarningsPage` | Prestador | Lazy via hub `account` em `router.tsx`; `SettingsRoleGate allow={['provider']}` |
+| Página Ganhos | `/dashboard/settings/earnings` → `ProviderEarningsSectionPage` → `EarningsPage` | Prestador | Lazy via hub `settings` em `router.tsx`; `SettingsRoleGate allow={['provider']}` |
 | Menu dashboard | **Sem** item Ganhos | — | Removido de `dashboardMenu.ts`; acesso só pelo hub Configurações |
 | Disclosure (Public API) | `ProviderSettlementDisclosure` | Prestador | Export `@/features/provider-earnings` |
 | Recebimentos (captura) | `/dashboard/settings/receivables` → `ProviderPaymentHistoryList` | Prestador | Importa disclosure + link para Ganhos (**código em payments**) |
@@ -38,7 +38,7 @@ Documentação baseada em `src/features/provider-earnings/`, rota hospedada `/da
 
 **Deep links / query params:** nenhum path/query param de filtro ou deep link documentado na feature; filtro é estado React local (`useState`), **não** sincronizado com URL. Rota top-level `/dashboard/earnings` **removida** (sem redirect).
 
-**Diferença mobile vs desktop:** mesma UI de lista dentro do hub (sidebar desktop / stack mobile do account hub).
+**Diferença mobile vs desktop:** mesma UI de lista dentro do hub (sidebar desktop / stack mobile do hub Configurações).
 
 ## 4. Perfis envolvidos
 
@@ -50,7 +50,7 @@ Documentação baseada em `src/features/provider-earnings/`, rota hospedada `/da
 | Não autenticado | Bloqueado pelo dashboard `ProtectedRoute` | `router.tsx` |
 | Admin | Sem tela; list RPC só retorna linhas do `auth.uid()` | Migration da RPC |
 
-**Ações bloqueadas:** papel errado → gate da seção; prestador sem KYC ativo em rotas operacionais → UI KYC; no hub account o conteúdo pode carregar pela allowlist.
+**Ações bloqueadas:** papel errado → gate da seção; prestador sem KYC ativo em rotas operacionais → UI KYC; no hub Configurações o conteúdo pode carregar pela allowlist.
 
 ## 5. Fluxo funcional principal
 
@@ -278,7 +278,7 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 | Direção | Módulo / lib | Relação |
 |---------|--------------|---------|
 | Upstream dados | **payments** (schedules, webhooks, upsert, cron) | Persistência e ingestão |
-| Shell | **dashboard-shell**, **provider-kyc**, **settings** (host) | Hub account, gate, chrome mobile stack |
+| Shell | **dashboard-shell**, **provider-kyc**, **settings** (host) | Hub Configurações, gate, chrome mobile stack |
 | Downstream UI | **payments** (`ProviderPaymentHistoryList`, `ProviderSettlementStatus`) | Consomem Public API do disclosure; view-services **não** monta settlement no card contratado |
 | Cruzado | **settings** | Destino do link Recebimentos (`/dashboard/settings/receivables`) |
 | Libs | `@/lib/supabase/client`, `@/lib/logger`, `@/lib/formatCurrency`, `@/lib/utils/calendarDate`, TanStack Query, UI shadcn |
@@ -312,7 +312,7 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 
 - `src/features/provider-earnings/` — `components/` (`EarningsPage`, filtros, lista, cards, empty/error, `ProviderSettlementDisclosure`), `api/settlements.api.ts`, `api/settlements.rpc.ts`, `hooks/useProviderSettlements.ts`, `types/settlements.types.ts`, `utils/*`, `constants/*` (`ROUTE_PROVIDER_EARNINGS`), `index.ts`
 - Testes Vitest sob `**/__tests__/` na feature
-- `src/router.tsx` — `account/earnings` via `ProviderEarningsSectionPage`
+- `src/router.tsx` — `settings/earnings` via `ProviderEarningsSectionPage`
 - `src/features/settings/components/sections/ProviderEarningsSectionPage.tsx`
 - `src/layouts/DashboardLayout/dashboardMenu.ts` (sem Ganhos), `mobileNavigation.config.ts`, `DashboardLayout.tsx`
 - Consumidores: `src/features/payments/components/PaymentHistory/ProviderPaymentHistoryList.tsx`, `ProviderSettlementStatus.tsx` (**não** `ServiceContractedSection`)

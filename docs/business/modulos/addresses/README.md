@@ -59,8 +59,8 @@
 
 - `src/features/addresses/` (api, components, hooks, schemas)
 - `supabase/migrations/20260226100200_create_client_addresses.sql`
-- `src/router.tsx` (rota placeholder)
-- `src/features/settings/components/SettingsClientPage.tsx` (`AddressesSection`)
+- `src/router.tsx` (rota `/dashboard/settings/addresses`)
+- `src/features/settings/components/sections/ClientAddressesPage.tsx` (`AddressesSection`)
 
 
 ## 11. Atualização de auditoria (2026-08-02)

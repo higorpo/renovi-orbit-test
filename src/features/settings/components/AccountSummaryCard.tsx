@@ -11,7 +11,6 @@ import { cn } from "@/lib/utils";
 
 export interface AccountSummaryCardProps {
   fullName: string;
-  email: string;
   createdAt?: string | null;
   profileImagePath?: string | null;
   onPhotoSelect?: (file: File) => void;
@@ -196,7 +195,6 @@ export function AccountSummaryCardSkeleton({ layout = "band" }: { layout?: "band
         <Skeleton className="h-20 w-20 shrink-0 rounded-full sm:h-24 sm:w-24" />
         <div className="flex w-full flex-col items-center space-y-2 sm:items-start">
           <Skeleton className="h-5 w-44" />
-          <Skeleton className="h-4 w-52" />
           <Skeleton className="h-3.5 w-32" />
         </div>
       </div>

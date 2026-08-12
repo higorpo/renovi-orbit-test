@@ -45,7 +45,7 @@
 - E-mail Auth **somente leitura** na UI.
 - Slug público: gerado na primeira definição “real” de `display_name` (quando slug ainda é null/`providerId`); depois de slug real, mudança de nome **não** regenera slug.
 - Política de privacidade: link só se `VITE_MAIN_SITE_URL`; senão “Política de privacidade em breve.”
-- `DeleteAccountDialog` (digitar EXCLUIR) existe no código mas **não** é usado por `DangerZoneSection`.
+- Exclusão de conta: orientação mailto DPO em `DangerZoneSection` (sem delete imediato na API).
 - Rotas removidas (sem redirect): `/dashboard/conta`, `/dashboard/earnings`, `/dashboard/addresses`.
 
 ## 7. Entidades
@@ -77,15 +77,14 @@
 
 | Item | Status |
 |------|--------|
-| Exclusão de conta | Só orientação DPO; `DeleteAccountDialog` morto/reservado |
+| Exclusão de conta | Só orientação DPO via `DangerZoneSection` (sem delete imediato) |
 | Limite máx. imagens por item de portfólio | Não explícito no front (só 5 MB/arquivo) |
 | Erro de validação de foto no seletor | Retorno silencioso sem toast em `AccountSummaryCard` |
-| Páginas monolito `Settings{Client,Provider}Page` | Ainda no código/testes; **não** montadas no `router.tsx` (hub por seções é o canônico) |
 
 ## 10. Evidências
 
 - `src/features/settings/` — `SettingsLayout`, `SettingsIndexPage`, `constants/routes.ts`, `constants/settingsNav.ts`, `components/sections/*`
-- `src/router.tsx` — `path: 'account'` + children
+- `src/router.tsx` — `path: 'settings'` + children
 - `src/layouts/DashboardLayout/dashboardMenu.ts` — Configurações → `ROUTE_SETTINGS`
 - `src/layouts/DashboardLayout/mobileNavigation.config.ts` — índice tab-root; seções stack → `/dashboard/settings`
 - Detalhe: [features/configuracoes.md](./features/configuracoes.md)

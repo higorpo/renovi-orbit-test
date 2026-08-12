@@ -4,7 +4,7 @@
 
 - **O que é:** shell do painel autenticado (`DashboardLayout`) com menu por papel, chrome desktop/mobile, embedding do gate KYC do prestador e rotas filhas — parte **reais**, parte **placeholder** (`DashboardFakePage`).
 - **Quem usa:** `client` e `provider` autenticados.
-- **Foco desta doc:** o que o menu mostra por papel; o que é fake vs real; allowlist KYC; rotas fora do menu (calendário, settings, detalhe).
+- **Foco desta doc:** o que o menu mostra por papel; o que é fake vs real; allowlist KYC; rotas fora do menu top-level (calendário, detalhe; Ganhos/Endereços só no hub Configurações).
 
 ## 2. Objetivo de negócio
 
@@ -26,8 +26,7 @@ Dar navegação estável e previsível no painel pós-login, sem misturar regras
 | `/dashboard/services` | `MyServicesRouteSlot` | **Real** (`my-services`) | — |
 | `/dashboard/services/calendar` | `ProviderCalendarPage` | **Real** (`provider-calendar`) | `provider` |
 | `/dashboard/services/:id` | `ServiceDetailShell` | **Real** (`view-services`) | — |
-| `/dashboard/settings` (+ seções) | `SettingsLayout` / seções / host earnings | **Real** (`settings` + `provider-earnings` em `earnings`) | `client`/`provider` por seção |
-| `/dashboard/settings` | `DashboardFakePage` título “Configurações” | **Fake** | — (pai); **fora do menu** |
+| `/dashboard/settings` (+ seções) | `SettingsLayout` / `SettingsIndexPage` / seções / host earnings | **Real** (`settings` + `provider-earnings` em `earnings`) | `client`/`provider` por seção |
 | `/dashboard/help` | `DashboardFakePage` título “Ajuda” | **Fake** | — (pai) |
 | `/dashboard/jobs` | `ProviderJobsRouteSlot` | **Real** (`provider-jobs`) | `provider` |
 | `/dashboard/chats` | `ChatsLayout` | **Real** (`chats`) | `client`, `provider` |
@@ -41,7 +40,7 @@ Dar navegação estável e previsível no painel pós-login, sem misturar regras
 |-------|---------|-----------|
 | Banner “Ver calendário de serviços” em Meus Serviços (prestador) | `/dashboard/services/calendar` | `ProviderCalendarEntryBanner` em `ProviderMyServicesPage` |
 | Deep link / card → detalhe | `/dashboard/services/:id` (sheet ou stack) | `view-services` + `mobileNavigation.config.ts` |
-| URL direta `/dashboard/settings` | Placeholder Configurações | Rota existe; **sem** item em `dashboardMenu.ts` |
+| Menu **Configurações** / URL `/dashboard/settings` | Hub real (`SettingsLayout` + índice/seções) | Item em `dashboardMenu.ts`; feature `settings` |
 
 ## 4. Perfis envolvidos
 
@@ -184,7 +183,7 @@ Não aplicável ao shell/placeholder. Listagens ficam nas features hospedadas.
 ## 17. Regras implícitas
 
 - Endereços e Ganhos **não** são itens do menu; gestão em `/dashboard/settings/addresses` e `/dashboard/settings/earnings`.
-- `/dashboard/settings` é acessível por URL para client e provider (sem subguard), mas **não** aparece no menu.
+- `/dashboard/settings` é hub real no menu (Configurações); índice mobile = tab-root; seções = stack com back ao índice.
 - Prestador pode digitar URL de `/dashboard/jobs` etc. sem KYC `ACTIVE`: o router deixa passar o guard de role; o **gate substitui** o conteúdo (exceto allowlist); chrome de nav permanece oculto.
 - Matching de ativo no desktop: path `/dashboard` só ativo em igualdade exata; demais itens usam `pathname.startsWith(itemPath)` (`DesktopNav`).
 - Contagem mainItems: sempre `allItems.slice(0, 5)` por papel — cliente: Ajuda no bottom nav (5 itens); prestador: Configurações no bottom nav, Ajuda no overflow.
@@ -216,8 +215,8 @@ Não aplicável ao shell/placeholder. Listagens ficam nas features hospedadas.
 
 | Item | Status | Observação |
 |------|--------|------------|
-| Conteúdo futuro de Visão geral, Ajuda, Configurações | Não localizado | Só `DashboardFakePage` |
-| Se `/dashboard/settings` receberá item de menu | Não localizado | Rota órfã de menu |
+| Conteúdo futuro de Visão geral e Ajuda | Não localizado | Só `DashboardFakePage` nessas rotas |
+| Hub Configurações | Implementado | `SettingsLayout` + seções; item no menu |
 | Módulo `provider-calendar` no índice de `docs/business/modulos/` | Fora do escopo deste doc | Rota hospedada pelo shell; doc de domínio pode estar em outro módulo |
 
 ---
@@ -226,8 +225,9 @@ Não aplicável ao shell/placeholder. Listagens ficam nas features hospedadas.
 
 | Path / condição | Modo | Bottom nav | Header shell |
 |-----------------|------|------------|--------------|
-| Raízes tab (`/dashboard`, services, chats, jobs, …) | `tab-root` | Sim | Logo + hamburger |
-| `/dashboard/services/calendar`, help, settings | `stack` | Não | ← + título |
+| Raízes tab (`/dashboard`, services, chats, jobs, `/dashboard/settings`, …) | `tab-root` | Sim | Logo + hamburger |
+| `/dashboard/services/calendar`, help | `stack` | Não | ← + título |
+| `/dashboard/settings/:seção` | `stack` | Não | ← + título da seção; back → `/dashboard/settings` |
 | `/dashboard/services/:id` com state sheet | `tab-root` (lista atrás) | Sim | Tab |
 | `/dashboard/services/:id` full-page | `stack` | Não | “Detalhes do serviço” |
 | `/dashboard/chats/:chatId` | `custom` | Não | Header da feature chat |
@@ -242,6 +242,6 @@ Evidência: `mobileNavigation.config.ts`, `mobileNavigation.types.ts`.
 - [ ] Sem itens Endereços / Ganhos no menu; Ganhos em `/dashboard/settings/earnings`.
 - [ ] `/dashboard/chats` → layout real de conversas.
 - [ ] Calendário acessível pelo banner em Meus Serviços (prestador), não pelo menu.
-- [ ] `/dashboard/settings` por URL → placeholder; sem item de menu.
+- [ ] `/dashboard/settings` → hub real (índice mobile / redirect desktop); item Configurações no menu.
 - [ ] Offline: header deslocado.
-- [ ] Índice mobile `/dashboard/settings` = tab-root; seções account = stack com back ao hub.
+- [ ] Índice mobile `/dashboard/settings` = tab-root; seções do hub = stack com back ao índice.

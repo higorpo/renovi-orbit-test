@@ -1,8 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth";
 import { toast } from "sonner";
-
-/* Toasts for provider account updates are shown once by SettingsProviderPage after all updates complete. */
 import {
   updateProviderPrivateProfile,
   updateProviderPublicProfile,

@@ -16,7 +16,7 @@ import { toast } from "sonner";
  */
 export function SettingsIndexPage() {
   const isDesktop = useBreakpointMd();
-  const { user, profile: authProfile } = useAuth();
+  const { profile: authProfile } = useAuth();
   const role = authProfile?.role ?? "client";
   const items = getSettingsNavItems(role);
 
@@ -34,7 +34,7 @@ export function SettingsIndexPage() {
           <p className="text-sm text-body">Gerencie sua conta e preferências</p>
         </header>
         <div className="mb-5">
-          <MobileAccountSummary role={role} email={user?.email ?? ""} />
+          <MobileAccountSummary role={role} />
         </div>
         <div className="overflow-hidden rounded-2xl border border-border bg-canvas p-2 shadow-sm">
           <SettingsNavList items={items} variant="list" />
@@ -44,20 +44,14 @@ export function SettingsIndexPage() {
   );
 }
 
-function MobileAccountSummary({
-  role,
-  email,
-}: {
-  role: "client" | "provider";
-  email: string;
-}) {
+function MobileAccountSummary({ role }: { role: "client" | "provider" }) {
   if (role === "provider") {
-    return <ProviderMobileSummary email={email} />;
+    return <ProviderMobileSummary />;
   }
-  return <ClientMobileSummary email={email} />;
+  return <ClientMobileSummary />;
 }
 
-function ClientMobileSummary({ email }: { email: string }) {
+function ClientMobileSummary() {
   const { profile, isLoading } = useAccountProfile();
   const { uploadPhotoAsync, isUploading } = useUploadProfilePhoto();
   const { removePhotoAsync, isRemoving } = useRemoveProfilePhoto();
@@ -69,7 +63,6 @@ function ClientMobileSummary({ email }: { email: string }) {
     <AccountSummaryCard
       layout="stack"
       fullName={profile.full_name}
-      email={email}
       createdAt={profile.created_at}
       profileImagePath={profile.profile_image_path}
       onPhotoSelect={(file) => {
@@ -85,7 +78,7 @@ function ClientMobileSummary({ email }: { email: string }) {
   );
 }
 
-function ProviderMobileSummary({ email }: { email: string }) {
+function ProviderMobileSummary() {
   const { profile, isLoading, publicData } = useProviderProfile();
   const { uploadPhotoAsync, isUploading } = useUploadProfilePhoto();
   const { removePhotoAsync, isRemoving } = useRemoveProfilePhoto();
@@ -102,7 +95,6 @@ function ProviderMobileSummary({ email }: { email: string }) {
     <AccountSummaryCard
       layout="stack"
       fullName={profile.full_name}
-      email={email}
       createdAt={profile.created_at}
       profileImagePath={profile.profile_image_path}
       onPhotoSelect={(file) => {

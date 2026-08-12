@@ -26,22 +26,15 @@ describe("AccountSummaryCard", () => {
     useProfileImageUrl.mockReturnValue({ url: "", isLoading: false });
   });
 
-  it("renders full name and email", () => {
-    render(
-      <AccountSummaryCard
-        fullName="Maria Silva"
-        email="maria@example.com"
-      />
-    );
+  it("renders full name without email", () => {
+    render(<AccountSummaryCard fullName="Maria Silva" />);
     expect(screen.getByText("Maria Silva")).toBeInTheDocument();
-    expect(screen.getByText("maria@example.com")).toBeInTheDocument();
+    expect(screen.queryByText(/@/)).not.toBeInTheDocument();
   });
 
-  it("renders fallback when fullName or email empty", () => {
-    render(
-      <AccountSummaryCard fullName="" email="" />
-    );
-    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(1);
+  it("renders fallback when fullName is empty", () => {
+    render(<AccountSummaryCard fullName="" />);
+    expect(screen.getByText("—")).toBeInTheDocument();
   });
 
   it("renders Cliente desde when createdAt is provided", () => {
@@ -49,7 +42,6 @@ describe("AccountSummaryCard", () => {
     render(
       <AccountSummaryCard
         fullName="Maria"
-        email="m@e.com"
         createdAt="2024-01-15T00:00:00Z"
       />
     );
@@ -57,20 +49,14 @@ describe("AccountSummaryCard", () => {
   });
 
   it("renders initials in fallback when no photo URL", () => {
-    render(
-      <AccountSummaryCard fullName="Maria Silva" email="m@e.com" />
-    );
+    render(<AccountSummaryCard fullName="Maria Silva" />);
     expect(screen.getByText("MS")).toBeInTheDocument();
   });
 
   it("shows Alterar foto button when onPhotoSelect is provided", () => {
     const onPhotoSelect = vi.fn();
     render(
-      <AccountSummaryCard
-        fullName="Maria"
-        email="m@e.com"
-        onPhotoSelect={onPhotoSelect}
-      />
+      <AccountSummaryCard fullName="Maria" onPhotoSelect={onPhotoSelect} />
     );
     expect(screen.getByRole("button", { name: /Alterar foto/ })).toBeInTheDocument();
   });
@@ -78,11 +64,7 @@ describe("AccountSummaryCard", () => {
   it("calls onPhotoSelect when valid file is selected", () => {
     const onPhotoSelect = vi.fn();
     render(
-      <AccountSummaryCard
-        fullName="Maria"
-        email="m@e.com"
-        onPhotoSelect={onPhotoSelect}
-      />
+      <AccountSummaryCard fullName="Maria" onPhotoSelect={onPhotoSelect} />
     );
     const input = screen.getByLabelText(/Selecionar foto/);
     const file = new File(["x"], "photo.jpg", { type: "image/jpeg" });
@@ -96,11 +78,7 @@ describe("AccountSummaryCard", () => {
     validateProfileImageFile.mockReturnValue("Formato não permitido.");
     const onPhotoSelect = vi.fn();
     render(
-      <AccountSummaryCard
-        fullName="Maria"
-        email="m@e.com"
-        onPhotoSelect={onPhotoSelect}
-      />
+      <AccountSummaryCard fullName="Maria" onPhotoSelect={onPhotoSelect} />
     );
     const input = screen.getByLabelText(/Selecionar foto/);
     const file = new File(["x"], "photo.gif", { type: "image/gif" });
@@ -114,7 +92,6 @@ describe("AccountSummaryCard", () => {
     render(
       <AccountSummaryCard
         fullName="Maria"
-        email="m@e.com"
         profileImagePath="users/1/profile/avatar.jpg"
         onPhotoRemove={onPhotoRemove}
       />
@@ -128,7 +105,6 @@ describe("AccountSummaryCard", () => {
     render(
       <AccountSummaryCard
         fullName="Maria"
-        email="m@e.com"
         profileImagePath="path"
         onPhotoRemove={onPhotoRemove}
       />
@@ -141,7 +117,6 @@ describe("AccountSummaryCard", () => {
     render(
       <AccountSummaryCard
         fullName="Maria"
-        email="m@e.com"
         onPhotoSelect={vi.fn()}
         isUploading
       />
@@ -154,7 +129,6 @@ describe("AccountSummaryCard", () => {
     render(
       <AccountSummaryCard
         fullName="Maria"
-        email="m@e.com"
         profileImagePath="path"
         onPhotoRemove={vi.fn()}
         isRemoving
@@ -168,7 +142,6 @@ describe("AccountSummaryCard", () => {
     render(
       <AccountSummaryCard
         fullName="Maria"
-        email="m@e.com"
         profileLink="https://example.com/p/maria"
         onCopyProfileLink={onCopyProfileLink}
       />
@@ -183,7 +156,6 @@ describe("AccountSummaryCard", () => {
     render(
       <AccountSummaryCard
         fullName="Maria"
-        email="m@e.com"
         createdAt="2024-06-01T00:00:00Z"
         sinceLabel="No ar desde"
       />
@@ -192,24 +164,20 @@ describe("AccountSummaryCard", () => {
   });
 
   it("does not render since line when createdAt is not provided", () => {
-    render(
-      <AccountSummaryCard fullName="Maria" email="m@e.com" />
-    );
+    render(<AccountSummaryCard fullName="Maria" />);
     expect(screen.queryByText(/Cliente desde/)).not.toBeInTheDocument();
   });
 
   it("shows loading spinner in avatar fallback when isLoading and no url", () => {
     useProfileImageUrl.mockReturnValue({ url: "", isLoading: true });
-    render(
-      <AccountSummaryCard fullName="Maria" email="m@e.com" />
-    );
+    render(<AccountSummaryCard fullName="Maria" />);
     expect(document.querySelector(".animate-spin")).toBeInTheDocument();
   });
 
   it("does not call onPhotoSelect when file input change has no files", () => {
     const onPhotoSelect = vi.fn();
     render(
-      <AccountSummaryCard fullName="Maria" email="m@e.com" onPhotoSelect={onPhotoSelect} />
+      <AccountSummaryCard fullName="Maria" onPhotoSelect={onPhotoSelect} />
     );
     const input = screen.getByLabelText(/Selecionar foto/);
     fireEvent.change(input, { target: { files: [] } });
@@ -218,7 +186,7 @@ describe("AccountSummaryCard", () => {
 
   it("does not show photo actions when onPhotoSelect and onPhotoRemove are not provided", () => {
     render(
-      <AccountSummaryCard fullName="Maria" email="m@e.com" profileImagePath="path" />
+      <AccountSummaryCard fullName="Maria" profileImagePath="path" />
     );
     expect(screen.queryByRole("button", { name: /Alterar foto/ })).not.toBeInTheDocument();
   });
@@ -226,11 +194,7 @@ describe("AccountSummaryCard", () => {
   it("shows Remover when onPhotoRemove and url is set without profileImagePath", () => {
     useProfileImageUrl.mockReturnValue({ url: "https://img.example/photo.jpg", isLoading: false });
     render(
-      <AccountSummaryCard
-        fullName="Maria"
-        email="m@e.com"
-        onPhotoRemove={vi.fn()}
-      />
+      <AccountSummaryCard fullName="Maria" onPhotoRemove={vi.fn()} />
     );
     expect(screen.getByRole("button", { name: /Remover foto/ })).toBeInTheDocument();
   });

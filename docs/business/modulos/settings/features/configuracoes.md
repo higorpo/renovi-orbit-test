@@ -96,7 +96,6 @@ flowchart TD
 | Copiar link falha | Toasts distintos no card vs seção pública |
 | Foto inválida no seletor | Validação retorna e **encerra sem toast** (`AccountSummaryCard`) |
 | Exclusão | Dialog informa mailto DPO — **não** chama delete API |
-| `DeleteAccountDialog` | Implementado (digitar EXCLUIR) mas **não importado** em `DangerZoneSection` |
 | Papel errado na seção | `SettingsRoleGate` redireciona / bloqueia conforme implementação |
 
 ## 7. Regras de negócio (numeradas)
@@ -228,7 +227,7 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - Cliente não vê `PaymentHistorySection` com role provider e vice-versa.
 - Zona de perigo copy fala em remoção irreversível, mas ação real é pedido por e-mail.
 - Toasts de sucesso de foto: “Foto atualizada com sucesso.” / “Foto removida.” (`useProfilePhotoMutation`).
-- `SettingsPage` / `Settings{Client,Provider}Page` permanecem no tree para testes; produção usa layout + seções.
+- Produção usa apenas `SettingsLayout` + páginas em `components/sections/*` (hub por seção).
 
 ## 18. Riscos
 
@@ -242,19 +241,18 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 
 - Shell: `SettingsLayout.tsx`, `SettingsIndexPage.tsx`, `SettingsNavList.tsx`, `SettingsSectionHeader.tsx`, `SettingsRoleGate.tsx`
 - Seções: `components/sections/PersonalInfoPage.tsx`, `ClientPersonalInfoPage.tsx`, `ProviderPersonalInfoPage.tsx`, `ClientAddressesPage.tsx`, `ClientPaymentsPage.tsx`, `ProviderLegalIdentityPage.tsx`, `ProviderProfessionalProfilePage.tsx`, `ProviderReceivablesPage.tsx`, `ProviderEarningsSectionPage.tsx`, `AccountPrivacyPage.tsx`, `AccountSessionPage.tsx`
-- Blocos reutilizados: `DadosPessoaisSection`, `ContatoIdentidadeSection`, `EntityTypeSection`, `LegalIdentitySection`, `OfferedServicesSection`, `PublicProfileSettingsSection`, `ServiceAreaField`, `PortfolioManagementSection`, `PrivacySection`, `DangerZoneSection`, `LogoutSection`, `AccountSummaryCard`, `AccountErrorState`, `DeleteAccountDialog` (não ligado)
+- Blocos reutilizados: `DadosPessoaisSection`, `ContatoIdentidadeSection`, `EntityTypeSection`, `LegalIdentitySection`, `OfferedServicesSection`, `PublicProfileSettingsSection`, `ServiceAreaField`, `PortfolioManagementSection`, `PrivacySection`, `DangerZoneSection`, `LogoutSection`, `AccountSummaryCard`, `AccountErrorState`
 - APIs: `api/clientProfilePrivate.api.ts`, `providerPrivateProfile.api.ts`, `providerPublicProfile.api.ts`, `offeredServices.api.ts`, `portfolio.api.ts`, `profileImageStorage.api.ts`, `portfolioImageStorage.api.ts`, `providerProfile.api.ts`
 - Hooks: `useAccountProfile`, `useClientPrivateProfile`, `useUpdateAccountProfile`, `useProviderProfile`, `useUpdateProviderProfile`, `useProviderSettingsForm`, `useOfferedServices`, `usePortfolioItems`, `useProfilePhotoMutation`, `useProfileImageUrl`
 - Validação: `types/accountForm.validation.ts`, `types/providerAccountForm.validation.ts`
 - Constantes: `constants.ts`, `constants/routes.ts`, `constants/settingsNav.ts`
-- Router: `src/router.tsx` path `account` + children
+- Router: `src/router.tsx` path `settings` + children
 - Menu / chrome: `dashboardMenu.ts`, `mobileNavigation.config.ts`
 
 ## 20. Pendências
 
 | Item | Status |
 |------|--------|
-| Wire de `DeleteAccountDialog` ou remoção do código morto | Pendente de produto |
 | Limite de imagens por item de portfólio | Não encontrado no front |
 | Toast de erro de validação de foto | Ausente no seletor |
 | Detalhe RLS/migrations | Evidência parcial — aprofundar em auditoria backend se necessário |
@@ -322,3 +320,4 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - Menu e rotas top-level Endereços/Ganhos/conta removidos.
 - Allowlist KYC `/dashboard/settings`.
 - Regras de formulário/auto-save revalidadas como inalteradas na fase 1.
+- Superfície monolítica removida: `SettingsPage` / `SettingsClientPage` / `SettingsProviderPage` / `DeleteAccountDialog` — produção só `SettingsLayout` + `SettingsIndexPage` + `components/sections/*`; exclusão permanece mailto DPO em `DangerZoneSection`.

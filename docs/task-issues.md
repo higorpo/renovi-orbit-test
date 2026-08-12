@@ -353,7 +353,7 @@ Status: `[ ]` pendente · `[~]` em progresso · `[x]` concluído
 - [ ] **Área:** Arquitetura  
 - **Arquivos:**
   - `src/features/notifications/` (3 arquivos, só `recordPushClick`)
-  - `src/features/settings/index.ts` (exporta só `SettingsPage`)
+  - `src/features/settings/index.ts` (exporta hub: `SettingsLayout`, rotas)
   - `src/features/auth/index.ts` (superfície pública muito ampla — exporta APIs diretamente)
 - **Problema:** Disciplina de public API varia: `chats`/`negotiation-proposals` exemplares; `settings`/`notifications` mínimos. `notifications` candidato a merge.
 - **Solução sugerida:** Template padronizado de public API (comment block + `publicApi.test.ts`); fundir `notifications` em `push-permission` ou `chats` até crescer.

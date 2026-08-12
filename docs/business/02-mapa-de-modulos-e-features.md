@@ -20,7 +20,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | **my-services** | [solicitacoes-do-cliente](./modulos/my-services/features/solicitacoes-do-cliente.md) | `/dashboard/services`; banner prestador → calendário; highlights de pagamento e follow-up de conclusão no card; prestador `CONFIRMED` + past → “Concluir serviço” no card; nota real no card `completed` | `view-services` (lista/detalhe; `client_rating_*` no CS); sheet de orçamentos via `negotiation-proposals`; `provider-calendar` (entrada); conclusão no card/detalhe (`service-completion`) |
 | **view-services** | [visualizacao-de-servicos](./modulos/view-services/features/visualizacao-de-servicos.md) | `/dashboard/services/:id` → **`ServiceDetailShell`** (página ou `null` se sheet); sheet no `DashboardLayout` | RPCs `get_service`, `list_services`, `get_client_service_journey` (timeline **Acompanhe seu pedido**, cliente-only); card **Serviço contratado** (cliente rico / prestador resumo; rating `get_provider_rating_summaries`); `contracted_services`; consumido por `my-services`, `provider-jobs`, `provider-calendar`; conclusão via **service-completion** |
 | **dynamic-form** | [motor-de-formularios](./modulos/dynamic-form/features/motor-de-formularios.md) | `/dev/demo/form` (somente DEV) | Consumido por `request-quote` |
-| **settings** | [minha-conta](./modulos/settings/features/configuracoes.md) | Hub `/dashboard/settings/*` (mobile lista + stack; desktop sidebar); ADR 0002 | `addresses`, storage, perfis público/privado; histórico de captura via `payments`; host de Ganhos (`provider-earnings`) |
+| **settings** | [configuracoes](./modulos/settings/features/configuracoes.md) | Hub `/dashboard/settings/*` (mobile lista + stack; desktop sidebar); ADR 0002 | `addresses`, storage, perfis público/privado; histórico de captura via `payments`; host de Ganhos (`provider-earnings`) |
 | **provider-jobs** | [trabalhos-e-propostas](./modulos/provider-jobs/features/trabalhos-e-propostas.md) | `/dashboard/jobs` (lista); detalhe `/dashboard/services/:id` (`ServiceDetailShell` / sheet) | Edge **viva** `list-provider-opportunities`; propostas / CNS; backend [matching-dispatch](./modulos/matching-dispatch/README.md); GPS feed via `device-beacon` |
 | **matching-dispatch** *(backend)* | [dispatch-e-visibilidade](./modulos/matching-dispatch/features/dispatch-e-visibilidade.md) | *Sem rota de UI* | Migrations `202607110*`, cron matching, visibilidade; bootstrap via READY-handoff ([service-completion](./modulos/service-completion/README.md)); consumido por **provider-jobs**; beacon → `provider_latest_locations` (**device-beacon**). Legado: Edge `match-provider-jobs` **morta** (pasta vazia); RPC `match_provider_jobs` **órfã** no schema |
 | **service-completion** | [conclusao-e-enrichment](./modulos/service-completion/features/conclusao-e-enrichment.md) | Embutido em detalhe/lista (`view-services`); prompt global no `RootLayout`; *sem rota própria* | Enrichment pré-matching; RPCs `service_completion_*` / `get_service_completion_context` / `get_client_pending_evaluation_prompt`; Edges checklist + `record-service-completion-declaration`; declaração de execução (gate manual); janitor SQL de órfãos; host UI só Public API |
@@ -42,10 +42,9 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | Rota | Comportamento no código |
 |------|-------------------------|
 | `/dashboard` | `DashboardFakePage` “Visão geral” |
-| `/dashboard/settings` | Placeholder “Configurações” (rota existe; **não** está no menu) |
 | `/dashboard/help` | Placeholder “Ajuda” |
 
-> **Não é placeholder:** `/dashboard/services/:id` → `ServiceDetailShell`; hub `/dashboard/settings/*` (settings + host de earnings). Rotas **removidas** (sem redirect): `/dashboard/conta`, `/dashboard/earnings`, `/dashboard/addresses`.
+> **Não é placeholder:** `/dashboard/services/:id` → `ServiceDetailShell`; hub `/dashboard/settings/*` (settings + host de earnings; item **Configurações** no menu). Rotas **removidas** (sem redirect): `/dashboard/conta`, `/dashboard/earnings`, `/dashboard/addresses`.
 
 ## Menu do dashboard (evidência: `dashboardMenu.ts`)
 
@@ -54,7 +53,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | **Cliente** | Visão geral, Meus Serviços, Conversas, Configurações (`/dashboard/settings`), Ajuda |
 | **Prestador** | Visão geral, Meus Serviços, Trabalhos, Conversas, Configurações (`/dashboard/settings`), Ajuda |
 
-**Fora do menu (rotas reais):** `/dashboard/services/calendar`, `/dashboard/services/:id`, `/dashboard/settings`, seções `/dashboard/settings/*` (incl. earnings).
+**Fora do menu (rotas reais):** `/dashboard/services/calendar`, `/dashboard/services/:id`; seções do hub `/dashboard/settings/*` (incl. earnings) acessíveis pelo menu Configurações, não como itens top-level.
 
 ## Edge Functions (Supabase)
 

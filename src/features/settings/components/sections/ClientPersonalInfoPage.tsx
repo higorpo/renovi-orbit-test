@@ -149,7 +149,6 @@ export function ClientPersonalInfoPage() {
           ) : profile ? (
             <AccountSummaryCard
               fullName={profile.full_name}
-              email={email}
               createdAt={profile.created_at}
               profileImagePath={profile.profile_image_path}
               onPhotoSelect={(file) => {

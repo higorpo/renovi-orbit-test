@@ -71,7 +71,7 @@
 
 - `src/features/provider-earnings/` (`EarningsPage`, `useProviderSettlements`, `settlements.api.ts`, disclosure, `ROUTE_PROVIDER_EARNINGS`)
 - `src/features/settings/components/sections/ProviderEarningsSectionPage.tsx` — host no hub
-- `src/router.tsx` — `account/earnings` (não top-level `earnings`)
+- `src/router.tsx` — `settings/earnings` (não top-level `earnings`)
 - `src/layouts/DashboardLayout/dashboardMenu.ts` — **sem** item Ganhos
 - Migrations `20260802240000_create_payment_settlement_movements.sql`, `20260802250000_payment_sync_netcred_settlements_cron.sql`, grants em `20260802300000_*`
 - EFs: `netcred-webhook` (PAYOUT_* + enrich pós-CAPTURE/REFUND), `sync-netcred-settlements`; shared `enrichSettlementMovements`
