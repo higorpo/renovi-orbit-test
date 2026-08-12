@@ -26,7 +26,7 @@ export function useProviderPayoutMethods() {
     bankAccount,
     pixKey,
     hasBankDetails: Boolean(code || bankBranch || bankAccount || pixKey),
-    isLoading,
+    isLoading: isLoading || banksQuery.isLoading,
     error,
     refetch,
   };

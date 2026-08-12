@@ -128,6 +128,8 @@ describe("loadBrazilianBanksFallback + helpers", () => {
     expect(banks.length).toBeGreaterThanOrEqual(100);
     expect(findBrazilianBankByCode("001", banks)?.name).toBe("Banco do Brasil");
     expect(findBrazilianBankByCode("260", banks)?.name).toBe("Nubank");
+    expect(findBrazilianBankByCode("84", banks)?.code).toBe("084");
+    expect(findBrazilianBankByCode("084", banks)?.name).toMatch(/Sisprime/i);
     expect(Object.keys(BRAZILIAN_BANK_NAME_OVERRIDES).length).toBeGreaterThanOrEqual(30);
   });
 

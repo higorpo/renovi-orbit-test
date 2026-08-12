@@ -35,6 +35,7 @@ export const BRAZILIAN_BANK_NAME_OVERRIDES: Readonly<Record<string, string>> = {
   "021": "Banestes",
   "047": "Banco do Estado de Sergipe",
   "085": "Ailos (Cooperativa)",
+  "084": "Sisprime do Brasil",
   "097": "Credisis",
   "133": "Cresol",
   "197": "Stone Pagamentos",
@@ -114,7 +115,8 @@ export function findBrazilianBankByCode(
   code: string,
   banks: readonly BrazilianBank[],
 ): BrazilianBank | undefined {
-  const normalized = code.trim();
+  const trimmed = code.trim();
+  const normalized = /^\d+$/.test(trimmed) ? trimmed.padStart(3, "0") : trimmed;
   return banks.find((bank) => bank.code === normalized);
 }
 

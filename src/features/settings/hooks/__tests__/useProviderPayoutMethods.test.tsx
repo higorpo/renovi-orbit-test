@@ -14,14 +14,13 @@ vi.mock("../useProviderProfile", () => ({
   useProviderProfile: () => mocks.useProviderProfile(),
 }));
 
-vi.mock("@/features/provider-kyc", () => ({
-  useBrazilianBanks: () => mocks.useBrazilianBanks(),
-  findBrazilianBankByCode: (
-    code: string,
-    banks: Array<{ code: string; name: string }>,
-  ) => banks.find((bank) => bank.code === code.trim()),
-  formatBankLabel: (bank: { code: string; name: string }) => `${bank.name} (${bank.code})`,
-}));
+vi.mock("@/features/provider-kyc", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/provider-kyc")>();
+  return {
+    ...actual,
+    useBrazilianBanks: () => mocks.useBrazilianBanks(),
+  };
+});
 
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -59,6 +58,28 @@ describe("useProviderPayoutMethods", () => {
     expect(result.current.bankAccount).toBe("56789-0");
     expect(result.current.pixKey).toBe("joao@prestway.com");
     expect(result.current.hasBankDetails).toBe(true);
+  });
+
+  it("resolves an unpadded COMPE code the same way onboarding does", () => {
+    mocks.useBrazilianBanks.mockReturnValue({
+      data: [{ code: "084", name: "Sisprime do Brasil" }],
+      isLoading: false,
+    });
+    mocks.useProviderProfile.mockReturnValue({
+      privateData: {
+        bank_institution_code: "84",
+        bank_branch: "1234",
+        bank_account: "56789-0",
+        pix_key: null,
+      },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    const { result } = renderHook(() => useProviderPayoutMethods(), { wrapper });
+
+    expect(result.current.bankLabel).toBe("Sisprime do Brasil (084)");
   });
 
   it("falls back to the raw code when the bank list has no match", () => {
