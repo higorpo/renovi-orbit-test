@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Download, ExternalLink, Mail, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -10,14 +10,47 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Shield } from "lucide-react";
 import { DPO_EMAIL } from "../constants";
-import { SettingsCardHeader } from "./SettingsCardHeader";
 
 export interface PrivacySectionProps {
   privacyPolicyUrl?: string | null;
 }
 
+interface PrivacyActionRowProps {
+  icon: typeof Shield;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}
+
+function PrivacyActionRow({ icon: Icon, title, description, children }: PrivacyActionRowProps) {
+  return (
+    <article className="rounded-2xl border border-border bg-canvas p-4 shadow-sm sm:p-5">
+      <div className="flex items-start gap-3 sm:gap-4">
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary"
+          aria-hidden
+        >
+          <Icon className="h-5 w-5" strokeWidth={1.75} />
+        </div>
+        <div className="min-w-0 flex-1 space-y-3">
+          <div className="space-y-1">
+            <h3 className="font-display text-[15px] font-semibold tracking-tight text-ink">
+              {title}
+            </h3>
+            <p className="text-sm leading-relaxed text-body">{description}</p>
+          </div>
+          {children}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+/**
+ * Privacy actions for the settings hub. Page title lives in SettingsSectionHeader /
+ * mobile stack chrome — this section only renders the action list.
+ */
 export function PrivacySection({ privacyPolicyUrl }: PrivacySectionProps) {
   const [showExportAlert, setShowExportAlert] = useState(false);
 
@@ -30,8 +63,8 @@ export function PrivacySection({ privacyPolicyUrl }: PrivacySectionProps) {
             <AlertDialogDescription asChild>
               <div>
                 <p>
-                  Para solicitar a exportação dos seus dados pessoais, envie um e-mail para
-                  o nosso encarregado de dados (DPO):
+                  Para solicitar a exportação dos seus dados pessoais, envie um e-mail para o
+                  nosso encarregado de dados (DPO):
                 </p>
                 <p className="mt-3 font-semibold text-ink">
                   <a href={`mailto:${DPO_EMAIL}`} className="underline">
@@ -39,8 +72,8 @@ export function PrivacySection({ privacyPolicyUrl }: PrivacySectionProps) {
                   </a>
                 </p>
                 <p className="mt-3 text-sm">
-                  Informe no e-mail que deseja solicitar a portabilidade dos seus dados
-                  conforme a LGPD. Retornaremos em até 15 dias úteis.
+                  Informe no e-mail que deseja solicitar a portabilidade dos seus dados conforme a
+                  LGPD. Retornaremos em até 15 dias úteis.
                 </p>
               </div>
             </AlertDialogDescription>
@@ -51,60 +84,70 @@ export function PrivacySection({ privacyPolicyUrl }: PrivacySectionProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Card className="rounded-2xl border-border shadow-sm">
-        <CardHeader className="pb-3 sm:pb-3">
-          <SettingsCardHeader
-            title="Privacidade e LGPD"
-            icon={Shield}
-            description="Seus direitos e como tratamos seus dados"
-          />
-        </CardHeader>
-        <CardContent className="space-y-6 pt-0 sm:pt-0">
-          <div className="space-y-3">
-            <p className="text-sm leading-relaxed text-body">
-              Se você tiver dúvidas sobre como tratamos seus dados pessoais ou quiser
-              exercer seus direitos previstos na LGPD, fale com o nosso encarregado de
-              dados.
-            </p>
-            <Button variant="outline" className="rounded-full" asChild>
-              <a href={`mailto:${DPO_EMAIL}`} aria-label="Falar com o DPO">
-                Falar com o DPO
-              </a>
-            </Button>
-          </div>
+      <div className="space-y-4" aria-label="Privacidade e LGPD">
+        <p className="text-caption text-muted-foreground">
+          Direitos previstos na LGPD e canais oficiais da Prestway.
+        </p>
 
-          <div className="space-y-3 border-t border-border pt-6">
-            <p className="text-sm leading-relaxed text-body">
-              Baixe uma cópia dos dados que a Prestway possui sobre você.
-            </p>
-            <Button
-              variant="outline"
-              className="rounded-full"
-              onClick={() => setShowExportAlert(true)}
-              aria-label="Exportar meus dados"
+        <ul className="m-0 list-none space-y-3 p-0">
+          <li>
+            <PrivacyActionRow
+              icon={Mail}
+              title="Falar com o DPO"
+              description="Dúvidas sobre o tratamento dos seus dados ou exercício de direitos previstos na LGPD."
             >
-              Exportar meus dados
-            </Button>
-          </div>
-
-          <div className="border-t border-border pt-6">
-            {privacyPolicyUrl ? (
-              <Button variant="link" className="h-auto p-0 text-ink underline" asChild>
-                <a
-                  href={privacyPolicyUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Ver política de privacidade"
-                >
-                  Ver política de privacidade
+              <Button variant="outline" size="sm" className="rounded-full" asChild>
+                <a href={`mailto:${DPO_EMAIL}`} aria-label="Falar com o DPO">
+                  Enviar e-mail
                 </a>
               </Button>
-            ) : (
-              <p className="text-sm text-body">Política de privacidade em breve.</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            </PrivacyActionRow>
+          </li>
+
+          <li>
+            <PrivacyActionRow
+              icon={Download}
+              title="Exportar meus dados"
+              description="Solicite uma cópia dos dados que a Prestway possui sobre você."
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                onClick={() => setShowExportAlert(true)}
+                aria-label="Exportar meus dados"
+              >
+                Solicitar exportação
+              </Button>
+            </PrivacyActionRow>
+          </li>
+
+          <li>
+            <PrivacyActionRow
+              icon={Shield}
+              title="Política de privacidade"
+              description="Como coletamos, usamos e protegemos suas informações."
+            >
+              {privacyPolicyUrl ? (
+                <Button variant="outline" size="sm" className="rounded-full" asChild>
+                  <a
+                    href={privacyPolicyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Ver política de privacidade"
+                    className="inline-flex items-center gap-1.5"
+                  >
+                    Ver política
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                  </a>
+                </Button>
+              ) : (
+                <p className="text-sm text-muted-foreground">Política de privacidade em breve.</p>
+              )}
+            </PrivacyActionRow>
+          </li>
+        </ul>
+      </div>
     </>
   );
 }
