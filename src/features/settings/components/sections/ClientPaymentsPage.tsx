@@ -2,6 +2,7 @@ import { SavedCardsList, PaymentHistorySection } from "@/features/payments";
 import { useAccountProfile } from "../../hooks/useAccountProfile";
 import { SettingsRoleGate } from "../SettingsRoleGate";
 import { SettingsSectionHeader } from "../SettingsSectionHeader";
+import { SettingsSectionShell } from "../SettingsSectionShell";
 
 export function ClientPaymentsPage() {
   return (
@@ -15,7 +16,7 @@ function ClientPaymentsContent() {
   const { profile, isLoading } = useAccountProfile();
 
   return (
-    <div className="space-y-6 px-4 py-6 md:px-0 md:py-0">
+    <SettingsSectionShell>
       <SettingsSectionHeader
         title="Pagamentos"
         description="Cartões salvos e histórico de cobranças"
@@ -24,6 +25,6 @@ function ClientPaymentsContent() {
         <SavedCardsList phone={profile?.phone ?? undefined} tokenizeContext="profile" />
       ) : null}
       <PaymentHistorySection role="client" />
-    </div>
+    </SettingsSectionShell>
   );
 }

@@ -8,11 +8,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
 import { Phone } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import type { AccountFormData } from "../types/accountForm.validation";
 import { maskPhone, maskCPF } from "@/lib/masks";
+import { SettingsCardHeader } from "./SettingsCardHeader";
 
 export interface ContatoIdentidadeSectionProps {
   form: UseFormReturn<AccountFormData>;
@@ -20,17 +20,15 @@ export interface ContatoIdentidadeSectionProps {
 
 export function ContatoIdentidadeSection({ form }: ContatoIdentidadeSectionProps) {
   return (
-    <Card>
-      <CardHeader className="pb-3 sm:pb-0">
-        <SectionTitleWithIcon
+    <Card className="rounded-2xl border-border shadow-sm">
+      <CardHeader className="pb-2">
+        <SettingsCardHeader
           title="Contato e identidade"
           icon={Phone}
-          iconGradient="from-emerald-500 to-teal-500"
-          size="compact"
-          className="!mb-0"
+          description="Telefone e documento para contato e verificação"
         />
       </CardHeader>
-      <CardContent className="!pt-4 space-y-4">
+      <CardContent className="space-y-4 pt-2">
         <FormField
           control={form.control}
           name="phone"

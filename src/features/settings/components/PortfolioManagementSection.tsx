@@ -18,7 +18,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
+import { SettingsCardHeader } from "./SettingsCardHeader";
 import {
   Dialog,
   DialogClose,
@@ -422,20 +422,19 @@ export function PortfolioManagementSection({
   const isEditMode = editingItem !== null;
 
   return (
-    <Card>
-      <CardHeader className="pb-3 sm:pb-0">
+    <Card className="rounded-2xl border-border shadow-sm">
+      <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <SectionTitleWithIcon
+          <SettingsCardHeader
             title="Portfólio"
             icon={ImageIcon}
-            iconGradient="from-rose-500 to-pink-600"
-            size="compact"
-            className="!mb-0"
+            description="Trabalhos realizados no seu perfil público"
           />
           <Button
             type="button"
             variant="outline"
             size="sm"
+            className="rounded-full"
             onClick={() => {
               setEditingItem(null);
               setAddOpen(true);
@@ -447,12 +446,9 @@ export function PortfolioManagementSection({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="!pt-4 space-y-4">
-        <p className="text-sm">
-          Adicione trabalhos realizados para exibir no seu perfil público.
-        </p>
+      <CardContent className="space-y-4 pt-2">
         {orderedItems.length === 0 ? (
-          <p className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
+          <p className="rounded-xl border border-dashed border-border bg-canvas-soft py-10 text-center text-sm text-body">
             Nenhum item no portfólio. Clique em &quot;Adicionar trabalho&quot; para começar.
           </p>
         ) : onReorderItems ? (

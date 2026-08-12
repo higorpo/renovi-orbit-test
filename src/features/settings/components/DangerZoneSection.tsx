@@ -10,9 +10,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
 import { AlertTriangle } from "lucide-react";
 import { DPO_EMAIL } from "../constants";
+import { SettingsCardHeader } from "./SettingsCardHeader";
 
 export function DangerZoneSection() {
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
@@ -26,46 +26,44 @@ export function DangerZoneSection() {
             <AlertDialogDescription asChild>
               <div>
                 <p>
-                  Para solicitar a exclusão da sua conta e dos seus dados pessoais,
-                  envie um e-mail para o nosso encarregado de dados (DPO):
+                  Para solicitar a exclusão da sua conta e dos seus dados pessoais, envie
+                  um e-mail para o nosso encarregado de dados (DPO):
                 </p>
-                <p className="mt-3 font-semibold text-foreground">
+                <p className="mt-3 font-semibold text-ink">
                   <a href={`mailto:${DPO_EMAIL}`} className="underline">
                     {DPO_EMAIL}
                   </a>
                 </p>
                 <p className="mt-3 text-sm">
-                  Informe no e-mail que deseja solicitar a exclusão da sua conta
-                  conforme a LGPD. Retornaremos em até 15 dias úteis.
+                  Informe no e-mail que deseja solicitar a exclusão da sua conta conforme
+                  a LGPD. Retornaremos em até 15 dias úteis.
                 </p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setShowDeleteAlert(false)}>
-              Entendi
-            </AlertDialogAction>
+            <AlertDialogAction onClick={() => setShowDeleteAlert(false)}>Entendi</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <Card className="border-destructive/50 bg-destructive/5">
-        <CardHeader className="pb-3 sm:pb-0">
-          <SectionTitleWithIcon
+      <Card className="rounded-2xl border-destructive/30 bg-destructive/5 shadow-sm">
+        <CardHeader className="pb-2">
+          <SettingsCardHeader
             title="Zona de perigo"
             icon={AlertTriangle}
-            iconGradient="from-destructive to-destructive/80"
-            size="compact"
-            className="!mb-0"
+            tone="danger"
+            description="Ações irreversíveis relacionadas à sua conta"
           />
         </CardHeader>
-        <CardContent className="!pt-4">
-          <p className="mb-4 text-sm text-muted-foreground">
+        <CardContent className="space-y-4 pt-2">
+          <p className="text-sm leading-relaxed text-body">
             Essa ação é irreversível. Seus dados serão removidos conforme as regras
             aplicáveis da LGPD e os requisitos legais de retenção.
           </p>
           <Button
             variant="destructive"
+            className="rounded-full"
             onClick={() => setShowDeleteAlert(true)}
             aria-label="Excluir minha conta"
           >

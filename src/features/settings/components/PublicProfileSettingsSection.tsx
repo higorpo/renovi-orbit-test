@@ -5,7 +5,7 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/comp
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
+import { SettingsCardHeader } from "./SettingsCardHeader";
 import { Eye, Copy, Check } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -49,17 +49,15 @@ export function PublicProfileSettingsSection({
   }, [profileUrl]);
 
   return (
-    <Card>
-      <CardHeader className="pb-3 sm:pb-0">
-        <SectionTitleWithIcon
+    <Card className="rounded-2xl border-border shadow-sm">
+      <CardHeader className="pb-2">
+        <SettingsCardHeader
           title="Perfil público"
           icon={Eye}
-          iconGradient="from-cyan-500 to-blue-600"
-          size="compact"
-          className="!mb-0"
+          description="Como clientes veem você na Prestway"
         />
       </CardHeader>
-      <CardContent className="!pt-4 space-y-4">
+      <CardContent className="space-y-4 pt-2">
         <FormField
           control={form.control}
           name="display_name"
@@ -145,6 +143,7 @@ export function PublicProfileSettingsSection({
               type="button"
               variant="outline"
               size="sm"
+              className="rounded-full"
               onClick={handleViewProfile}
               disabled={disabled}
             >
@@ -155,15 +154,17 @@ export function PublicProfileSettingsSection({
               type="button"
               variant="outline"
               size="sm"
+              className="rounded-full"
               onClick={handleCopyLink}
               disabled={disabled}
+              aria-label="Copiar link do perfil"
             >
               {copied ? (
-                <Check className="h-4 w-4 mr-2 text-green-600" aria-hidden />
+                <Check className="h-4 w-4 mr-2 text-success" aria-hidden />
               ) : (
                 <Copy className="h-4 w-4 mr-2" aria-hidden />
               )}
-              Copiar link do perfil
+              Copiar link
             </Button>
           </div>
         )}

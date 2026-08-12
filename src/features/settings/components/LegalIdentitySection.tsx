@@ -2,7 +2,7 @@ import type { UseFormReturn } from "react-hook-form";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
+import { SettingsCardHeader } from "./SettingsCardHeader";
 import { FileText } from "lucide-react";
 import { maskCPF, maskCNPJ } from "@/lib/masks";
 import type { ProviderAccountFormData } from "../types/providerAccountForm.validation";
@@ -20,17 +20,15 @@ export function LegalIdentitySection({
   disabled,
 }: LegalIdentitySectionProps) {
   return (
-    <Card>
-      <CardHeader className="pb-3 sm:pb-0">
-        <SectionTitleWithIcon
+    <Card className="rounded-2xl border-border shadow-sm">
+      <CardHeader className="pb-2">
+        <SettingsCardHeader
           title="Dados legais / identidade"
           icon={FileText}
-          iconGradient="from-amber-500 to-orange-600"
-          size="compact"
-          className="!mb-0"
+          description="Documentos usados para verificação e fiscal"
         />
       </CardHeader>
-      <CardContent className="!pt-4 space-y-4">
+      <CardContent className="space-y-4 pt-2">
         {entityType === "pf" ? (
           <FormField
             control={form.control}

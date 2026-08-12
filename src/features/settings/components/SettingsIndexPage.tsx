@@ -11,7 +11,7 @@ import { AccountSummaryCard, AccountSummaryCardSkeleton } from "./AccountSummary
 import { toast } from "sonner";
 
 /**
- * Mobile: account hub index (summary + section list).
+ * Mobile: settings hub index (summary + section list).
  * Desktop: redirect to personal-info (sidebar lives in SettingsLayout).
  */
 export function SettingsIndexPage() {
@@ -25,12 +25,21 @@ export function SettingsIndexPage() {
   }
 
   return (
-    <div className="container max-w-lg px-4 py-6">
-      <h1 className="mb-6 text-2xl font-bold tracking-tight text-foreground">Configurações</h1>
-      <div className="mb-6">
-        <MobileAccountSummary role={role} email={user?.email ?? ""} />
+    <div className="bg-canvas-soft min-h-full">
+      <div className="container max-w-lg px-4 py-6">
+        <header className="mb-6 space-y-1">
+          <h1 className="font-display text-display-md font-bold tracking-tight text-ink">
+            Configurações
+          </h1>
+          <p className="text-sm text-body">Gerencie sua conta e preferências</p>
+        </header>
+        <div className="mb-5">
+          <MobileAccountSummary role={role} email={user?.email ?? ""} />
+        </div>
+        <div className="overflow-hidden rounded-2xl border border-border bg-canvas p-2 shadow-sm">
+          <SettingsNavList items={items} variant="list" />
+        </div>
       </div>
-      <SettingsNavList items={items} variant="list" />
     </div>
   );
 }
@@ -53,11 +62,12 @@ function ClientMobileSummary({ email }: { email: string }) {
   const { uploadPhotoAsync, isUploading } = useUploadProfilePhoto();
   const { removePhotoAsync, isRemoving } = useRemoveProfilePhoto();
 
-  if (isLoading) return <AccountSummaryCardSkeleton />;
+  if (isLoading) return <AccountSummaryCardSkeleton layout="stack" />;
   if (!profile) return null;
 
   return (
     <AccountSummaryCard
+      layout="stack"
       fullName={profile.full_name}
       email={email}
       createdAt={profile.created_at}
@@ -80,7 +90,7 @@ function ProviderMobileSummary({ email }: { email: string }) {
   const { uploadPhotoAsync, isUploading } = useUploadProfilePhoto();
   const { removePhotoAsync, isRemoving } = useRemoveProfilePhoto();
 
-  if (isLoading) return <AccountSummaryCardSkeleton />;
+  if (isLoading) return <AccountSummaryCardSkeleton layout="stack" />;
   if (!profile) return null;
 
   const profileUrl =
@@ -90,6 +100,7 @@ function ProviderMobileSummary({ email }: { email: string }) {
 
   return (
     <AccountSummaryCard
+      layout="stack"
       fullName={profile.full_name}
       email={email}
       createdAt={profile.created_at}

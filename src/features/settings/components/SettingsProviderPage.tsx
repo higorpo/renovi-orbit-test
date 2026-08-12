@@ -16,7 +16,7 @@ import { ProviderFormSkeleton } from "./AccountFormSkeletons";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
+import { SettingsCardHeader } from "./SettingsCardHeader";
 import { Phone } from "lucide-react";
 import { maskPhone } from "@/lib/masks";
 import { DadosPessoaisSection } from "./DadosPessoaisSection";
@@ -295,7 +295,7 @@ function SettingsProviderPage() {
               <ProviderDadosPessoaisAdapter form={form} email={email} />
               <Card>
                 <CardHeader className="pb-3 sm:pb-0">
-                  <SectionTitleWithIcon title="Contato" icon={Phone} iconGradient="from-sky-500 to-blue-600" size="compact" className="!mb-0" />
+                  <SettingsCardHeader title="Contato" icon={Phone} />
                 </CardHeader>
                 <CardContent className="!pt-4">
                   <FormField

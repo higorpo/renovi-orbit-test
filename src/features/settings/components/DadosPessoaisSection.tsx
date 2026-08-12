@@ -8,10 +8,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
 import { User } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import type { AccountFormData } from "../types/accountForm.validation";
+import { SettingsCardHeader } from "./SettingsCardHeader";
 
 export interface DadosPessoaisSectionProps {
   form: UseFormReturn<AccountFormData>;
@@ -20,17 +20,15 @@ export interface DadosPessoaisSectionProps {
 
 export function DadosPessoaisSection({ form, email }: DadosPessoaisSectionProps) {
   return (
-    <Card>
-      <CardHeader className="pb-3 sm:pb-0">
-        <SectionTitleWithIcon
+    <Card className="rounded-2xl border-border shadow-sm">
+      <CardHeader className="pb-2">
+        <SettingsCardHeader
           title="Dados pessoais"
           icon={User}
-          iconGradient="from-violet-500 to-purple-600"
-          size="compact"
-          className="!mb-0"
+          description="Como você aparece na Prestway"
         />
       </CardHeader>
-      <CardContent className="!pt-4 space-y-4">
+      <CardContent className="space-y-4 pt-2">
         <FormField
           control={form.control}
           name="full_name"
@@ -59,7 +57,7 @@ export function DadosPessoaisSection({ form, email }: DadosPessoaisSectionProps)
             readOnly
             disabled
             aria-readonly="true"
-            className="bg-muted"
+            className="bg-canvas-soft"
           />
           <FormDescription>
             Seu e-mail não pode ser alterado por aqui. Caso precise alterar, entre em

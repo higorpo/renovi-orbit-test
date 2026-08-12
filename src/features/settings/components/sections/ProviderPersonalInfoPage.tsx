@@ -1,10 +1,10 @@
 import { useForm } from "react-hook-form";
-import { Loader2, Phone } from "lucide-react";
+import { Phone } from "lucide-react";
 import { Form } from "@/components/ui/form";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
+import { SettingsCardHeader } from "../SettingsCardHeader";
 import { maskPhone } from "@/lib/masks";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { useProviderSettingsForm } from "../../hooks/useProviderSettingsForm";
@@ -15,6 +15,7 @@ import { AccountErrorState } from "../AccountErrorState";
 import { ProviderFormSkeleton } from "../AccountFormSkeletons";
 import { DadosPessoaisSection } from "../DadosPessoaisSection";
 import { SettingsSectionHeader } from "../SettingsSectionHeader";
+import { SettingsSectionShell, SettingsAutosaveHint } from "../SettingsSectionShell";
 
 function ProviderDadosPessoaisAdapter({
   form,
@@ -54,7 +55,7 @@ export function ProviderPersonalInfoPage() {
   }
 
   return (
-    <div className="space-y-6 px-4 py-6 md:px-0 md:py-0">
+    <SettingsSectionShell>
       <SettingsSectionHeader
         title="Informações pessoais"
         description="Nome, foto e telefone de contato"
@@ -84,7 +85,7 @@ export function ProviderPersonalInfoPage() {
               onCopyProfileLink={profileUrl ? handleCopyProfileLink : undefined}
             />
           ) : null}
-        </div>
+    </SettingsSectionShell>
       ) : null}
 
       {profileLoading ? (
@@ -93,17 +94,14 @@ export function ProviderPersonalInfoPage() {
         <Form {...form}>
           <div className="space-y-6">
             <ProviderDadosPessoaisAdapter form={form} email={email} />
-            <Card>
-              <CardHeader className="pb-3 sm:pb-0">
-                <SectionTitleWithIcon
+            <Card className="rounded-2xl border-border shadow-sm">
+              <CardHeader className="pb-2">
+                <SettingsCardHeader
                   title="Contato"
                   icon={Phone}
-                  iconGradient="from-sky-500 to-blue-600"
-                  size="compact"
-                  className="!mb-0"
                 />
               </CardHeader>
-              <CardContent className="!pt-4">
+              <CardContent className="pt-2">
                 <FormField
                   control={form.control}
                   name="phone"
@@ -123,19 +121,10 @@ export function ProviderPersonalInfoPage() {
                 />
               </CardContent>
             </Card>
-            <p className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
-              {isUpdating ? (
-                <>
-                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                  Salvando…
-                </>
-              ) : (
-                "As alterações são salvas automaticamente."
-              )}
-            </p>
+            <SettingsAutosaveHint isSaving={isUpdating} />
           </div>
         </Form>
       )}
-    </div>
+    </SettingsSectionShell>
   );
 }

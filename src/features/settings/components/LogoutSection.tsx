@@ -12,8 +12,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
 import { useAuth } from "@/features/auth";
+import { SettingsCardHeader } from "./SettingsCardHeader";
 
 export function LogoutSection() {
   const { signOut } = useAuth();
@@ -45,24 +45,23 @@ export function LogoutSection() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Card>
-        <CardHeader className="pb-3 sm:pb-0">
-          <SectionTitleWithIcon
+      <Card className="rounded-2xl border-border shadow-sm">
+        <CardHeader className="pb-2">
+          <SettingsCardHeader
             title="Sessão"
             icon={LogOut}
-            iconGradient="from-slate-500 to-slate-600"
-            size="compact"
-            className="!mb-0"
+            description="Encerre o acesso neste dispositivo"
           />
         </CardHeader>
-        <CardContent className="!pt-4">
-          <p className="text-sm text-muted-foreground mb-4">
-            Encerra sua sessão atual neste dispositivo. Você precisará fazer login novamente para acessar a plataforma.
+        <CardContent className="space-y-4 pt-2">
+          <p className="text-sm leading-relaxed text-body">
+            Encerra sua sessão atual neste dispositivo. Você precisará fazer login
+            novamente para acessar a plataforma.
           </p>
           <Button
             variant="outline"
             onClick={() => setShowConfirm(true)}
-            className="gap-2"
+            className="gap-2 rounded-full"
             aria-label="Sair da plataforma"
           >
             <LogOut className="h-4 w-4" />

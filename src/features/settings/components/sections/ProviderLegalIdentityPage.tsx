@@ -1,4 +1,3 @@
-import { Loader2 } from "lucide-react";
 import { Form } from "@/components/ui/form";
 import { useProviderSettingsForm } from "../../hooks/useProviderSettingsForm";
 import { SettingsRoleGate } from "../SettingsRoleGate";
@@ -7,6 +6,7 @@ import { ProviderFormSkeleton } from "../AccountFormSkeletons";
 import { EntityTypeSection } from "../EntityTypeSection";
 import { LegalIdentitySection } from "../LegalIdentitySection";
 import { SettingsSectionHeader } from "../SettingsSectionHeader";
+import { SettingsSectionShell, SettingsAutosaveHint } from "../SettingsSectionShell";
 
 export function ProviderLegalIdentityPage() {
   const {
@@ -24,7 +24,7 @@ export function ProviderLegalIdentityPage() {
 
   return (
     <SettingsRoleGate allow={["provider"]}>
-      <div className="space-y-6 px-4 py-6 md:px-0 md:py-0">
+      <SettingsSectionShell>
         <SettingsSectionHeader
           title="Identidade legal"
           description="PF/PJ e documentos cadastrais"
@@ -34,26 +34,17 @@ export function ProviderLegalIdentityPage() {
           <ProviderFormSkeleton />
         ) : (
           <Form {...form}>
-            <div className="space-y-6">
+            <div className="space-y-5">
               <EntityTypeSection
                 value={form.watch("entity_type")}
                 onChange={(v) => form.setValue("entity_type", v, { shouldDirty: true })}
               />
               <LegalIdentitySection form={form} entityType={form.watch("entity_type")} />
-              <p className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
-                {isUpdating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                    Salvando…
-                  </>
-                ) : (
-                  "As alterações são salvas automaticamente."
-                )}
-              </p>
+              <SettingsAutosaveHint isSaving={isUpdating} />
             </div>
           </Form>
         )}
-      </div>
+      </SettingsSectionShell>
     </SettingsRoleGate>
   );
 }

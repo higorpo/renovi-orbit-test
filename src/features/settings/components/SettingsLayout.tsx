@@ -5,9 +5,13 @@ import { getSettingsNavItems } from "../constants/settingsNav";
 import { SettingsNavList } from "./SettingsNavList";
 
 /**
- * Responsive account hub shell.
- * Desktop: persistent sidebar + section outlet.
+ * Responsive settings hub shell (Prestway).
+ * Desktop: sticky sidebar + section outlet on canvas-soft page floor.
  * Mobile: outlet only (index = list; sections = full pages).
+ *
+ * Uses `grow` (not `min-h-full` / `flex-1`) so the floor fills the dashboard
+ * scrollport when content is short and expands with content when tall —
+ * background stays owned by this feature, not DashboardLayout.
  */
 export function SettingsLayout() {
   const isDesktop = useBreakpointMd();
@@ -17,10 +21,12 @@ export function SettingsLayout() {
 
   if (loading && !profile) {
     return (
-      <div className="container px-4 py-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-48 rounded bg-muted" />
-          <div className="h-64 rounded bg-muted" />
+      <div className="w-full grow bg-canvas-soft">
+        <div className="container px-4 py-6 md:py-8">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 w-48 rounded-lg bg-muted" />
+            <div className="h-64 rounded-2xl bg-muted" />
+          </div>
         </div>
       </div>
     );
@@ -28,16 +34,22 @@ export function SettingsLayout() {
 
   if (isDesktop) {
     return (
-      <div className="container px-4 py-6 md:py-8">
-        <div className="flex gap-8 lg:gap-12">
-          <aside className="w-64 shrink-0 lg:w-72">
-            <h1 className="mb-4 font-display text-xl font-bold tracking-tight text-foreground">
-              Configurações
-            </h1>
-            <SettingsNavList items={items} variant="sidebar" />
-          </aside>
-          <div className="min-w-0 flex-1">
-            <Outlet />
+      <div className="w-full grow bg-canvas-soft">
+        <div className="container px-4 py-8 lg:py-10">
+          <div className="flex gap-10 lg:gap-14">
+            <aside className="w-60 shrink-0 self-start lg:w-64">
+              <div className="sticky top-20">
+                <h1 className="mb-5 font-display text-display-md font-bold tracking-tight text-ink">
+                  Configurações
+                </h1>
+                <SettingsNavList items={items} variant="sidebar" />
+              </div>
+            </aside>
+            <div className="min-w-0 flex-1">
+              <div className="rounded-2xl border border-border bg-canvas p-6 shadow-sm lg:p-8">
+                <Outlet />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -45,7 +57,7 @@ export function SettingsLayout() {
   }
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 w-full grow bg-canvas">
       <Outlet />
     </div>
   );

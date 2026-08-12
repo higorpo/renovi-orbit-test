@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
+import { SettingsCardHeader } from "./SettingsCardHeader";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Search, X } from "lucide-react";
 import { getServiceCardStyle } from "@/features/request-quote";
@@ -77,20 +77,15 @@ export function OfferedServicesSection({
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3 sm:pb-0">
-        <SectionTitleWithIcon
+    <Card className="rounded-2xl border-border shadow-sm">
+      <CardHeader className="pb-2">
+        <SettingsCardHeader
           title="Serviços oferecidos"
           icon={Search}
-          iconGradient="from-emerald-500 to-teal-600"
-          size="compact"
-          className="!mb-0"
+          description="Pesquise e selecione os serviços que aparecem no seu perfil público"
         />
       </CardHeader>
-      <CardContent className="!pt-4 space-y-4">
-        <p className="text-sm">
-          Pesquise e selecione os serviços que você oferece. Eles aparecerão no seu perfil público.
-        </p>
+      <CardContent className="space-y-4 pt-2">
         <div className="relative w-full">
           <Input
             placeholder="Buscar serviços..."
@@ -103,7 +98,7 @@ export function OfferedServicesSection({
           />
           {showList && (
             <div
-              className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border bg-card shadow-lg max-h-48 overflow-y-auto divide-y"
+              className="absolute left-0 right-0 top-full z-50 mt-1 max-h-48 divide-y overflow-y-auto rounded-xl border border-border bg-canvas shadow-elevation-2"
               role="listbox"
               aria-label="Resultados da busca"
               onMouseDown={(e) => e.preventDefault()}

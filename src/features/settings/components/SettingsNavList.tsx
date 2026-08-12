@@ -5,7 +5,7 @@ import type { SettingsNavItem } from "../constants/settingsNav";
 
 interface SettingsNavListProps {
   items: SettingsNavItem[];
-  /** Desktop sidebar: highlight active with soft background. */
+  /** Desktop sidebar: soft primary active. Mobile list: chevron rows. */
   variant: "sidebar" | "list";
 }
 
@@ -14,18 +14,18 @@ export function SettingsNavList({ items, variant }: SettingsNavListProps) {
   const footer = items.filter((item) => item.footer);
 
   return (
-    <nav aria-label="Configurações da conta" className="flex flex-col">
-      <ul className="flex flex-col">
+    <nav aria-label="Seções de configurações" className="flex flex-col">
+      <ul className={cn("flex flex-col", variant === "list" ? "gap-0.5" : "gap-0.5")}>
         {main.map((item) => (
-          <AccountNavRow key={item.slug} item={item} variant={variant} />
+          <SettingsNavRow key={item.slug} item={item} variant={variant} />
         ))}
       </ul>
       {footer.length > 0 ? (
         <>
-          <div className="my-2 border-t border-border" role="separator" />
-          <ul className="flex flex-col">
+          <div className="my-3 border-t border-border" role="separator" />
+          <ul className="flex flex-col gap-0.5">
             {footer.map((item) => (
-              <AccountNavRow key={item.slug} item={item} variant={variant} />
+              <SettingsNavRow key={item.slug} item={item} variant={variant} />
             ))}
           </ul>
         </>
@@ -34,7 +34,7 @@ export function SettingsNavList({ items, variant }: SettingsNavListProps) {
   );
 }
 
-function AccountNavRow({
+function SettingsNavRow({
   item,
   variant,
 }: {
@@ -49,28 +49,36 @@ function AccountNavRow({
         to={item.path}
         className={({ isActive }) =>
           cn(
-            "group flex min-h-11 items-center gap-3 rounded-lg px-3 py-3 text-base font-medium text-foreground transition-colors duration-150",
-            "hover:bg-muted/60",
-            variant === "sidebar" && isActive && "bg-muted",
-            variant === "list" && "justify-between",
+            "group flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] font-medium transition-colors duration-150",
+            variant === "list" && "justify-between py-3.5",
+            isActive
+              ? "bg-primary-soft text-ink"
+              : "text-ink hover:bg-canvas-soft",
           )
         }
       >
-        <span className="flex min-w-0 items-center gap-3">
-          <Icon
-            className="h-5 w-5 shrink-0 text-muted-foreground"
-            aria-hidden
-            strokeWidth={1.75}
-          />
-          <span className="truncate">{item.label}</span>
-        </span>
-        {variant === "list" ? (
-          <ChevronRight
-            className="h-5 w-5 shrink-0 text-muted-foreground"
-            aria-hidden
-            strokeWidth={1.75}
-          />
-        ) : null}
+        {({ isActive }) => (
+          <>
+            <span className="flex min-w-0 items-center gap-3">
+              <Icon
+                className={cn(
+                  "h-5 w-5 shrink-0 transition-colors duration-150",
+                  isActive ? "text-primary" : "text-muted-foreground group-hover:text-body",
+                )}
+                aria-hidden
+                strokeWidth={1.75}
+              />
+              <span className="truncate">{item.label}</span>
+            </span>
+            {variant === "list" ? (
+              <ChevronRight
+                className="h-5 w-5 shrink-0 text-muted-foreground"
+                aria-hidden
+                strokeWidth={1.75}
+              />
+            ) : null}
+          </>
+        )}
       </NavLink>
     </li>
   );

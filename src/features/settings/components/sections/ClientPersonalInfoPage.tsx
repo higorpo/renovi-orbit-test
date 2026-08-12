@@ -1,6 +1,5 @@
 import { useMemo, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
-import { Loader2 } from "lucide-react";
 import { Form } from "@/components/ui/form";
 import { useAuth } from "@/features/auth";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
@@ -19,6 +18,7 @@ import { DadosPessoaisSection } from "../DadosPessoaisSection";
 import { ContatoIdentidadeSection } from "../ContatoIdentidadeSection";
 import { ClientFormSkeleton } from "../AccountFormSkeletons";
 import { SettingsSectionHeader } from "../SettingsSectionHeader";
+import { SettingsSectionShell, SettingsAutosaveHint } from "../SettingsSectionShell";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 
@@ -136,14 +136,14 @@ export function ClientPersonalInfoPage() {
   }
 
   return (
-    <div className="space-y-6 px-4 py-6 md:px-0 md:py-0">
+    <SettingsSectionShell>
       <SettingsSectionHeader
         title="Informações pessoais"
         description="Nome, contato e documento"
       />
 
       {isDesktop ? (
-        <div className="mb-2">
+        <div>
           {profileLoading ? (
             <AccountSummaryCardSkeleton />
           ) : profile ? (
@@ -170,22 +170,13 @@ export function ClientPersonalInfoPage() {
         <ClientFormSkeleton />
       ) : (
         <Form {...form}>
-          <div className="space-y-6">
+          <div className="space-y-5">
             <DadosPessoaisSection form={form} email={email} />
             <ContatoIdentidadeSection form={form} />
-            <p className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
-              {isUpdating ? (
-                <>
-                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                  Salvando…
-                </>
-              ) : (
-                "As alterações são salvas automaticamente."
-              )}
-            </p>
+            <SettingsAutosaveHint isSaving={isUpdating} />
           </div>
         </Form>
       )}
-    </div>
+    </SettingsSectionShell>
   );
 }

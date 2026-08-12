@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
+import { SettingsCardHeader } from "./SettingsCardHeader";
 import {
   Dialog,
   DialogHeader,
@@ -32,15 +32,13 @@ export function EntityTypeSection({
   const [helpOpen, setHelpOpen] = useState(false);
 
   return (
-    <Card>
-      <CardHeader className="pb-3 sm:pb-0">
+    <Card className="rounded-2xl border-border shadow-sm">
+      <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <SectionTitleWithIcon
+          <SettingsCardHeader
             title="Tipo de entidade"
             icon={Building2}
-            iconGradient="from-violet-500 to-purple-600"
-            size="compact"
-            className="!mb-0"
+            description="Como você atua juridicamente na Prestway"
           />
           <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
             <DialogTrigger asChild>
@@ -76,37 +74,37 @@ export function EntityTypeSection({
           </Dialog>
         </div>
       </CardHeader>
-      <CardContent className="!pt-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <CardContent className="pt-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <button
             type="button"
             onClick={() => !disabled && onChange("pf")}
             disabled={disabled}
-            className={`flex flex-col items-start gap-1 rounded-lg border-2 p-4 text-left transition-colors ${
+            className={`flex flex-col items-start gap-1.5 rounded-xl border p-4 text-left transition-colors duration-150 ${
               value === "pf"
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-muted-foreground/50"
+                ? "border-primary bg-primary-soft"
+                : "border-border hover:bg-canvas-soft"
             }`}
             aria-pressed={value === "pf"}
           >
-            <User className="h-6 w-6" aria-hidden />
-            <span className="font-medium">Pessoa física</span>
-            <span className="text-sm text-muted-foreground">{PF_DESCRIPTION}</span>
+            <User className="h-5 w-5 text-ink" aria-hidden strokeWidth={1.75} />
+            <span className="font-medium text-ink">Pessoa física</span>
+            <span className="text-sm leading-relaxed text-body">{PF_DESCRIPTION}</span>
           </button>
           <button
             type="button"
             onClick={() => !disabled && onChange("pj")}
             disabled={disabled}
-            className={`flex flex-col items-start gap-1 rounded-lg border-2 p-4 text-left transition-colors ${
+            className={`flex flex-col items-start gap-1.5 rounded-xl border p-4 text-left transition-colors duration-150 ${
               value === "pj"
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-muted-foreground/50"
+                ? "border-primary bg-primary-soft"
+                : "border-border hover:bg-canvas-soft"
             }`}
             aria-pressed={value === "pj"}
           >
-            <Building2 className="h-6 w-6" aria-hidden />
-            <span className="font-medium">Pessoa jurídica</span>
-            <span className="text-sm text-muted-foreground">{PJ_DESCRIPTION}</span>
+            <Building2 className="h-5 w-5 text-ink" aria-hidden strokeWidth={1.75} />
+            <span className="font-medium text-ink">Pessoa jurídica</span>
+            <span className="text-sm leading-relaxed text-body">{PJ_DESCRIPTION}</span>
           </button>
         </div>
       </CardContent>

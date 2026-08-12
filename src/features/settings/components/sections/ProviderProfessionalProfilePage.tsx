@@ -1,4 +1,3 @@
-import { Loader2 } from "lucide-react";
 import { Form } from "@/components/ui/form";
 import { useProviderSettingsForm } from "../../hooks/useProviderSettingsForm";
 import { SettingsRoleGate } from "../SettingsRoleGate";
@@ -8,6 +7,7 @@ import { OfferedServicesSection } from "../OfferedServicesSection";
 import { PublicProfileSettingsSection } from "../PublicProfileSettingsSection";
 import { PortfolioManagementSection } from "../PortfolioManagementSection";
 import { SettingsSectionHeader } from "../SettingsSectionHeader";
+import { SettingsSectionShell, SettingsAutosaveHint } from "../SettingsSectionShell";
 
 export function ProviderProfessionalProfilePage() {
   const {
@@ -38,7 +38,7 @@ export function ProviderProfessionalProfilePage() {
 
   return (
     <SettingsRoleGate allow={["provider"]}>
-      <div className="space-y-6 px-4 py-6 md:px-0 md:py-0">
+      <SettingsSectionShell>
         <SettingsSectionHeader
           title="Perfil profissional"
           description="Serviços, área de atuação, perfil público e portfólio"
@@ -48,7 +48,7 @@ export function ProviderProfessionalProfilePage() {
           <ProviderFormSkeleton />
         ) : (
           <Form {...form}>
-            <div className="space-y-6">
+            <div className="space-y-5">
               <OfferedServicesSection
                 selectedServiceIds={offeredServiceIds}
                 onSelectedChange={setOfferedServiceIds}
@@ -56,16 +56,7 @@ export function ProviderProfessionalProfilePage() {
                 isUpdating={isUpdatingServices}
               />
               <PublicProfileSettingsSection form={form} profileSlug={publicData?.slug ?? null} />
-              <p className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
-                {isUpdating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                    Salvando…
-                  </>
-                ) : (
-                  "As alterações são salvas automaticamente."
-                )}
-              </p>
+              <SettingsAutosaveHint isSaving={isUpdating} />
             </div>
           </Form>
         )}
@@ -82,7 +73,7 @@ export function ProviderProfessionalProfilePage() {
           isUpdating={isUpdatingPortfolio}
           isDeleting={isDeletingPortfolio}
         />
-      </div>
+      </SettingsSectionShell>
     </SettingsRoleGate>
   );
 }
