@@ -1,7 +1,7 @@
 export const PROVIDER_KYC_DOCUMENTS_BUCKET = "provider-kyc-documents";
 
 /** Account/settings route allowed while KYC blocks the operational shell. */
-export const PROVIDER_KYC_ALLOWED_PATH_PREFIX = "/dashboard/conta";
+export const PROVIDER_KYC_ALLOWED_PATH_PREFIX = "/dashboard/account";
 
 export const PROVIDER_KYC_SUPPORT_URL = `${(import.meta.env.VITE_MAIN_SITE_URL ?? "").replace(/\/$/, "")}/suporte`;
 

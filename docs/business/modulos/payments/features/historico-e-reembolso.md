@@ -6,7 +6,7 @@
 - **Problema que resolve:** transparência do que foi cobrado/reembolsado e do que o prestador “recebeu” na captura; execução segura de cancelamento/estorno com política ToS e gateway-first.
 - **Quem usa:** cliente e prestador (histórico em Minha conta; cancelamento no detalhe do serviço contratado).
 - **Resultado esperado:** lista atualizada de parcelas pós-captura; cancelamento pré-`PAID` sem custo; pós-`PAID` com estorno submetido ao gateway e serviço/chat cancelados só após ACK.
-- **Não confundir** com **Ganhos** (`/dashboard/earnings`): liquidações bancárias — ver [ganhos-e-liquidacoes](../../provider-earnings/features/ganhos-e-liquidacoes.md).
+- **Não confundir** com **Ganhos** (`/dashboard/account/earnings`): liquidações bancárias — ver [ganhos-e-liquidacoes](../../provider-earnings/features/ganhos-e-liquidacoes.md).
 
 ## 2. Objetivo de negócio
 
@@ -19,15 +19,15 @@
 
 | Perfil | Superfície | Rota / entry | Componente |
 |--------|------------|--------------|------------|
-| Cliente | Histórico de pagamentos | `/dashboard/conta` (`MyAccountClientPage`) | `PaymentHistorySection` → `ClientPaymentHistoryList` |
-| Prestador | Recebimentos (captura) | `/dashboard/conta` (`MyAccountProviderPage`) | `PaymentHistorySection` → `ProviderPaymentHistoryList` |
+| Cliente | Histórico de pagamentos | `/dashboard/account/payments` | `PaymentHistorySection` → `ClientPaymentHistoryList` |
+| Prestador | Recebimentos (captura) | `/dashboard/account/receivables` | `PaymentHistorySection` → `ProviderPaymentHistoryList` |
 | Cliente / Prestador | Cancelar serviço | Detalhe do serviço (`ServiceDetailPage` → `ServiceDetailActionsBar`) | `ContractedServiceCancelAction` |
 
-- **Rota própria:** nenhuma — seções embutidas.
+- **Rota própria:** nenhuma — seções do hub Minha conta (`my-account`).
 - **Deep links / query params:** não há parâmetros específicos desta feature.
-- **Guards:** conta e detalhe de serviço sob dashboard autenticado; views de histórico filtram por `auth.uid()` (ou admin).
+- **Guards:** hub account e detalhe de serviço sob dashboard autenticado; views de histórico filtram por `auth.uid()` (ou admin).
 
-Evidência: `src/router.tsx` (`path: 'conta'`); `MyAccountClientPage.tsx`; `MyAccountProviderPage.tsx`; `ServiceDetailActionsBar.tsx` (`ContractedServiceCancelAction` quando há contrato e papel client/provider).
+Evidência: `src/router.tsx` (`account/payments`, `account/receivables`); `ClientPaymentsPage.tsx`; `ProviderReceivablesPage.tsx`; `ServiceDetailActionsBar.tsx` (`ContractedServiceCancelAction` quando há contrato e papel client/provider).
 
 ## 4. Perfis envolvidos
 
@@ -38,7 +38,7 @@ Evidência: `src/router.tsx` (`path: 'conta'`); `MyAccountClientPage.tsx`; `MyAc
 | Admin plataforma | Views permitem SELECT via `is_platform_admin()` | **Evidência parcial:** não há UI dedicada de cancelamento admin neste módulo |
 | Anônimo / outro usuário | Sem SELECT nas views | `FORBIDDEN` se não for client/provider do serviço |
 
-**Quem não usa o histórico nesta UI:** visitante; papéis sem conta em `/dashboard/conta`.
+**Quem não usa o histórico nesta UI:** visitante; papéis sem acesso às seções do hub `/dashboard/account`.
 
 ## 5. Fluxo funcional principal
 
@@ -257,7 +257,7 @@ Cancelamento pós-commit / side effects → `contracted_services.status = CANCEL
 | Ver histórico | Cliente / Prestador | Autenticado; linhas na view | Lista / empty / erro de fetch | Mensagem genérica de load fail |
 | Cancelar (pré-cobrança) | Cliente ou prestador do serviço | Elegibilidade UI + estados pré-charge | Toast “Serviço cancelado com sucesso.” | Matriz §Anexo A |
 | Cancelar (pós-`PAID`) | Idem | Parcela `PAID` + execução conhecida no servidor | Toast com janela 30–60 dias | `refund_failed`, guards 409, etc. |
-| Abrir Ganhos (link) | Prestador | — | Navegação `/dashboard/earnings` | — |
+| Abrir Ganhos (link) | Prestador | — | Navegação `/dashboard/account/earnings` | — |
 
 **Não há** ação de “solicitar reembolso” isolada do cancelamento do serviço neste módulo.
 
@@ -306,7 +306,7 @@ Cancelamento pós-commit / side effects → `contracted_services.status = CANCEL
 | API | `api/history.api.ts`, `api/refund.api.ts`, `api/charges.api.ts` (lifecycle) |
 | Utils | `clientPaymentHistoryAmounts.ts`, `formatPaymentHistoryState.ts`, `contractedServiceCancellation.ts`, `mapCancellationError.ts`, `formatPostChargeCancelSuccessMessage.ts` |
 | Tipos | `types/paymentHistory.types.ts` |
-| Conta | `src/features/my-account/components/MyAccount{Client,Provider}Page.tsx` |
+| Conta | `src/features/my-account/components/sections/ClientPaymentsPage.tsx`, `ProviderReceivablesPage.tsx` |
 | Detalhe serviço | `src/features/view-services/components/ServiceDetailActionsBar.tsx`, `ServiceDetailPage.tsx` |
 | Edge | `supabase/functions/process-refund/{index,handleRequest,types}.ts` |
 | Views | `supabase/migrations/20260801140000_create_payment_history_views.sql` |

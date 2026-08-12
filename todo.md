@@ -117,7 +117,7 @@ Coisas para fazer next
 
 
 
-
+- Permitir cadastrar empresas, usar nome da empresa ao inves do nome do responsável
 
 
 

@@ -4,7 +4,7 @@ export type ServiceDetailReturnTo =
   | "/dashboard/jobs"
   | "/dashboard/services"
   | "/dashboard/services/calendar"
-  | "/dashboard/earnings";
+  | "/dashboard/account/earnings";
 
 export type MyServicesViewerRole = "client" | "provider";
 
@@ -42,7 +42,7 @@ export function createProviderEarningsServiceDetailState(
 ): ServiceDetailLocationState {
   return {
     serviceDetailPresentation: "sheet",
-    returnTo: "/dashboard/earnings",
+    returnTo: "/dashboard/account/earnings",
     myServicesRole: "provider",
     background,
   };

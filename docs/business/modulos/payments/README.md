@@ -102,8 +102,8 @@
 ## Relação com outros módulos
 
 - **`negotiation-proposals` / `chats`:** aceite de proposta cria `payment_schedules` e abre checkout.
-- **`my-account`:** embute `PaymentHistorySection` (cliente e prestador) em `/dashboard/conta`.
-- **`provider-earnings`:** UI de liquidações bancárias; lê settlements deste domínio; disclosure de previsão importado da Public API (sem re-export em `payments`).
+- **`my-account`:** embute `PaymentHistorySection` (cliente em `/dashboard/account/payments`; prestador em `/dashboard/account/receivables`) e `SavedCardsList` (cliente, payments).
+- **`provider-earnings`:** UI de liquidações bancárias em `/dashboard/account/earnings`; lê settlements deste domínio; disclosure de previsão importado da Public API (sem re-export em `payments`).
 - **`provider-kyc`:** UI (gate + wizard de credenciamento) até onboarding `ACTIVE`; backend de submissão/detecção permanece nas RPCs/EFs NetCred deste domínio.
 - **`my-services` / `view-services`:** status do serviço contratado reflete ciclo de pagamento; cancelamento pós-pagamento dispara reembolso; aviso discreto de `far_recapture_pending` no detalhe.
 - **`service-completion`:** writers de produto `EXECUTED`/`COMPLETED`/`IN_DISPUTE` (`service_completion_*`) — **fora** deste módulo (ADR-0004 / ADR-0006). Removidos: `payment_mark_service_executed`, `payment_confirm_service_completed`, `payment_cron_auto_complete_*`. Chargeback/`is_disputed` permanece aqui; **Disputa de serviço** (`IN_DISPUTE`) é do service-completion (≠ chargeback).

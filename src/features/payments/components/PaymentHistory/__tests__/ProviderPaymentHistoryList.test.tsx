@@ -15,7 +15,7 @@ vi.mock("@/features/provider-earnings", () => ({
   ),
   PROVIDER_SETTLEMENT_COMPLETION_NOTE:
     "Marcar o serviço como concluído não antecipa quando o valor será depositado na sua conta.",
-  ROUTE_PROVIDER_EARNINGS: "/dashboard/earnings",
+  ROUTE_PROVIDER_EARNINGS: "/dashboard/account/earnings",
 }));
 
 function renderList() {

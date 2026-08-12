@@ -1,5 +1,10 @@
 import type { Location } from "react-router";
 import type { ServiceDetailLocationState } from "@/features/view-services/types/serviceDetailNavigation.types";
+import {
+  ACCOUNT_SECTION_STACK_TITLE,
+  type AccountSectionSlug,
+} from "@/features/my-account/constants/accountNav";
+import { ROUTE_ACCOUNT } from "@/features/my-account/constants/routes";
 import type { MobileChromeConfig } from "./mobileNavigation.types";
 import { MOBILE_TAB_ROOT_DEFAULT } from "./mobileNavigation.types";
 
@@ -47,6 +52,14 @@ function createStackConfig(stackTitle: string, backFallback: string): MobileChro
   };
 }
 
+function resolveAccountSectionChrome(pathname: string): MobileChromeConfig | null {
+  const match = pathname.match(/^\/dashboard\/account\/([^/]+)$/);
+  if (!match) return null;
+  const slug = match[1] as AccountSectionSlug;
+  const stackTitle = ACCOUNT_SECTION_STACK_TITLE[slug] ?? "Minha conta";
+  return createStackConfig(stackTitle, ROUTE_ACCOUNT);
+}
+
 export function resolveMobileChrome(
   pathname: string,
   location: Location,
@@ -75,6 +88,11 @@ export function resolveMobileChrome(
     }
 
     return createStackConfig("Detalhes do serviço", "/dashboard/services");
+  }
+
+  const accountSectionChrome = resolveAccountSectionChrome(pathname);
+  if (accountSectionChrome) {
+    return accountSectionChrome;
   }
 
   for (const route of MOBILE_STACK_ROUTES) {

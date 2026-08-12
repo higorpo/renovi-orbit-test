@@ -30,12 +30,10 @@ Evidência: `src/router.tsx` (árvore atual).
 | `/dashboard/services` | Herdado | `client`, `provider` | Real (`my-services`) | Slot por papel no layout |
 | `/dashboard/services/calendar` | Aninhado `provider` | **`provider` apenas** | Real (`provider-calendar`) | **Fora do menu**; entrada via banner em Meus Serviços |
 | `/dashboard/services/:id` | Herdado | `client`, `provider` | Real (`view-services`) | Detalhe; sheet ou stack; **fora do menu** |
-| `/dashboard/addresses` | Aninhado `client` | **`client` apenas** | **Fake** | Menu aponta aqui; gestão real em Minha conta |
-| `/dashboard/conta` | Aninhado `client`+`provider` | `client`, `provider` | Real (`my-account`) | **Allowlist KYC** (prestador) |
+| `/dashboard/account` (+ seções) | Herdado (+ `AccountRoleGate` por seção) | `client`, `provider` | Real (`my-account`; earnings host) | **Allowlist KYC**; Ganhos em `/dashboard/account/earnings` |
 | `/dashboard/settings` | Herdado | `client`, `provider` | **Fake** | Sem item de menu |
-| `/dashboard/help` | Herdado | `client`, `provider` | **Fake** | No menu (overflow) |
+| `/dashboard/help` | Herdado | `client`, `provider` | **Fake** | No menu (overflow cliente: no main; prestador: overflow) |
 | `/dashboard/jobs` | Aninhado `provider` | **`provider` apenas** | Real (`provider-jobs`) | |
-| `/dashboard/earnings` | Aninhado `provider` | **`provider` apenas** | Real (`provider-earnings`) | Ganhos / liquidações |
 | `/dashboard/chats` | Aninhado `client`+`provider` | `client`, `provider` | Real (`chats`) | Inbox CNS |
 | `/dashboard/chats/:chatId` | Filho de chats | `client`, `provider` | Real (`chats`) | Thread; chrome mobile `custom` |
 | `/example` | `ProtectedRoute` | **`client` apenas** | Demo | |
@@ -63,9 +61,8 @@ Evidência: `src/layouts/DashboardLayout/dashboardMenu.ts`. Bottom nav mobile = 
 | 1 | Visão geral | `/dashboard` | Sim | Fake |
 | 2 | Meus Serviços | `/dashboard/services` | Sim | Real |
 | 3 | Conversas | `/dashboard/chats` | Sim | Real |
-| 4 | Endereços | `/dashboard/addresses` | Sim | Fake (reais em Minha conta) |
-| 5 | Minha conta | `/dashboard/conta` | Sim | Real |
-| 6 | Ajuda | `/dashboard/help` | Overflow | Fake |
+| 4 | Minha conta | `/dashboard/account` | Sim | Real (hub) |
+| 5 | Ajuda | `/dashboard/help` | Sim | Fake |
 
 ### Prestador (qualquer role ≠ `client` no helper)
 
@@ -75,15 +72,14 @@ Evidência: `src/layouts/DashboardLayout/dashboardMenu.ts`. Bottom nav mobile = 
 | 2 | Meus Serviços | `/dashboard/services` | Sim | Real |
 | 3 | Trabalhos | `/dashboard/jobs` | Sim | Real |
 | 4 | Conversas | `/dashboard/chats` | Sim | Real |
-| 5 | Ganhos | `/dashboard/earnings` | Sim | Real |
-| 6 | Minha conta | `/dashboard/conta` | Overflow | Real |
-| 7 | Ajuda | `/dashboard/help` | Overflow | Fake |
+| 5 | Minha conta | `/dashboard/account` | Sim | Real (hub; Ganhos dentro) |
+| 6 | Ajuda | `/dashboard/help` | Overflow | Fake |
 
-**Não estão no menu:** `/dashboard/services/calendar`, `/dashboard/services/:id`, `/dashboard/settings`. Não há item “Orçamentos”.
+**Não estão no menu:** `/dashboard/services/calendar`, `/dashboard/services/:id`, `/dashboard/settings`, seções `/dashboard/account/*` (acesso via Minha conta). Não há itens Endereços / Ganhos / “Orçamentos”.
 
 **Menu do prestador (definição):** `getDashboardMenu(role)` sempre retorna o menu completo do papel — sem filtro por status KYC na definição dos itens.
 
-**Chrome quando KYC bloqueia:** `useProviderKycBlocksNav` (provider + loading **ou** `shouldBlockProviderForKyc`) faz o `DashboardLayout` **ocultar** DesktopNav, bottom nav e hamburger (`MobileTabHeader` `hideMenu`); header/logo permanece; `pb-20` só com bottom nav visível. O `ProviderKycGate` substitui o **conteúdo** operacional quando `onboarding_status !== ACTIVE` (exceto allowlist `/dashboard/conta*`).
+**Chrome quando KYC bloqueia:** `useProviderKycBlocksNav` (provider + loading **ou** `shouldBlockProviderForKyc`) faz o `DashboardLayout` **ocultar** DesktopNav, bottom nav e hamburger (`MobileTabHeader` `hideMenu`); header/logo permanece; `pb-20` só com bottom nav visível. O `ProviderKycGate` substitui o **conteúdo** operacional quando `onboarding_status !== ACTIVE` (exceto allowlist `/dashboard/account*`).
 
 **Admin no helper:** ramificação só trata `client`; demais papéis recebem menu de prestador. Na prática o `ProtectedRoute` do dashboard **exclui** `admin`.
 
@@ -93,7 +89,7 @@ Detalhe: [placeholders-e-menu](./modulos/dashboard-shell/features/placeholders-e
 
 ## Gate de KYC no shell (`ProviderKycGate` + chrome)
 
-Complementa (não substitui) os `ProtectedRoute`. Allowlist de conteúdo: `PROVIDER_KYC_ALLOWED_PATH_PREFIX = "/dashboard/conta"` (pathname igual ou `/dashboard/conta/…`).
+Complementa (não substitui) os `ProtectedRoute`. Allowlist de conteúdo: `PROVIDER_KYC_ALLOWED_PATH_PREFIX = "/dashboard/account"` (pathname igual ou `/dashboard/account/…`).
 
 | Situação | Efeito |
 |----------|--------|
@@ -101,9 +97,9 @@ Complementa (não substitui) os `ProtectedRoute`. Allowlist de conteúdo: `PROVI
 | `provider` + `onboarding_status === ACTIVE` (conta carregada) | Conteúdo operacional liberado; chrome de nav visível |
 | `provider` + loading da conta | Spinner “Verificando credenciamento…” (**antes** da allowlist); **menus ocultos** |
 | `provider` + conta null ou status ≠ `ACTIVE`, path **fora** da allowlist | Slots + outlet → UIs KYC / wizard; **menus ocultos** |
-| Path `/dashboard/conta` ou `/dashboard/conta/…` (após loading) | Children liberados (logout / conta) mesmo se ≠ `ACTIVE`; chrome **ainda oculto** se não-`ACTIVE` |
+| Path `/dashboard/account` ou `/dashboard/account/…` (após loading) | Children liberados (logout / conta) mesmo se ≠ `ACTIVE`; chrome **ainda oculto** se não-`ACTIVE` |
 
-Guards de rota **não** impedem URL direta de `/dashboard/jobs`, `/dashboard/earnings`, `/dashboard/chats`, etc.: o papel `provider` passa; o **gate substitui** o conteúdo se não-`ACTIVE`; chrome permanece oculto.
+Guards de rota **não** impedem URL direta de `/dashboard/jobs`, `/dashboard/chats`, etc.: o papel `provider` passa; o **gate substitui** o conteúdo se não-`ACTIVE`; chrome permanece oculto.
 
 Detalhe: [gate-e-acesso-operacional](./modulos/provider-kyc/features/gate-e-acesso-operacional.md).
 
@@ -173,7 +169,7 @@ Fonte: [service-reschedule](./modulos/service-reschedule/README.md).
 | Checkout no aceite / cartões / cobrança manual | Sim | — (precisa estar credentialed `ACTIVE` + company + bank no backend) | — |
 | Histórico de pagamentos / recebimentos | Sim (captura) | Sim (recebíveis) | SELECT via `is_platform_admin()` em views |
 | Cancelar serviço (ToS / refund path) | Sim (se elegível) | Sim (se elegível; estorno integral) | Sem UI dedicada no app |
-| Ganhos / liquidações UI | — | `/dashboard/earnings` | — |
+| Ganhos / liquidações UI | — | `/dashboard/account/earnings` | — |
 | Reset DEAD_LETTER / crons de cobrança | — | — | Ops `service_role` |
 
 Fonte: [payments](./modulos/payments/README.md), [checkout-e-cobranca](./modulos/payments/features/checkout-e-cobranca.md), [historico-e-reembolso](./modulos/payments/features/historico-e-reembolso.md).
@@ -241,8 +237,8 @@ Para detalhes por tabela, ver arquivos em `supabase/migrations/` citados em [ras
 
 - O **painel** `/dashboard` é só para **`client` e `provider`**; cada área sensível reforça papel com `ProtectedRoute` aninhado (`addresses` → client; `jobs` / `earnings` / `services/calendar` → provider; `chats` / `conta` → ambos).
 - Rotas reais fora do menu: **calendário** (`/dashboard/services/calendar`), **detalhe** (`/dashboard/services/:id`), **settings** (fake).
-- **Prestador sem KYC `ACTIVE`:** conteúdo operacional bloqueado pelo gate; **menus ocultos** (desktop, bottom nav, hamburger); header/logo permanece; allowlist de conteúdo **`/dashboard/conta*`**.
+- **Prestador sem KYC `ACTIVE`:** conteúdo operacional bloqueado pelo gate; **menus ocultos** (desktop, bottom nav, hamburger); header/logo permanece; allowlist de conteúdo **`/dashboard/account*`**.
 - **Push:** soft prompt para autenticados (copy por papel); **geo operacional só prestador** (device-beacon).
 - **CNS / propostas / reagendamento / pagamentos / conclusão:** matrizes acima; admin sem UI de mutação nesses fluxos.
 - **Admin:** papel no banco + redirect para `/admin/dashboard` **sem rota** — **P-02**.
-- Endereços no menu cliente: **placeholder**; gestão real em **Minha conta**.
+- Endereços: gestão em **Minha conta** (`/dashboard/account/addresses`); sem item de menu dedicado.

@@ -6,7 +6,7 @@
 - **Quem usa:** principalmente **clientes** autenticados; componentes reutilizados no wizard público quando há usuário logado.
 - **Processo suportado:** captação de local do serviço e consistência com `client_addresses` e tabelas de plataforma.
 - **Valor:** reduz erro de endereço e habilita matching geográfico para prestadores.
-- **Riscos operacionais:** divergência entre menu “Endereços” do dashboard (**placeholder** na rota) e gestão real na **Minha conta** pode confundir atendimento.
+- **Riscos operacionais:** endereços sensíveis (CEP/logradouro); exclusão com impacto em pedidos que referenciam o registro.
 
 ## 2. Visão geral funcional
 
@@ -53,7 +53,7 @@
 
 ## 9. Riscos, lacunas e observações
 
-- Rota `/dashboard/addresses` não usa este módulo — **placeholder**.
+- Rota top-level `/dashboard/addresses` **removida**; gestão no hub `/dashboard/account/addresses`.
 
 ## 10. Evidências no código
 
@@ -65,4 +65,4 @@
 
 ## 11. Atualização de auditoria (2026-08-02)
 
-- Revalidado sem drift: CRUD em `client_addresses`, uso real em Minha conta / pedido, rota `/dashboard/addresses` placeholder.
+- CRUD em `client_addresses`; uso real em Minha conta (`/dashboard/account/addresses`) / pedido; rota menu `/dashboard/addresses` removida.

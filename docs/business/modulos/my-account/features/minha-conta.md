@@ -1,71 +1,86 @@
 # Minha conta (cliente e prestador)
 
-Documentação alinhada a `src/features/my-account/`, guard em `src/router.tsx` e APIs/hooks da feature. Endereços e histórico de pagamentos são **embutidos** — detalhe canônico nos módulos `addresses` e `payments` (links apenas).
+Documentação alinhada a `src/features/my-account/`, hub em `src/router.tsx` (`/dashboard/account/*`) e APIs/hooks da feature. Endereços e histórico de pagamentos são **embutidos** — detalhe canônico nos módulos `addresses` e `payments` (links apenas). Ganhos: UI de `provider-earnings` hospedada no hub.
+
+ADR de navegação: [`docs/adr/0002-account-settings-hub.md`](../../../../adr/0002-account-settings-hub.md).
 
 ---
 
 ## 1. Resumo executivo
 
-Tela única `/dashboard/conta` onde cliente e prestador mantêm cadastro, foto, privacidade/LGPD e sessão. O prestador gerencia ainda identidade legal, perfil público, serviços ofertados, área de atuação e portfólio. Auto-save com debounce diferente por papel. Exclusão de conta e exportação LGPD hoje são fluxos manuais via e-mail ao DPO (`dpo@prestway.com`).
+Hub responsivo de configurações sob `/dashboard/account` (slugs em inglês), não mais uma página única em scroll em `/dashboard/conta`. Cliente e prestador mantêm cadastro, foto, privacidade/LGPD e sessão em seções; o prestador gerencia ainda identidade legal, perfil profissional (público, ofertados, área, portfólio), recebimentos na captura e Ganhos (liquidação). **Fase 1:** só o shell de navegação; UIs de formulário/seção existentes reutilizadas; auto-save inalterado. Exclusão de conta e exportação LGPD hoje são fluxos manuais via e-mail ao DPO (`dpo@prestway.com`).
 
 ## 2. Objetivo de negócio
 
 - Manter dados cadastrais confiáveis para contratação, matching geográfico e página pública do prestador.
 - Oferecer ponto de saída (logout / conta) mesmo com KYC prestador incompleto.
 - Centralizar preferências de privacidade e pedidos LGPD sem self-service destrutivo na API.
+- Um hub de conta no menu do dashboard (sem Endereços / Ganhos como itens top-level).
 
 ## 3. Localização na plataforma
 
-| Tela | Rota | Guard |
-|------|------|-------|
-| Minha conta | `/dashboard/conta` | `ProtectedRoute` `allowedRoles={['client','provider']}` |
+| Superfície | Rota | Guard / chrome |
+|------------|------|----------------|
+| Índice Minha conta | `/dashboard/account` | Dashboard autenticado; **mobile** tab-root (lista); **desktop** `Navigate` → `personal-info` |
+| Seções | `/dashboard/account/:section` | Mobile **stack** (voltar → `/dashboard/account`); desktop sidebar + outlet |
 
-- **Ramificação:** `MyAccountPage` → `MyAccountClientPage` \| `MyAccountProviderPage` por `profile.role`.
-- **Loading sem perfil:** skeleton pulse no container.
-- **KYC:** `/dashboard/conta` (e paths aninhados) na allowlist do `ProviderKycGate` — ver [gate-e-acesso-operacional](../../provider-kyc/features/gate-e-acesso-operacional.md).
-- **Sem deep link / query** de negócio nesta feature (evidência: páginas sem `useSearchParams` de foco).
-- **Menu:** item de conta no dashboard (layout); não confundir com `/dashboard/addresses` (fake).
+**Seções (slugs):**
+
+| Papel | Slugs |
+|-------|-------|
+| Cliente | `personal-info`, `addresses`, `payments`, `privacy`, `session` |
+| Prestador | `personal-info`, `legal-identity`, `professional-profile`, `receivables`, `earnings`, `privacy`, `session` |
+
+- **Layout:** `MyAccountLayout` — desktop: sidebar `AccountNavList` + `<Outlet />`; mobile: só outlet.
+- **Índice mobile:** `MyAccountIndexPage` — título “Minha conta”, `AccountSummaryCard`, lista de seções.
+- **Summary card:** mobile no índice; desktop só em `personal-info` (`ClientPersonalInfoPage` / `ProviderPersonalInfoPage`).
+- **KYC:** prefixo allowlist `PROVIDER_KYC_ALLOWED_PATH_PREFIX = "/dashboard/account"` — ver [gate-e-acesso-operacional](../../provider-kyc/features/gate-e-acesso-operacional.md).
+- **Menu dashboard:** item **Minha conta** → `/dashboard/account` (`dashboardMenu.ts`). Removidos itens **Endereços** e **Ganhos**.
+- **Rotas removidas (sem redirect):** `/dashboard/conta`, `/dashboard/earnings`, `/dashboard/addresses`.
+- **Constante:** `ROUTE_ACCOUNT`; helpers `accountSectionPath` / `ACCOUNT_SECTION` em `constants/routes.ts`.
 
 ## 4. Perfis envolvidos
 
-| Perfil | Acesso | Não acessa nesta rota |
-|--------|--------|------------------------|
-| `client` | Página cliente completa | Seções de prestador |
-| `provider` | Página prestador completa | `AddressesSection`, `SavedCardsList` |
-| Visitante | Não | Guard |
-| `admin` | Sem superfície nesta rota | — |
+| Perfil | Acesso | Não acessa |
+|--------|--------|------------|
+| `client` | Seções cliente; `AccountRoleGate` nas seções client-only | legal-identity, professional-profile, receivables, earnings |
+| `provider` | Seções prestador | addresses, payments (cartões/histórico cliente) |
+| Visitante | Não | Guard do dashboard |
+| `admin` | Sem superfície dedicada neste hub | — |
 
 ## 5. Fluxo funcional principal
 
 ```mermaid
 flowchart TD
-  A[/dashboard/conta] --> B{profile.role}
-  B -->|client| C[MyAccountClientPage]
-  B -->|provider| D[MyAccountProviderPage]
-  C --> E[Form auto-save 1.5s]
-  C --> F[AddressesSection]
-  C --> G[SavedCardsList]
-  C --> H[PaymentHistorySection client]
-  D --> I[Form auto-save 2s por grupos]
-  D --> J[Offered + Public + Portfolio]
-  D --> K[PaymentHistorySection provider]
-  C --> L[Privacy + Logout + DangerZone]
-  D --> L
+  A["/dashboard/account"] --> B{breakpoint md?}
+  B -->|desktop| C["Redirect personal-info"]
+  B -->|mobile| D["Índice: Summary + lista seções"]
+  D --> E["/dashboard/account/:section stack"]
+  C --> F["Sidebar + outlet seção"]
+  E --> G{role + slug}
+  F --> G
+  G -->|client personal-info| H[Form auto-save 1.5s]
+  G -->|client addresses| I[AddressesSection]
+  G -->|client payments| J[SavedCards + PaymentHistory client]
+  G -->|provider personal-info / legal / professional| K[Form / seções prestador]
+  G -->|provider receivables| L[PaymentHistory provider]
+  G -->|provider earnings| M[EarningsPage via provider-earnings]
+  G -->|privacy / session| N[Privacy + Logout + DangerZone]
 ```
 
 ### Cliente — feliz
 
-1. Carrega `useAccountProfile` + CPF (`useClientPrivateProfile`).
-2. Edita nome/telefone/CPF → após 1500 ms valida Zod e persiste `profiles` + `client_profiles_private`.
-3. Gerencia endereços / cartões / vê histórico (módulos externos).
-4. Privacidade, logout ou zona de perigo (DPO).
+1. Abre hub → mobile lista; desktop personal-info.
+2. Edita nome/telefone/CPF em personal-info → após 1500 ms valida Zod e persiste `profiles` + `client_profiles_private`.
+3. Endereços / pagamentos (cartões + histórico) nas seções dedicadas.
+4. Privacidade, sessão (logout) ou zona de perigo (DPO).
 
 ### Prestador — feliz
 
-1. Carrega agregado `useProviderProfile` + ofertados + portfólio.
-2. Edita campos → 2000 ms → validação → mutações só dos **grupos dirty** (profile / private / public).
-3. Serviços e área; portfólio fora do `Form` com CRUD explícito.
-4. Histórico de recebimentos embutido; privacidade / logout / DPO.
+1. Abre hub → mesma lógica mobile/desktop.
+2. personal-info / legal-identity / professional-profile → debounce 2000 ms e mutações por grupos dirty onde aplicável.
+3. Recebimentos (captura); Ganhos (liquidação bancária — feature externa hospedada).
+4. Privacidade / sessão / DPO.
 
 ## 6. Fluxos alternativos e exceções
 
@@ -82,6 +97,7 @@ flowchart TD
 | Foto inválida no seletor | Validação retorna e **encerra sem toast** (`AccountSummaryCard`) |
 | Exclusão | Dialog informa mailto DPO — **não** chama delete API |
 | `DeleteAccountDialog` | Implementado (digitar EXCLUIR) mas **não importado** em `DangerZoneSection` |
+| Papel errado na seção | `AccountRoleGate` redireciona / bloqueia conforme implementação |
 
 ## 7. Regras de negócio (numeradas)
 
@@ -97,9 +113,10 @@ flowchart TD
 10. E-mail do usuário não é editável no formulário.
 11. Slug: em `updateProviderPublicProfile`, se `display_name` atualiza e slug atual é null ou igual a `providerId`, gera slug único; após slug “real”, alterações de nome não mudam o slug (código analisado).
 12. Prestador: `useUpdateAccountProfile({ silent: true })` — toasts de profile base silenciados no fluxo de grupos.
-13. Cliente: `SavedCardsList` com `tokenizeContext="profile"` e `phone` do perfil.
-14. Histórico: `PaymentHistorySection role="client"|"provider"` — contratos/views no módulo payments.
-15. Logout: confirmação em `AlertDialog` → `signOut()` (`useAuth`).
+13. Cliente: `SavedCardsList` com `tokenizeContext="profile"` e `phone` do perfil (seção payments).
+14. Histórico: `PaymentHistorySection role="client"|"provider"` — contratos/views no módulo payments (seções payments / receivables).
+15. Logout: confirmação em `AlertDialog` → `signOut()` (`useAuth`) — seção session.
+16. Fase 1: shell de navegação; sem redesign row-by-row dos formulários.
 
 ## 8. Campos e dados
 
@@ -144,7 +161,7 @@ flowchart TD
 
 | Estado UI | Quando |
 |-----------|--------|
-| Loading skeleton | `profileLoading` / sem perfil inicial |
+| Loading skeleton | `profileLoading` / sem perfil inicial / layout loading |
 | Error state | `profileError && !profile` |
 | Salvando… | Mutação em andamento (`Loader2`) |
 | Idle auto-save | Texto “As alterações são salvas automaticamente.” |
@@ -166,9 +183,9 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 | Destino | Como |
 |---------|------|
 | `auth` | Perfil base, update, signOut |
-| `addresses` | Embutido só cliente — [gestão de endereços](../../addresses/features/gestao-de-enderecos.md) |
+| `addresses` | `/dashboard/account/addresses` — [gestão de endereços](../../addresses/features/gestao-de-enderecos.md) |
 | `payments` | Cartões + histórico — [histórico e reembolso](../../payments/features/historico-e-reembolso.md); erros de cartão em [checkout](../../payments/features/checkout-e-cobranca.md) |
-| `provider-earnings` | **Não** embutido; liquidações em `/dashboard/earnings` |
+| `provider-earnings` | Hospedado em `/dashboard/account/earnings` (`ProviderEarningsSectionPage` → `EarningsPage`); `ROUTE_PROVIDER_EARNINGS` |
 | `provider-profile` | Link `/perfil/{slug}` |
 | Site jurídico | `PRIVACY_POLICY_URL` = `{VITE_MAIN_SITE_URL}/juridico/politica-de-privacidade` |
 
@@ -177,37 +194,41 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - **Ofertados:** busca em `platform_services` — até 20 resultados com query / 10 sem query (`OfferedServicesSection`).
 - **Portfólio:** lista do prestador + reorder DnD (`@dnd-kit`); sem paginação server-side evidenciada no hook de conta.
 - **Histórico de pagamentos:** listagem/paginação no módulo `payments` (não duplicar aqui).
+- **Ganhos:** listagem/filtros no módulo `provider-earnings`.
 - **Endereços:** CRUD no módulo `addresses`.
 
 ## 15. Ações disponíveis
 
 | Ação | Quem | Pré-condição | Resultado |
 |------|------|--------------|-----------|
+| Navegar seções | Ambos | Autenticado | Hub / stack / sidebar |
 | Auto-save campos | Ambos | Dirty + Zod OK | Persistência |
 | Upload / remover foto | Ambos | Arquivo válido / path existe | Storage + profile path |
-| CRUD endereços | Cliente | — | Feature addresses |
-| Cartões salvos | Cliente | — | Feature payments |
-| Ver histórico captura | Cliente / Prestador | — | `PaymentHistorySection` |
-| Add/remove serviços | Prestador | Seleção | `setOfferedServices` |
+| CRUD endereços | Cliente | Seção addresses | Feature addresses |
+| Cartões salvos | Cliente | Seção payments | Feature payments |
+| Ver histórico captura | Cliente / Prestador | payments / receivables | `PaymentHistorySection` |
+| Ver Ganhos | Prestador | Seção earnings | `EarningsPage` |
+| Add/remove serviços | Prestador | professional-profile | `setOfferedServices` |
 | Copiar / abrir perfil | Prestador | slug | Clipboard / nova URL |
 | CRUD portfólio | Prestador | Título | Items + imagens |
-| Falar DPO / Exportar | Ambos | — | mailto / dialog |
-| Excluir conta (UI) | Ambos | — | Orientação DPO |
-| Sair | Ambos | Confirma | `signOut` |
+| Falar DPO / Exportar | Ambos | privacy | mailto / dialog |
+| Excluir conta (UI) | Ambos | session / danger | Orientação DPO |
+| Sair | Ambos | session | `signOut` |
 
 ## 16. Dependências
 
 - Internas: hooks/api listados na seção 19.
-- Externas de feature: `auth`, `addresses`, `payments`, `request-quote` (estilo), UI shadcn.
+- Externas de feature: `auth`, `addresses`, `payments`, `provider-earnings` (host), `request-quote` (estilo), UI shadcn.
 - Downstream: matching/área usa bairros; público usa slug.
 
 ## 17. Regras implícitas
 
-- Hidratação do form: `hydratedProfileIdRef` evita reset contínuo após primeiro load do `profile.id`.
-- Prestador: telefone fora de `DadosPessoaisSection` (card Contato dedicado); adapter de tipos para reutilizar a seção de nome.
+- Hidratação do form: `hydratedProfileIdRef` evita reset contínuo após primeiro load do `profile.id` (fluxos de formulário reutilizados).
+- Prestador: telefone fora de `DadosPessoaisSection` (card Contato dedicado) em personal-info.
 - Cliente não vê `PaymentHistorySection` com role provider e vice-versa.
 - Zona de perigo copy fala em remoção irreversível, mas ação real é pedido por e-mail.
 - Toasts de sucesso de foto: “Foto atualizada com sucesso.” / “Foto removida.” (`useProfilePhotoMutation`).
+- `MyAccountPage` / `MyAccount{Client,Provider}Page` permanecem no tree para testes; produção usa layout + seções.
 
 ## 18. Riscos
 
@@ -215,16 +236,19 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - Validação de foto silenciosa na UI.
 - Dados sensíveis (CPF/CNPJ) na mesma superfície do auto-save.
 - Dependência de env para política de privacidade.
+- Deep links legados para `/dashboard/conta` (ex.: enqueue de lembrete KYC na migration) **não** redirecionam — rota removida.
 
 ## 19. Evidências
 
-- Páginas: `components/MyAccountPage.tsx`, `MyAccountClientPage.tsx`, `MyAccountProviderPage.tsx`
-- Seções: `DadosPessoaisSection`, `ContatoIdentidadeSection`, `EntityTypeSection`, `LegalIdentitySection`, `OfferedServicesSection`, `PublicProfileSettingsSection`, `ServiceAreaField`, `PortfolioManagementSection`, `PrivacySection`, `DangerZoneSection`, `LogoutSection`, `AccountSummaryCard`, `AccountErrorState`, `DeleteAccountDialog` (não ligado)
+- Shell: `MyAccountLayout.tsx`, `MyAccountIndexPage.tsx`, `AccountNavList.tsx`, `AccountSectionHeader.tsx`, `AccountRoleGate.tsx`
+- Seções: `components/sections/PersonalInfoPage.tsx`, `ClientPersonalInfoPage.tsx`, `ProviderPersonalInfoPage.tsx`, `ClientAddressesPage.tsx`, `ClientPaymentsPage.tsx`, `ProviderLegalIdentityPage.tsx`, `ProviderProfessionalProfilePage.tsx`, `ProviderReceivablesPage.tsx`, `ProviderEarningsSectionPage.tsx`, `AccountPrivacyPage.tsx`, `AccountSessionPage.tsx`
+- Blocos reutilizados: `DadosPessoaisSection`, `ContatoIdentidadeSection`, `EntityTypeSection`, `LegalIdentitySection`, `OfferedServicesSection`, `PublicProfileSettingsSection`, `ServiceAreaField`, `PortfolioManagementSection`, `PrivacySection`, `DangerZoneSection`, `LogoutSection`, `AccountSummaryCard`, `AccountErrorState`, `DeleteAccountDialog` (não ligado)
 - APIs: `api/clientProfilePrivate.api.ts`, `providerPrivateProfile.api.ts`, `providerPublicProfile.api.ts`, `offeredServices.api.ts`, `portfolio.api.ts`, `profileImageStorage.api.ts`, `portfolioImageStorage.api.ts`, `providerProfile.api.ts`
-- Hooks: `useAccountProfile`, `useClientPrivateProfile`, `useUpdateAccountProfile`, `useProviderProfile`, `useUpdateProviderProfile`, `useOfferedServices`, `usePortfolioItems`, `useProfilePhotoMutation`, `useProfileImageUrl`
+- Hooks: `useAccountProfile`, `useClientPrivateProfile`, `useUpdateAccountProfile`, `useProviderProfile`, `useUpdateProviderProfile`, `useProviderAccountForm`, `useOfferedServices`, `usePortfolioItems`, `useProfilePhotoMutation`, `useProfileImageUrl`
 - Validação: `types/accountForm.validation.ts`, `types/providerAccountForm.validation.ts`
-- Constantes: `constants.ts`
-- Router: `src/router.tsx` path `conta`
+- Constantes: `constants.ts`, `constants/routes.ts`, `constants/accountNav.ts`
+- Router: `src/router.tsx` path `account` + children
+- Menu / chrome: `dashboardMenu.ts`, `mobileNavigation.config.ts`
 
 ## 20. Pendências
 
@@ -234,30 +258,35 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 | Limite de imagens por item de portfólio | Não encontrado no front |
 | Toast de erro de validação de foto | Ausente no seletor |
 | Detalhe RLS/migrations | Evidência parcial — aprofundar em auditoria backend se necessário |
+| Atualizar deep_link SQL de lembretes KYC de `/dashboard/conta` → `/dashboard/account` | Gap comprovado (rota antiga removida, sem redirect) |
 
 ---
 
-## Anexo A — Composição por papel
+## Anexo A — Composição por seção (fase 1)
 
-### Cliente (`MyAccountClientPage`)
+### Cliente
 
-1. Header “Minha conta” / subtítulo dados, endereços e privacidade  
-2. `AccountSummaryCard` (cliente desde)  
-3. `DadosPessoaisSection` + `ContatoIdentidadeSection` + hint auto-save  
-4. **`AddressesSection`** (addresses)  
-5. **`SavedCardsList`** (payments)  
-6. **`PaymentHistorySection role="client"`** (payments)  
-7. `PrivacySection` → `LogoutSection` → `DangerZoneSection`
+| Seção | Conteúdo principal |
+|-------|-------------------|
+| Índice (mobile) | Summary + nav list |
+| personal-info | Header; Summary (só desktop); Dados pessoais + Contato + auto-save |
+| addresses | `AddressesSection` |
+| payments | `SavedCardsList` + `PaymentHistorySection role="client"` |
+| privacy | `PrivacySection` |
+| session | `LogoutSection` + `DangerZoneSection` |
 
-### Prestador (`MyAccountProviderPage`)
+### Prestador
 
-1. Header / subtítulo identidade e perfil público  
-2. `AccountSummaryCard` (“No ar desde” + link/copiar perfil)  
-3. Dados pessoais + Contato + `EntityTypeSection` + `LegalIdentitySection`  
-4. `OfferedServicesSection` + `PublicProfileSettingsSection` (+ área) + hint auto-save  
-5. `PortfolioManagementSection` (fora do Form)  
-6. **`PaymentHistorySection role="provider"`** (payments) — recebimentos na captura, não liquidação bancária  
-7. Privacidade → Logout → Zona de perigo  
+| Seção | Conteúdo principal |
+|-------|-------------------|
+| Índice (mobile) | Summary (+ link/copiar perfil) + nav list |
+| personal-info | Header; Summary (só desktop); dados + contato |
+| legal-identity | Entity type + identidade legal |
+| professional-profile | Ofertados + perfil público/área + portfólio |
+| receivables | `PaymentHistorySection role="provider"` |
+| earnings | `AccountSectionHeader` + `EarningsPage` (header interno oculto no host) |
+| privacy | `PrivacySection` |
+| session | `LogoutSection` + `DangerZoneSection` |
 
 ## Anexo B — Mensagens (toasts / diálogos)
 
@@ -276,20 +305,20 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 
 ## Anexo C — Checklist QA
 
-- [ ] Cliente e prestador abrem a mesma rota com UIs distintas  
-- [ ] Auto-save 1,5 s / 2 s; inválido bloqueia persistência  
-- [ ] E-mail disabled; CPF/CNPJ máscaras  
-- [ ] PJ sem CNPJ/razão → toast inválido  
-- [ ] Endereços só cliente; cartões só cliente  
-- [ ] Histórico client vs provider  
-- [ ] Foto >2 MB silenciosa; portfólio >5 MB rejeitado na validação de arquivo  
-- [ ] Copiar slug; política com/sem env  
-- [ ] Excluir conta → só mailto; logout confirma  
-- [ ] Prestador sem KYC ACTIVE ainda acessa `/dashboard/conta`
+- [ ] Mobile: `/dashboard/account` lista seções + summary; seções abrem em stack com voltar ao índice
+- [ ] Desktop: `/dashboard/account` → personal-info; sidebar; summary só em personal-info
+- [ ] Cliente e prestador veem conjuntos de seções distintos
+- [ ] Auto-save 1,5 s / 2 s; inválido bloqueia persistência
+- [ ] E-mail disabled; CPF/CNPJ máscaras
+- [ ] Endereços / pagamentos só cliente; receivables / earnings só prestador
+- [ ] Ganhos em `/dashboard/account/earnings` (não top-level)
+- [ ] Menu sem Endereços / Ganhos; Minha conta → `/dashboard/account`
+- [ ] `/dashboard/conta`, `/dashboard/earnings`, `/dashboard/addresses` 404 (sem redirect)
+- [ ] Prestador sem KYC ACTIVE ainda acessa `/dashboard/account*`
 
-## 21. Atualização de auditoria (2026-08-02)
+## 21. Atualização de auditoria (2026-08-12)
 
-- Seções canônicas 1–20 + anexos por papel.
-- Confirmado embutimento de addresses/payments (links apenas).
-- Confirmado `DeleteAccountDialog` não ligado; DangerZone = DPO.
-- Debounces, grupos dirty e slug conservador revalidados no código atual.
+- Hub settings `/dashboard/account/*` (fase 1 shell); ADR 0002.
+- Menu e rotas top-level Endereços/Ganhos/conta removidos.
+- Allowlist KYC `/dashboard/account`.
+- Regras de formulário/auto-save revalidadas como inalteradas na fase 1.

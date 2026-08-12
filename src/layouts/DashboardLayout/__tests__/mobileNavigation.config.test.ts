@@ -92,6 +92,23 @@ describe("resolveMobileChrome", () => {
     expect(chrome.enableStackTransition).toBe(false);
   });
 
+  it("returns tab-root for account hub index", () => {
+    const chrome = resolveMobileChrome("/dashboard/account", location("/dashboard/account"));
+    expect(chrome.mode).toBe("tab-root");
+    expect(chrome.showBottomNav).toBe(true);
+  });
+
+  it("returns stack chrome for account section pages", () => {
+    const chrome = resolveMobileChrome(
+      "/dashboard/account/personal-info",
+      location("/dashboard/account/personal-info"),
+    );
+    expect(chrome.mode).toBe("stack");
+    expect(chrome.stackTitle).toBe("Informações pessoais");
+    expect(chrome.backFallback).toBe("/dashboard/account");
+    expect(chrome.showBottomNav).toBe(false);
+  });
+
   it("returns hidden chrome outside dashboard", () => {
     const chrome = resolveMobileChrome("/login", location("/login"));
     expect(chrome.mode).toBe("hidden");

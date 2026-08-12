@@ -3,7 +3,7 @@
 ## 1. Resumo executivo
 
 - **O que é:** barreira de UI no `DashboardLayout` que (1) **esconde o chrome de navegação** (DesktopNav, bottom nav mobile, hamburger do `MobileTabHeader`) e (2) substitui o conteúdo operacional do prestador (slots persistentes + `<Outlet />`) por telas de status ou pelo wizard de credenciamento, enquanto a conta NetCred não estiver `ACTIVE` (ou ainda estiver carregando).
-- **Problema que resolve:** impedir uso e navegação para trabalhos, serviços, conversas, ganhos e demais áreas do painel antes do credenciamento de pagamentos; o **header com logo** permanece; allowlist de conteúdo **`/dashboard/conta*`** intacta.
+- **Problema que resolve:** impedir uso e navegação para trabalhos, serviços, conversas, ganhos e demais áreas do painel antes do credenciamento de pagamentos; o **header com logo** permanece; allowlist de conteúdo **`/dashboard/account*`**.
 - **Quem usa:** prestador autenticado (`profiles.role === provider`). Cliente passa pelo gate sem efeito; `useProviderKycBlocksNav` retorna `false` para não-provider.
 - **Resultado esperado:** com `onboarding_status === ACTIVE` (e conta já carregada), children do gate e menus renderizam normalmente; caso contrário (ou durante loading da conta), menus **completamente ocultos** e UI de status/wizard no lugar do conteúdo operacional.
 
@@ -21,7 +21,7 @@
 | Módulo | `provider-kyc` |
 | Entry point | `ProviderKycGate` em `DashboardLayout` envolvendo slots do prestador + outlet; `useProviderKycBlocksNav` no mesmo layout para chrome |
 | Rota dedicada | **Nenhuma** — embutido no layout do dashboard |
-| Allowlist | `PROVIDER_KYC_ALLOWED_PATH_PREFIX = "/dashboard/conta"` (pathname igual ou prefixo `/dashboard/conta/…`) — conteúdo liberado; **não** reabre o chrome de navegação |
+| Allowlist | `PROVIDER_KYC_ALLOWED_PATH_PREFIX = "/dashboard/account"` (pathname igual ou prefixo `/dashboard/account/…`) — conteúdo liberado; **não** reabre o chrome de navegação |
 | Navegação (chrome) | Oculta quando `useProviderKycBlocksNav()` é `true` (provider + loading **ou** `shouldBlockProviderForKyc`); header/logo permanece |
 | Menu (definição) | `getDashboardMenu(role)` continua calculando o menu completo do papel; o layout **não renderiza** DesktopNav / bottom nav / hamburger enquanto o hook bloqueia |
 | Query params / deep link | **Nenhum** específico do gate |
@@ -50,7 +50,7 @@ flowchart TD
   B -->|Não| Z[Renderiza children]
   B -->|Sim| C{accountQuery.isLoading?}
   C -->|Sim| L[Spinner: Verificando credenciamento…]
-  C -->|Não| D{pathname em /dashboard/conta*?}
+  C -->|Não| D{pathname em /dashboard/account*?}
   D -->|Sim| Z
   D -->|Não| E{onboardingStatus === ACTIVE?}
   E -->|Sim| Z
@@ -75,7 +75,7 @@ flowchart TD
 
 | Cenário | Comportamento observado |
 |---------|-------------------------|
-| Path `/dashboard/conta` ou `/dashboard/conta/…` após loading | Children liberados mesmo se status ≠ `ACTIVE` (ex.: `SUSPENDED`); chrome de nav **continua oculto** se ainda bloqueado |
+| Path `/dashboard/account` ou `/dashboard/account/…` após loading | Children liberados mesmo se status ≠ `ACTIVE` (ex.: `SUSPENDED`); chrome de nav **continua oculto** se ainda bloqueado |
 | Loading da conta | Spinner no gate **antes** da allowlist; chrome de nav já oculto (`useProviderKycBlocksNav` inclui loading) |
 | Conta ainda inexistente (`data === null`) | Tratado como pendente → `ProviderKycForm`; menus ocultos |
 | `REJECTED` + CTA “Reenviar documentos” | Estado local `showRejectedForm`; reabre o wizard; após submit chama `refetch` e limpa o flag |
@@ -90,7 +90,7 @@ flowchart TD
 1. **Escopo do bloqueio:** só `role === "provider"`.
 2. **Critério de liberação operacional:** `isProviderCredentialed` ⇔ `account?.onboardingStatus === "ACTIVE"`.
 3. **Critério de bloqueio (helpers):** `shouldBlockProviderForKyc` ⇔ `!account` **ou** `onboardingStatus !== "ACTIVE"`.
-4. **Allowlist:** pathname `=== "/dashboard/conta"` ou `startsWith("/dashboard/conta/")`.
+4. **Allowlist:** pathname `=== "/dashboard/account"` ou `startsWith("/dashboard/account/")`.
 5. **Ordem de decisão no gate:** não-provider → loading → allowlist → ACTIVE → submitting → pending/null → documents submitted → under review → rejected → suspended → genérico.
 6. **Submitting:** `DOCUMENTS_SUBMITTED` **e** `emailDispatchedAt` nulo/ausente.
 7. **Documents submitted (UI “enviados”):** `DOCUMENTS_SUBMITTED` **e** `emailDispatchedAt` truthy.
@@ -214,7 +214,7 @@ stateDiagram-v2
 | `auth` (`useAuth`) | `role`, `user`, `profile` |
 | `DashboardLayout` | Hospeda gate; `useProviderKycBlocksNav` esconde chrome; `getDashboardMenu(role)` alimenta nav só quando não bloqueado |
 | `MobileTabHeader` | Prop `hideMenu` oculta hamburger + sheet |
-| `my-account` | Allowlist de **conteúdo** — logout e ajustes se path `/dashboard/conta*` |
+| `my-account` | Allowlist de **conteúdo** — logout e ajustes se path `/dashboard/account*` |
 | Wizard (`ProviderKycForm`) | Coleta/reenvio — [formulário-credenciamento-wizard](./formulario-credenciamento-wizard.md) |
 | Edge `dispatch-kyc-email` | Retry via `useRetryKycEmailDispatch` |
 | payments / NetCred | Conta, submit, cron `detect-netcred-onboarding`, cobrança exige `ACTIVE` — [checkout-e-cobranca](../../payments/features/checkout-e-cobranca.md) |
@@ -229,7 +229,7 @@ stateDiagram-v2
 | `PROVIDER_KYC_REJECTED` | `account.provider_kyc_rejected` | UI permite reenvio |
 | `PROVIDER_ACTIVATED` | `account.provider_activated` | Cron de ativação |
 | `PROVIDER_SUSPENDED` | `account.provider_suspended` (+ variantes) | Já no catálogo |
-| `PROVIDER_ONBOARDING_INCOMPLETE_REMINDER` | `account.provider_onboarding_incomplete_reminder` | Cron diário 11:00 UTC; só `PENDING_DOCUMENTS`/`REJECTED`; push+email; **sem** `bypass_limits`; deep link `/dashboard/conta` — [lembretes-credenciamento-incompleto](./lembretes-credenciamento-incompleto.md) |
+| `PROVIDER_ONBOARDING_INCOMPLETE_REMINDER` | `account.provider_onboarding_incomplete_reminder` | Cron diário 11:00 UTC; só `PENDING_DOCUMENTS`/`REJECTED`; push+email; **sem** `bypass_limits`; deep link SQL `/dashboard/conta` (legado; rota removida) — [lembretes-credenciamento-incompleto](./lembretes-credenciamento-incompleto.md) |
 
 Evidência: migrations `payment_mmd_notification_catalog`, `provider_activated_mmd_notification`, `provider_onboarding_incomplete_reminders`; testes `payment_mmd_notification_catalog_test.sql`, `payment_provider_onboarding_incomplete_reminders_test.sql`. O **gate não dispara** MMD diretamente — só reflete estado (o deep link do lembrete cai na allowlist de conta).
 
@@ -267,7 +267,7 @@ Evidência: migrations `payment_mmd_notification_catalog`, `provider_activated_m
 
 ## 17. Regras implícitas
 
-1. **Loading precede allowlist:** em `ProviderKycGate`, o spinner roda antes do check de `/dashboard/conta*`.
+1. **Loading precede allowlist:** em `ProviderKycGate`, o spinner roda antes do check de `/dashboard/account*`.
 2. **Erro na fetch:** o hook `throw`s em `result.error`; com query em erro e sem `data`, o gate usa `account = null` → caminho do formulário (comportamento de “sem conta”), **não** uma tela de erro dedicada.
 3. **Slots do prestador vs. cliente:** mesmo com gate bloqueando o outlet do prestador, `ClientMyServicesPersistentSlot` e o sheet de detalhe ficam **fora** do gate.
 4. **Query da conta:** `ProviderKycGate` e `useProviderKycBlocksNav` (ambos via `useProviderPaymentAccount`) compartilham a mesma query key no shell.
@@ -275,7 +275,7 @@ Evidência: migrations `payment_mmd_notification_catalog`, `provider_activated_m
 6. **Guard de rota ≠ gate:** URL operacional permanece válida; conteúdo é mascarado; chrome de nav oculto independentemente do path (exceto após `ACTIVE`).
 7. **`onboardingSubmittedAt` não participa** da árvore de decisão do gate.
 8. **Reenvio rejeitado:** ao submeter com sucesso no form pós-rejeição, o gate zera `showRejectedForm` antes/junto do refetch — se o status ainda for `REJECTED` momentaneamente, volta à tela de rejeição até o refetch refletir o novo status.
-9. **Allowlist ≠ chrome:** path `/dashboard/conta*` libera children do gate após loading, mas **não** reexibe DesktopNav / bottom nav / hamburger enquanto `useProviderKycBlocksNav` for `true`.
+9. **Allowlist ≠ chrome:** path `/dashboard/account*` libera children do gate após loading, mas **não** reexibe DesktopNav / bottom nav / hamburger enquanto `useProviderKycBlocksNav` for `true`.
 
 ## 18. Riscos
 
@@ -285,7 +285,7 @@ Evidência: migrations `payment_mmd_notification_catalog`, `provider_activated_m
 | Deep link operacional | Usuário bloqueado ainda “entra” na rota, mas vê KYC — pode confundir QA/analytics de página |
 | Janela de loading | Spinner no gate + menus já ocultos; allowlist de conta só após loading |
 | Estado `showRejectedForm` | Perde-se em remount; não há deep link “modo reenvio” |
-| Copy “Minha conta” nas telas de status | Texto pode mencionar acesso a Minha conta; chrome de nav está oculto — path allowlist só libera conteúdo se a URL for `/dashboard/conta*` |
+| Copy “Minha conta” nas telas de status | Texto pode mencionar acesso a Minha conta; chrome de nav está oculto — path allowlist só libera conteúdo se a URL for `/dashboard/account*` |
 | Dependência de env | Suporte sem `VITE_MAIN_SITE_URL` cai em `/dashboard/help` (rota placeholder do shell) |
 
 ## 19. Evidências
@@ -330,8 +330,8 @@ Evidência: migrations `payment_mmd_notification_catalog`, `provider_activated_m
 - [ ] Prestador `DOCUMENTS_SUBMITTED` com e-mail: “Documentos enviados”; polling 30 s; menus ocultos.
 - [ ] Prestador `UNDER_NETCRED_REVIEW`: “em análise”; polling 30 s; menus ocultos.
 - [ ] Prestador `REJECTED`: tela + “Reenviar documentos” abre form; pós-submit refetch; menus ocultos.
-- [ ] Prestador `SUSPENDED`: “Conta suspensa”; em `/dashboard/conta` conteúdo da conta visível; menus ainda ocultos.
-- [ ] Path aninhado `/dashboard/conta/...` liberado com status bloqueante (conteúdo); chrome oculto.
+- [ ] Prestador `SUSPENDED`: “Conta suspensa”; em `/dashboard/account` conteúdo da conta visível; menus ainda ocultos.
+- [ ] Path aninhado `/dashboard/account/...` liberado com status bloqueante (conteúdo); chrome oculto.
 - [ ] Durante loading inicial: spinner no gate + menus já ocultos (sem flash de nav).
 - [ ] Deep link `/dashboard/jobs` com KYC pendente: UI KYC, não lista; sem bottom nav / DesktopNav.
 - [ ] Status desconhecido: “Credenciamento necessário”.

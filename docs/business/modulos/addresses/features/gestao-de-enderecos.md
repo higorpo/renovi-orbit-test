@@ -19,8 +19,8 @@
 | Aspecto | Detalhe |
 |---------|---------|
 | Módulo | `addresses` |
-| Menu | Item “Endereços” aponta para `/dashboard/addresses`, mas a rota é **placeholder** (`DashboardFakePage`) |
-| Uso real | `MyAccountClientPage` → `AddressesSection`; `RequestQuote` → `AddressSelectionStep` |
+| Menu | Sem item Endereços no `dashboardMenu`; acesso via Minha conta |
+| Uso real | `/dashboard/account/addresses` → `AddressesSection`; `RequestQuote` → `AddressSelectionStep` |
 | Rotas públicas | Indireto via `/pedir-orcamento` |
 | Dependências | `auth` (usuário), Supabase |
 
@@ -131,7 +131,7 @@ flowchart TD
 
 ## 18. Riscos e pontos de atenção
 
-- **Menu “Endereços” leva a página fake** — risco de suporte duplicar instruções.
+- ~~**Menu “Endereços” leva a página fake**~~ — item/rota removidos; acesso via hub Minha conta.
 - Dependência de qualidade do cadastro de bairros/cidades na plataforma.
 
 ## 19. Evidências no código
@@ -139,12 +139,12 @@ flowchart TD
 - `src/features/addresses/types/addressForm.validation.ts`
 - `src/features/addresses/api/addresses.api.ts`, `api/statesAndCities.api.ts`
 - `src/features/addresses/components/AddressSelectionStep/`, `AddressesSection`, `AddressFormDialog`
-- `src/features/my-account/components/MyAccountClientPage.tsx`
+- `src/features/my-account/components/sections/ClientAddressesPage.tsx`
 - `supabase/migrations/20260226100200_create_client_addresses.sql`
 
 ## 20. Pendências para validação com negócio/produto
 
-- Corrigir ou remover rota `/dashboard/addresses` placeholder alinhando ao menu.
+- ~~Corrigir ou remover rota `/dashboard/addresses` placeholder.~~ **Feito:** rota e item de menu removidos; hub `/dashboard/account/addresses`.
 - Confirmar política de **endereço obrigatório** vs opcional em pedidos (código permite `address_id` opcional em migrations — validar regra comercial).
 
 ## 21. Atualização de auditoria (2026-04-27)

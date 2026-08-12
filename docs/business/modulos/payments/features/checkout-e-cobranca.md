@@ -31,7 +31,7 @@ Documentação baseada em `src/features/payments/` (stepper, APIs, hooks, ClearS
 | Superfície | Onde | Observação |
 |------------|------|------------|
 | **Checkout (aceite)** | Dialog `AcceptProposalDialog` (`negotiation-proposals`) — fase `slot` → `checkout` embute `CheckoutStepper` | Sem rota própria; abre a partir do chat / fluxo de proposta. |
-| **Cartões salvos** | `SavedCardsList` em `/dashboard/conta` (`my-account` cliente) | Tokenização contexto `profile`. |
+| **Cartões salvos** | `SavedCardsList` em `/dashboard/account/payments` (`my-account` cliente) | Tokenização contexto `profile`. |
 | **Cobrança manual — detalhe** | `ManualPaymentRecovery` em `ServiceDetailActionsBar` (`view-services`) | Alerta + botão “Ajustar pagamento”. |
 | **Cobrança manual — lista** | Card Meus serviços (cliente): CTA “Ajustar pagamento” quando `PENDING_PAYMENT` + `FAILED_PERMANENT` | Ver [solicitacoes-do-cliente](../../my-services/features/solicitacoes-do-cliente.md). |
 | **Query / deep link** | Não há rota `/checkout` dedicada | Deep links de notificação MMD usam paths de serviço (ex. `/dashboard/services/...`). |
@@ -339,7 +339,7 @@ Neste escopo (checkout/cobrança):
 - `src/features/payments/utils/mapPaymentUserMessage.ts`, `chargeTimingDisclosure.ts`, `injectClearSaleSdk.ts`, `cardholderIdentity.ts`, `resolveCheckoutSteps.ts`
 - `src/features/negotiation-proposals/components/AcceptProposalDialog.tsx`, `hooks/useProposalClientMutations.ts`
 - `src/features/view-services/components/ServiceDetailActionsBar.tsx`
-- `src/features/my-account/components/MyAccountClientPage.tsx` (SavedCardsList)
+- `src/features/my-account/components/sections/ClientPaymentsPage.tsx` (SavedCardsList)
 
 **Backend**
 

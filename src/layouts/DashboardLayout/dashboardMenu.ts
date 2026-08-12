@@ -3,13 +3,12 @@ import {
   FileText,
   HelpCircle,
   LayoutDashboard,
-  MapPin,
   MessageSquare,
   Settings,
-  Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ProfileRole } from "@/features/auth";
+import { ROUTE_ACCOUNT } from "@/features/my-account";
 
 export interface DashboardMenuItem {
   path: string;
@@ -26,8 +25,7 @@ function clientMenuItems(): DashboardMenuItem[] {
     { path: "/dashboard", label: "Visão geral", icon: LayoutDashboard },
     { path: "/dashboard/services", label: "Meus Serviços", icon: FileText },
     { path: "/dashboard/chats", label: "Conversas", icon: MessageSquare },
-    { path: "/dashboard/addresses", label: "Endereços", icon: MapPin },
-    { path: "/dashboard/conta", label: "Minha conta", icon: Settings },
+    { path: ROUTE_ACCOUNT, label: "Minha conta", icon: Settings },
     { path: "/dashboard/help", label: "Ajuda", icon: HelpCircle },
   ];
 }
@@ -38,8 +36,7 @@ function providerMenuItems(): DashboardMenuItem[] {
     { path: "/dashboard/services", label: "Meus Serviços", icon: FileText },
     { path: "/dashboard/jobs", label: "Trabalhos", icon: Briefcase },
     { path: "/dashboard/chats", label: "Conversas", icon: MessageSquare },
-    { path: "/dashboard/earnings", label: "Ganhos", icon: Wallet },
-    { path: "/dashboard/conta", label: "Minha conta", icon: Settings },
+    { path: ROUTE_ACCOUNT, label: "Minha conta", icon: Settings },
     { path: "/dashboard/help", label: "Ajuda", icon: HelpCircle },
   ];
 }

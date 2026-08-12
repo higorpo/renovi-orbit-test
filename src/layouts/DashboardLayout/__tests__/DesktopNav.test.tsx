@@ -101,7 +101,6 @@ describe("DesktopNav", () => {
     renderDesktopNav(menu.allItems);
     expect(screen.getByRole("link", { name: /Visão geral/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Meus Serviços/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Endereços/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Minha conta/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Ajuda/ })).toBeInTheDocument();
   });
@@ -118,7 +117,7 @@ describe("DesktopNav", () => {
     fireEvent.pointerDown(moreButton, { button: 0, ctrl: 0 });
     fireEvent.click(moreButton);
     const menuPanel = await screen.findByRole("menu");
-    expect(within(menuPanel).getByRole("menuitem", { name: /Endereços/i })).toBeInTheDocument();
+    expect(within(menuPanel).getByRole("menuitem", { name: /Minha conta/i })).toBeInTheDocument();
     expect(within(menuPanel).getByRole("menuitem", { name: /Ajuda/i })).toBeInTheDocument();
   });
 
@@ -151,7 +150,7 @@ describe("DesktopNav", () => {
     renderDesktopNav(menu.allItems);
     expect(screen.getByRole("link", { name: /Meus Serviços/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Trabalhos/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Ganhos/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Minha conta/ })).toBeInTheDocument();
   });
 
   it("renders with empty items array", () => {

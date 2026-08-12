@@ -72,15 +72,44 @@ vi.mock("@/features/my-services/components/MyServicesRouteSlot", () => ({
 vi.mock("@/features/view-services/components/ServiceDetailShell", () => ({
   ServiceDetailShell: () => null,
 }));
-vi.mock("@/features/my-account/components/MyAccountPage", () => ({ MyAccountPage: () => null }));
+vi.mock("@/features/my-account/components/MyAccountLayout", () => ({
+  MyAccountLayout: () => null,
+}));
+vi.mock("@/features/my-account/components/MyAccountIndexPage", () => ({
+  MyAccountIndexPage: () => null,
+}));
+vi.mock("@/features/my-account/components/sections/PersonalInfoPage", () => ({
+  PersonalInfoPage: () => null,
+}));
+vi.mock("@/features/my-account/components/sections/ClientAddressesPage", () => ({
+  ClientAddressesPage: () => null,
+}));
+vi.mock("@/features/my-account/components/sections/ClientPaymentsPage", () => ({
+  ClientPaymentsPage: () => null,
+}));
+vi.mock("@/features/my-account/components/sections/ProviderLegalIdentityPage", () => ({
+  ProviderLegalIdentityPage: () => null,
+}));
+vi.mock("@/features/my-account/components/sections/ProviderProfessionalProfilePage", () => ({
+  ProviderProfessionalProfilePage: () => null,
+}));
+vi.mock("@/features/my-account/components/sections/ProviderReceivablesPage", () => ({
+  ProviderReceivablesPage: () => null,
+}));
+vi.mock("@/features/my-account/components/sections/ProviderEarningsSectionPage", () => ({
+  ProviderEarningsSectionPage: () => null,
+}));
+vi.mock("@/features/my-account/components/sections/AccountPrivacyPage", () => ({
+  AccountPrivacyPage: () => null,
+}));
+vi.mock("@/features/my-account/components/sections/AccountSessionPage", () => ({
+  AccountSessionPage: () => null,
+}));
 vi.mock("@/features/provider-profile/components/ProviderProfilePage", () => ({
   ProviderProfilePage: () => null,
 }));
 vi.mock("@/features/provider-jobs/components/ProviderJobsRouteSlot", () => ({
   ProviderJobsRouteSlot: () => null,
-}));
-vi.mock("@/features/provider-earnings/components/EarningsPage", () => ({
-  EarningsPage: () => null,
 }));
 vi.mock("@/features/provider-calendar/components/ProviderCalendarPage", () => ({
   ProviderCalendarPage: () => null,
@@ -151,10 +180,17 @@ describe("router", () => {
         "/dashboard/services",
         "/dashboard/services/calendar",
         "/dashboard/services/:id",
-        "/dashboard/addresses",
-        "/dashboard/conta",
+        "/dashboard/account",
+        "/dashboard/account/personal-info",
+        "/dashboard/account/addresses",
+        "/dashboard/account/payments",
+        "/dashboard/account/legal-identity",
+        "/dashboard/account/professional-profile",
+        "/dashboard/account/receivables",
+        "/dashboard/account/earnings",
+        "/dashboard/account/privacy",
+        "/dashboard/account/session",
         "/dashboard/jobs",
-        "/dashboard/earnings",
         "/dashboard/chats",
         "/dashboard/chats/:chatId",
         "/dashboard/help",
@@ -185,8 +221,9 @@ describe("router", () => {
   it("scopes provider-only dashboard children with ProtectedRoute roles", () => {
     const dashboard = router.routes[0]?.children?.find((route) => route.path === "dashboard");
     const jobs = dashboard?.children?.find((route) => route.path === "jobs");
-    const addresses = dashboard?.children?.find((route) => route.path === "addresses");
+    const account = dashboard?.children?.find((route) => route.path === "account");
     expect(jobs?.element).toBeTruthy();
-    expect(addresses?.element).toBeTruthy();
+    expect(account?.element).toBeTruthy();
+    expect(account?.children?.some((route) => route.path === "earnings")).toBe(true);
   });
 });

@@ -1,8 +1,8 @@
 # Ganhos e liquidações bancárias
 
-Documentação baseada em `src/features/provider-earnings/`, rota `/dashboard/earnings`, RPC `list_provider_settlement_movements`, tabela/view de settlements e ingestão NetCred (webhooks `PAYOUT_*`, enrich GraphQL pós-`TRANSACTION_CAPTURE`/`TRANSACTION_REFUND`, Edge `sync-netcred-settlements`). Idioma de produto na UI: pt-BR.
+Documentação baseada em `src/features/provider-earnings/`, rota hospedada `/dashboard/account/earnings` (`ROUTE_PROVIDER_EARNINGS`), RPC `list_provider_settlement_movements`, tabela/view de settlements e ingestão NetCred (webhooks `PAYOUT_*`, enrich GraphQL pós-`TRANSACTION_CAPTURE`/`TRANSACTION_REFUND`, Edge `sync-netcred-settlements`). Idioma de produto na UI: pt-BR.
 
-> **Não confundir** com **Recebimentos** (captura / `provider_payout` em Minha conta). Ver [historico-e-reembolso](../../payments/features/historico-e-reembolso.md). Este doc **não** redefine checkout, T-2 ou reembolso ToS — só links para [payments](../../payments/README.md).
+> **Não confundir** com **Recebimentos** (captura / `provider_payout` em Minha conta → `/dashboard/account/receivables`). Ver [historico-e-reembolso](../../payments/features/historico-e-reembolso.md). Este doc **não** redefine checkout, T-2 ou reembolso ToS — só links para [payments](../../payments/README.md).
 
 ---
 
@@ -10,7 +10,7 @@ Documentação baseada em `src/features/provider-earnings/`, rota `/dashboard/ea
 
 - **O que é:** tela **Ganhos** com lista paginada de **linhas de liquidação bancária** (movements do payout NetCred) e componente reutilizável de **previsão de depósito**.
 - **Problema que resolve:** prestador precisa ver **quando o valor cai na conta** (previsto / liquidado / estorno na liquidação), separado do momento em que o cartão do cliente foi capturado.
-- **Quem usa:** prestador autenticado; conteúdo da lista só após KYC `ACTIVE` (gate do shell); item Ganhos no menu do prestador quando chrome visível.
+- **Quem usa:** prestador autenticado; conteúdo da lista só após KYC `ACTIVE` (gate do shell nas rotas operacionais); entrada via **Minha conta → Ganhos** (sem item no menu top-level).
 - **Quem não usa:** cliente, visitante; admin sem UI dedicada nesta feature.
 - **Resultado esperado:** lista com valor líquido, título do serviço (link para detalhe), status Previsto/Liquidado, previsão/data de liquidação, parcela e máscara de conta; abas de filtro (Todos/Previsto/Liquidado = só CREDIT, sem aba Estorno); disclosure de previsão em outras superfícies.
 - **Impacto se indisponível:** prestador perde a visão de depósito bancário; Recebimentos (captura) e detalhe do serviço continuam; ingestão backend independente da UI.
@@ -26,39 +26,39 @@ Documentação baseada em `src/features/provider-earnings/`, rota `/dashboard/ea
 
 | Superfície | Rota / componente | Perfil | Observação |
 |------------|-------------------|--------|------------|
-| Página Ganhos | `/dashboard/earnings` → `EarningsPage` | Prestador | Lazy em `router.tsx`; `ProtectedRoute allowedRoles={['provider']}` |
-| Menu dashboard | Item **Ganhos** (`Wallet`) | Prestador | `dashboardMenu.ts`; 5º item dos `mainItems` (bottom nav mobile) |
+| Página Ganhos | `/dashboard/account/earnings` → `ProviderEarningsSectionPage` → `EarningsPage` | Prestador | Lazy via hub `account` em `router.tsx`; `AccountRoleGate allow={['provider']}` |
+| Menu dashboard | **Sem** item Ganhos | — | Removido de `dashboardMenu.ts`; acesso só pelo hub Minha conta |
 | Disclosure (Public API) | `ProviderSettlementDisclosure` | Prestador | Export `@/features/provider-earnings` |
-| Recebimentos (captura) | `/dashboard/conta` → `ProviderPaymentHistoryList` | Prestador | Importa disclosure + link para Ganhos (**código em payments**) |
+| Recebimentos (captura) | `/dashboard/account/receivables` → `ProviderPaymentHistoryList` | Prestador | Importa disclosure + link para Ganhos (**código em payments**) |
 | `ProviderSettlementStatus` | Componente em **payments** (Public API) | Prestador | Holds estorno / chargeback / `service_dispute`; **não** montado no card `ServiceContractedSection` (view-services) após redesign |
 
-**Constante de rota:** `ROUTE_PROVIDER_EARNINGS = "/dashboard/earnings"`.
+**Constante de rota:** `ROUTE_PROVIDER_EARNINGS = "/dashboard/account/earnings"`.
 
-**Chrome mobile:** caminho `/dashboard/earnings` **não** está em `MOBILE_STACK_ROUTES` → cai no default **tab-root** (`mobileNavigation.config.ts`: `pathname.startsWith("/dashboard")`).
+**Chrome mobile:** seção do hub → modo **stack** com `backFallback` `/dashboard/account` (`mobileNavigation.config.ts` + `ACCOUNT_SECTION_STACK_TITLE.earnings`).
 
-**Deep links / query params:** nenhum path/query param de filtro ou deep link documentado na feature; filtro é estado React local (`useState`), **não** sincronizado com URL.
+**Deep links / query params:** nenhum path/query param de filtro ou deep link documentado na feature; filtro é estado React local (`useState`), **não** sincronizado com URL. Rota top-level `/dashboard/earnings` **removida** (sem redirect).
 
-**Diferença mobile vs desktop:** mesma página; abas com scroll horizontal; título “Ganhos” no conteúdo (padrão tab-root). Sem layout distinto além do chrome do shell.
+**Diferença mobile vs desktop:** mesma UI de lista dentro do hub (sidebar desktop / stack mobile do account hub).
 
 ## 4. Perfis envolvidos
 
 | Papel | Acesso | Evidência |
 |-------|--------|-----------|
-| Prestador | Rota + RPC com `provider_id = auth.uid()` | `ProtectedRoute`; `list_provider_settlement_movements` |
-| Prestador KYC ≠ `ACTIVE` (ou conta ainda carregando) | Menus ocultos; outlet sob `ProviderKycGate` (UI KYC, não a lista) | `ProviderKycGate`; `useProviderKycBlocksNav` + `DashboardLayout` |
-| Cliente autenticado | Rota bloqueada pelo guard | `allowedRoles={['provider']}` |
+| Prestador | Rota do hub + RPC com `provider_id = auth.uid()` | `AccountRoleGate`; `list_provider_settlement_movements` |
+| Prestador KYC ≠ `ACTIVE` (ou conta ainda carregando) | Menus ocultos; `/dashboard/account*` na allowlist do gate | `ProviderKycGate`; `useProviderKycBlocksNav` + `DashboardLayout` |
+| Cliente autenticado | Seção earnings bloqueada pelo `AccountRoleGate` | Host em my-account |
 | Não autenticado | Bloqueado pelo dashboard `ProtectedRoute` | `router.tsx` |
 | Admin | Sem tela; list RPC só retorna linhas do `auth.uid()` | Migration da RPC |
 
-**Ações bloqueadas:** papel errado → redirect dos guards; prestador sem KYC ativo → conteúdo de Ganhos substituído pelo gate; chrome de nav oculto (item não navegável pelo menu).
+**Ações bloqueadas:** papel errado → gate da seção; prestador sem KYC ativo em rotas operacionais → UI KYC; no hub account o conteúdo pode carregar pela allowlist.
 
 ## 5. Fluxo funcional principal
 
 ```mermaid
 flowchart TD
-  A[Menu Ganhos / deep link] --> B["/dashboard/earnings"]
-  B --> C{Guard provider?}
-  C -->|Não| D[Redirect auth / papel]
+  A[Minha conta / Ganhos / deep link] --> B["/dashboard/account/earnings"]
+  B --> C{AccountRoleGate provider?}
+  C -->|Não| D[Redirect / bloqueio papel]
   C -->|Sim| E[EarningsPage + filtro default Todos]
   E --> F[useProviderSettlements infinite query]
   F --> G["RPC list_provider_settlement_movements"]
@@ -263,12 +263,12 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 
 | Ação | Quem | Pré-condição | Resultado | Erro |
 |------|------|--------------|-----------|------|
-| Abrir Ganhos | Prestador | Guard; conteúdo só se KYC `ACTIVE` (senão UI do gate) | Carrega lista | Guard / gate |
+| Abrir Ganhos | Prestador | Hub Minha conta; conteúdo operacional só se KYC `ACTIVE` fora da allowlist | Carrega lista | Gate / role |
 | Trocar filtro | Prestador | Página carregada | Refetch página 1 do filtro | ErrorState se falhar |
 | Carregar mais | Prestador | `hasNextPage` | Append itens | Erro na query de página |
 | Tentar novamente | Prestador | Estado de erro | `refetch` | — |
 | Limpar filtros | Prestador | Empty com filtro ativo | Volta para Todos | — |
-| Ir para Recebimentos | Prestador | Link no header | Navigate `/dashboard/conta` | — |
+| Ir para Recebimentos | Prestador | Link no header | Navigate `/dashboard/account/receivables` | — |
 | Ver disclosure | Prestador | Superfície consumidora | Texto previsão ou hold | `null` se data inválida |
 
 **Sem ações de escrita** (criar/editar/cancelar liquidação) nesta feature.
@@ -278,9 +278,9 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 | Direção | Módulo / lib | Relação |
 |---------|--------------|---------|
 | Upstream dados | **payments** (schedules, webhooks, upsert, cron) | Persistência e ingestão |
-| Shell | **dashboard-shell**, **provider-kyc** | Menu, gate, chrome mobile |
+| Shell | **dashboard-shell**, **provider-kyc**, **my-account** (host) | Hub account, gate, chrome mobile stack |
 | Downstream UI | **payments** (`ProviderPaymentHistoryList`, `ProviderSettlementStatus`) | Consomem Public API do disclosure; view-services **não** monta settlement no card contratado |
-| Cruzado | **my-account** | Destino do link Recebimentos |
+| Cruzado | **my-account** | Destino do link Recebimentos (`/dashboard/account/receivables`) |
 | Libs | `@/lib/supabase/client`, `@/lib/logger`, `@/lib/formatCurrency`, `@/lib/utils/calendarDate`, TanStack Query, UI shadcn |
 
 **Não editar payments neste escopo documental** — apenas links.
@@ -310,10 +310,11 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 
 ### Front
 
-- `src/features/provider-earnings/` — `components/` (`EarningsPage`, filtros, lista, cards, empty/error, `ProviderSettlementDisclosure`), `api/settlements.api.ts`, `api/settlements.rpc.ts`, `hooks/useProviderSettlements.ts`, `types/settlements.types.ts`, `utils/*`, `constants/*`, `index.ts`
+- `src/features/provider-earnings/` — `components/` (`EarningsPage`, filtros, lista, cards, empty/error, `ProviderSettlementDisclosure`), `api/settlements.api.ts`, `api/settlements.rpc.ts`, `hooks/useProviderSettlements.ts`, `types/settlements.types.ts`, `utils/*`, `constants/*` (`ROUTE_PROVIDER_EARNINGS`), `index.ts`
 - Testes Vitest sob `**/__tests__/` na feature
-- `src/router.tsx` — lazy + guard provider em `earnings`
-- `src/layouts/DashboardLayout/dashboardMenu.ts`, `mobileNavigation.config.ts`, `DashboardLayout.tsx` (`getDashboardMenu` + `ProviderKycGate` + `useProviderKycBlocksNav`)
+- `src/router.tsx` — `account/earnings` via `ProviderEarningsSectionPage`
+- `src/features/my-account/components/sections/ProviderEarningsSectionPage.tsx`
+- `src/layouts/DashboardLayout/dashboardMenu.ts` (sem Ganhos), `mobileNavigation.config.ts`, `DashboardLayout.tsx`
 - Consumidores: `src/features/payments/components/PaymentHistory/ProviderPaymentHistoryList.tsx`, `ProviderSettlementStatus.tsx` (**não** `ServiceContractedSection`)
 
 ### Backend
@@ -359,9 +360,10 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 
 ## Anexo B — Checklist QA (cenários)
 
-- [ ] Prestador ACTIVE: menu mostra Ganhos; abre `/dashboard/earnings` com título e link para Recebimentos.
-- [ ] Cliente: sem item Ganhos; URL direta bloqueada pelo guard.
-- [ ] Prestador KYC não ACTIVE: menus **ocultos**; deep link `/dashboard/earnings` mostra UI KYC (não a lista).
+- [ ] Prestador: abre Minha conta → Ganhos em `/dashboard/account/earnings`; link para Recebimentos (`/dashboard/account/receivables`).
+- [ ] Cliente: sem seção Ganhos; URL earnings bloqueada pelo `AccountRoleGate`.
+- [ ] Menu dashboard **sem** item Ganhos; `/dashboard/earnings` inexistente (sem redirect).
+- [ ] Prestador KYC não ACTIVE: menus **ocultos**; `/dashboard/account/earnings` na allowlist do gate.
 - [ ] Lista com CREDIT PENDING: badge Previsto + previsão.
 - [ ] Lista com PAID_OUT + `settledAt`: badge Liquidado + “Liquidado em …”.
 - [ ] DEBIT/clawback não aparece nas abas Todos/Previsto/Liquidado (RPC).

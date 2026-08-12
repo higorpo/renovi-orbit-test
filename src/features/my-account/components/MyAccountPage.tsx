@@ -4,7 +4,7 @@ import { MyAccountProviderPage } from "./MyAccountProviderPage";
 
 /**
  * Wrapper that renders client or provider account page based on profile role.
- * Same route /dashboard/conta for both; role is determined by useAuth().profile?.role.
+ * Prefer MyAccountLayout + section routes in production.
  */
 export function MyAccountPage() {
   const { profile, loading } = useAuth();

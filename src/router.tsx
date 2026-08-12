@@ -73,9 +73,59 @@ const ServiceDetailShell = lazy(() =>
     default: m.ServiceDetailShell,
   })),
 )
-const MyAccountPage = lazy(() =>
-  import('@/features/my-account/components/MyAccountPage').then((m) => ({
-    default: m.MyAccountPage,
+const MyAccountLayout = lazy(() =>
+  import('@/features/my-account/components/MyAccountLayout').then((m) => ({
+    default: m.MyAccountLayout,
+  })),
+)
+const MyAccountIndexPage = lazy(() =>
+  import('@/features/my-account/components/MyAccountIndexPage').then((m) => ({
+    default: m.MyAccountIndexPage,
+  })),
+)
+const PersonalInfoPage = lazy(() =>
+  import('@/features/my-account/components/sections/PersonalInfoPage').then((m) => ({
+    default: m.PersonalInfoPage,
+  })),
+)
+const ClientAddressesPage = lazy(() =>
+  import('@/features/my-account/components/sections/ClientAddressesPage').then((m) => ({
+    default: m.ClientAddressesPage,
+  })),
+)
+const ClientPaymentsPage = lazy(() =>
+  import('@/features/my-account/components/sections/ClientPaymentsPage').then((m) => ({
+    default: m.ClientPaymentsPage,
+  })),
+)
+const ProviderLegalIdentityPage = lazy(() =>
+  import('@/features/my-account/components/sections/ProviderLegalIdentityPage').then((m) => ({
+    default: m.ProviderLegalIdentityPage,
+  })),
+)
+const ProviderProfessionalProfilePage = lazy(() =>
+  import('@/features/my-account/components/sections/ProviderProfessionalProfilePage').then((m) => ({
+    default: m.ProviderProfessionalProfilePage,
+  })),
+)
+const ProviderReceivablesPage = lazy(() =>
+  import('@/features/my-account/components/sections/ProviderReceivablesPage').then((m) => ({
+    default: m.ProviderReceivablesPage,
+  })),
+)
+const ProviderEarningsSectionPage = lazy(() =>
+  import('@/features/my-account/components/sections/ProviderEarningsSectionPage').then((m) => ({
+    default: m.ProviderEarningsSectionPage,
+  })),
+)
+const AccountPrivacyPage = lazy(() =>
+  import('@/features/my-account/components/sections/AccountPrivacyPage').then((m) => ({
+    default: m.AccountPrivacyPage,
+  })),
+)
+const AccountSessionPage = lazy(() =>
+  import('@/features/my-account/components/sections/AccountSessionPage').then((m) => ({
+    default: m.AccountSessionPage,
   })),
 )
 const ProviderProfilePage = lazy(() =>
@@ -86,11 +136,6 @@ const ProviderProfilePage = lazy(() =>
 const ProviderJobsRouteSlot = lazy(() =>
   import('@/features/provider-jobs/components/ProviderJobsRouteSlot').then((m) => ({
     default: m.ProviderJobsRouteSlot,
-  })),
-)
-const EarningsPage = lazy(() =>
-  import('@/features/provider-earnings/components/EarningsPage').then((m) => ({
-    default: m.EarningsPage,
   })),
 )
 const ProviderCalendarPage = lazy(() =>
@@ -197,20 +242,20 @@ export const router = createBrowserRouter([
             element: <ServiceDetailShell />,
           },
           {
-            path: 'addresses',
-            element: (
-              <ProtectedRoute allowedRoles={['client']}>
-                <DashboardFakePage title="Endereços" />
-              </ProtectedRoute>
-            ),
-          },
-          {
-            path: 'conta',
-            element: (
-              <ProtectedRoute allowedRoles={['client', 'provider']}>
-                <MyAccountPage />
-              </ProtectedRoute>
-            ),
+            path: 'account',
+            element: <MyAccountLayout />,
+            children: [
+              { index: true, element: <MyAccountIndexPage /> },
+              { path: 'personal-info', element: <PersonalInfoPage /> },
+              { path: 'addresses', element: <ClientAddressesPage /> },
+              { path: 'payments', element: <ClientPaymentsPage /> },
+              { path: 'legal-identity', element: <ProviderLegalIdentityPage /> },
+              { path: 'professional-profile', element: <ProviderProfessionalProfilePage /> },
+              { path: 'receivables', element: <ProviderReceivablesPage /> },
+              { path: 'earnings', element: <ProviderEarningsSectionPage /> },
+              { path: 'privacy', element: <AccountPrivacyPage /> },
+              { path: 'session', element: <AccountSessionPage /> },
+            ],
           },
           { path: 'settings', element: <DashboardFakePage title="Configurações" /> },
           { path: 'help', element: <DashboardFakePage title="Ajuda" /> },
@@ -219,14 +264,6 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute allowedRoles={['provider']}>
                 <ProviderJobsRouteSlot />
-              </ProtectedRoute>
-            ),
-          },
-          {
-            path: 'earnings',
-            element: (
-              <ProtectedRoute allowedRoles={['provider']}>
-                <EarningsPage />
               </ProtectedRoute>
             ),
           },

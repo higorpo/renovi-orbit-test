@@ -11,7 +11,7 @@ Itens que exigem validação humana, evidência parcial ou conflito entre trecho
 | P-01 | Redirecionamento pós-pedido | `useRequestQuoteSubmit` navega para `/dashboard/client` após sucesso; **não existe** essa rota em `router.tsx` (apenas `/dashboard/...`). **Comportamento provável:** 404 ou fallback do router. **Confirmado 2026-08-02:** `navigate("/dashboard/client", { replace: true })` ainda em `useRequestQuoteSubmit.ts` (+ teste unitário esperando o mesmo path). | Alta — fluxo cliente após pedido | **Aberta** |
 | P-02 | Destino do admin | `getRedirectPathForProfile` envia `admin` para `/admin/dashboard`; **rotas `/admin` não constam** do `router.tsx`. | Alta — se existirem usuários admin reais | **Aberta** |
 | P-03 | Onboarding | Papéis desconhecidos redirecionam para `/onboarding`; rota **não listada** no router analisado. | Média | **Aberta** |
-| P-04 | Menu vs rota “Endereços” | Menu do cliente aponta `/dashboard/addresses`, mas a rota renderiza `DashboardFakePage` (“Endereços” placeholder). Gestão real em `MyAccountClientPage` (`AddressesSection`). | Média — UX/ops | **Aberta** |
+| P-04 | Menu vs rota “Endereços” | ~~Menu apontava `/dashboard/addresses` (fake).~~ **Fechada (2026-08-12):** item Endereços e rota removidos; gestão em `/dashboard/account/addresses`. | — | **Fechada** |
 | P-06 | Default do provedor de IA | Comentários em tipos vs `handlerHelpers` do Edge Function: default efetivo do campo `provider` pode ser **Gemini**; documentação interna pode divergir. | Baixa — transparência operacional | **Aberta** |
 
 ## Resolvidas (histórico)
@@ -88,8 +88,8 @@ Também referenciados no módulo matching (fora desta consolidação se já fech
 ## Comportamento inferido
 
 - Prestador e cliente compartilham o layout `/dashboard`; a **especialização** ocorre por submenu + guards aninhados.
-- “Configurações”, “Ajuda”, “Visão geral” no menu são **placeholders** até nova implementação. **Ganhos** (`/dashboard/earnings`) passou a ser feature real (`provider-earnings`) — ver [ganhos-e-liquidacoes](./modulos/provider-earnings/features/ganhos-e-liquidacoes.md). **Calendário** (`/dashboard/services/calendar`) é feature real (`provider-calendar`); entrada via banner em Meus Serviços (prestador), sem item de menu dedicado (PC-02).
-- ~~Prestador compartilha o menu operacional completo independentemente do KYC.~~ ~~**Corrigido (2026-07-30):** sem onboarding `ACTIVE`, o menu do prestador fica só em Minha conta e o shell operacional é bloqueado pelo `ProviderKycGate`.~~ ~~**Atualizado (2026-08-03):** menu completo do prestador **sempre** visível (`getDashboardMenu`); o `ProviderKycGate` continua substituindo o **conteúdo** operacional até `ACTIVE`.~~ **Atualizado (2026-08-03):** menus **completamente ocultos** enquanto loading ou KYC ≠ `ACTIVE` (`useProviderKycBlocksNav` + `DashboardLayout`); gate continua substituindo o **conteúdo**; allowlist `/dashboard/conta*`; header/logo permanece — ver [provider-kyc](./modulos/provider-kyc/features/gate-e-acesso-operacional.md). Hook `useProviderKycNavItems` removido anteriormente.
+- “Configurações”, “Ajuda”, “Visão geral” no menu são **placeholders** até nova implementação. **Ganhos** é feature real (`provider-earnings`) em `/dashboard/account/earnings` (sem item de menu) — ver [ganhos-e-liquidacoes](./modulos/provider-earnings/features/ganhos-e-liquidacoes.md). **Calendário** (`/dashboard/services/calendar`) é feature real (`provider-calendar`); entrada via banner em Meus Serviços (prestador), sem item de menu dedicado (PC-02).
+- ~~Prestador compartilha o menu operacional completo independentemente do KYC.~~ ~~**Corrigido (2026-07-30):** sem onboarding `ACTIVE`, o menu do prestador fica só em Minha conta e o shell operacional é bloqueado pelo `ProviderKycGate`.~~ ~~**Atualizado (2026-08-03):** menu completo do prestador **sempre** visível (`getDashboardMenu`); o `ProviderKycGate` continua substituindo o **conteúdo** operacional até `ACTIVE`.~~ **Atualizado (2026-08-03):** menus **completamente ocultos** enquanto loading ou KYC ≠ `ACTIVE` (`useProviderKycBlocksNav` + `DashboardLayout`); gate continua substituindo o **conteúdo**; allowlist `/dashboard/account*`; header/logo permanece — ver [provider-kyc](./modulos/provider-kyc/features/gate-e-acesso-operacional.md). Hook `useProviderKycNavItems` removido anteriormente.
 
 ## Necessita validação com negócio/produto
 
@@ -110,7 +110,7 @@ Também referenciados no módulo matching (fora desta consolidação se já fech
 
 | Situação | IDs |
 |----------|-----|
-| **Abertas (conflito/produto)** | P-01, P-02, P-03, P-04, P-06 |
+| **Abertas (conflito/produto)** | P-01, P-02, P-03, P-06 |
 | **Abertas (MMD operacional)** | P-08, P-09 |
 | **Abertas (matching legado)** | P-MD-04, P-MD-05 |
 | **Abertas (reagendamento residual)** | P-SR-01, P-SR-02, P-SR-03, P-SR-05, P-SR-06 |

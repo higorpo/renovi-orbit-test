@@ -3,10 +3,10 @@ import { getDashboardMenu } from "../dashboardMenu";
 import type { ProfileRole } from "@/features/auth";
 
 describe("getDashboardMenu", () => {
-  it("returns client menu with 5 main items and 7 all items", () => {
+  it("returns client menu with 5 main items and 5 all items", () => {
     const result = getDashboardMenu("client" as ProfileRole);
     expect(result.mainItems).toHaveLength(5);
-    expect(result.allItems).toHaveLength(6);
+    expect(result.allItems).toHaveLength(5);
     expect(result.mainItems).toEqual(result.allItems.slice(0, 5));
   });
 
@@ -18,16 +18,15 @@ describe("getDashboardMenu", () => {
       "/dashboard",
       "/dashboard/services",
       "/dashboard/chats",
-      "/dashboard/addresses",
-      "/dashboard/conta",
+      "/dashboard/account",
       "/dashboard/help",
     ]);
     expect(labels).toContain("Visão geral");
     expect(labels).toContain("Meus Serviços");
     expect(labels).toContain("Conversas");
-    expect(labels).toContain("Endereços");
     expect(labels).toContain("Minha conta");
     expect(labels).toContain("Ajuda");
+    expect(labels).not.toContain("Endereços");
   });
 
   it("returns client menu items with icon property", () => {
@@ -39,10 +38,10 @@ describe("getDashboardMenu", () => {
     });
   });
 
-  it("returns provider menu with 5 main items and 7 all items", () => {
+  it("returns provider menu with 5 main items and 6 all items", () => {
     const result = getDashboardMenu("provider" as ProfileRole);
     expect(result.mainItems).toHaveLength(5);
-    expect(result.allItems).toHaveLength(7);
+    expect(result.allItems).toHaveLength(6);
     expect(result.mainItems).toEqual(result.allItems.slice(0, 5));
   });
 
@@ -55,17 +54,16 @@ describe("getDashboardMenu", () => {
       "/dashboard/services",
       "/dashboard/jobs",
       "/dashboard/chats",
-      "/dashboard/earnings",
-      "/dashboard/conta",
+      "/dashboard/account",
       "/dashboard/help",
     ]);
     expect(labels).toContain("Visão geral");
     expect(labels).toContain("Meus Serviços");
     expect(labels).toContain("Trabalhos");
     expect(labels).toContain("Conversas");
-    expect(labels).toContain("Ganhos");
     expect(labels).toContain("Minha conta");
     expect(labels).toContain("Ajuda");
+    expect(labels).not.toContain("Ganhos");
   });
 
   it("returns provider menu items with icon property", () => {
