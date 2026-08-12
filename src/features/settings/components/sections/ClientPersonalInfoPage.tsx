@@ -143,7 +143,7 @@ export function ClientPersonalInfoPage() {
       />
 
       {isDesktop ? (
-        <div className="mb-2 max-w-sm">
+        <div className="mb-2">
           {profileLoading ? (
             <AccountSummaryCardSkeleton />
           ) : profile ? (
