@@ -19,7 +19,7 @@ export function SettingsCardHeader({
   className,
 }: SettingsCardHeaderProps) {
   return (
-    <div className={cn("flex items-start gap-3", className)}>
+    <div className={cn("flex items-center gap-3", className)}>
       {Icon ? (
         <div
           className={cn(
@@ -33,7 +33,7 @@ export function SettingsCardHeader({
           <Icon className="h-5 w-5" strokeWidth={1.75} />
         </div>
       ) : null}
-      <div className="min-w-0 space-y-0.5 pt-0.5">
+      <div className="min-w-0 space-y-0.5">
         <h3 className="font-display text-lg font-semibold tracking-tight text-ink">{title}</h3>
         {description ? <p className="text-sm leading-relaxed text-body">{description}</p> : null}
       </div>
