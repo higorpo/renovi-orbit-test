@@ -177,6 +177,7 @@ describe("router", () => {
         "/dev/demo/form",
         "/dev/demo/provider-service-card-showcase",
         "/dev/demo/client-service-card-showcase",
+        "/dev/demo/prestway-icon-showcase",
       ]),
     );
   });

@@ -38,6 +38,14 @@ const ServiceNextStepShowcasePage =
         ),
       )
     : null
+const PrestwayIconShowcasePage =
+  import.meta.env.DEV
+    ? lazy(() =>
+        import('@/components/brand/PrestwayIconShowcasePage').then((m) => ({
+          default: m.PrestwayIconShowcasePage,
+        })),
+      )
+    : null
 
 /** Lazy routes use direct file paths (not feature barrels) so Rollup splits chunks per screen. */
 const RequestQuote = lazy(() =>
@@ -151,6 +159,9 @@ export const router = createBrowserRouter([
         : []),
       ...(import.meta.env.DEV && ServiceNextStepShowcasePage
         ? [{ path: 'dev/demo/service-next-step-showcase', element: <ServiceNextStepShowcasePage /> }]
+        : []),
+      ...(import.meta.env.DEV && PrestwayIconShowcasePage
+        ? [{ path: 'dev/demo/prestway-icon-showcase', element: <PrestwayIconShowcasePage /> }]
         : []),
       {
         path: 'pedir-orcamento',
