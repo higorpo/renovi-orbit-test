@@ -62,6 +62,18 @@ const useBreakpointMd = vi.mocked(
   await import("@/hooks/useBreakpoint").then((m) => m.useBreakpointMd)
 );
 
+function expectHeaderLogoPalette(audience: "client" | "provider") {
+  const logo = screen.getByRole("img", { name: "Prestway" });
+  const paths = logo.querySelectorAll("path");
+  if (audience === "client") {
+    expect(paths[0]).toHaveAttribute("fill", "#2D89F0");
+    expect(paths[1]).toHaveAttribute("fill", "#2563EB");
+    return;
+  }
+  expect(paths[0]).toHaveAttribute("fill", "#FA8432");
+  expect(paths[1]).toHaveAttribute("fill", "#F97316");
+}
+
 describe("DashboardLayout", () => {
   beforeEach(() => {
     useOnlineStatusMock.mockReturnValue(true);
@@ -100,6 +112,7 @@ describe("DashboardLayout", () => {
     expect(logo).toBeInTheDocument();
     const logoLink = screen.getByRole("link", { name: "Prestway" });
     expect(logoLink.getAttribute("href")).toMatch(/^\/(dashboard)?$/);
+    expectHeaderLogoPalette("client");
     expect(screen.getByRole("navigation", { name: "Dashboard navigation" })).toBeInTheDocument();
   });
 
@@ -123,7 +136,7 @@ describe("DashboardLayout", () => {
         <DashboardLayout />
       </MemoryRouter>
     );
-    expect(screen.getByRole("img", { name: "Prestway" })).toBeInTheDocument();
+    expectHeaderLogoPalette("provider");
   });
 
   it("renders desktop header with logo when profile is null", () => {
@@ -146,7 +159,7 @@ describe("DashboardLayout", () => {
         <DashboardLayout />
       </MemoryRouter>
     );
-    expect(screen.getByRole("img", { name: "Prestway" })).toBeInTheDocument();
+    expectHeaderLogoPalette("client");
   });
 
   it("renders mobile nav when useBreakpointMd is false", () => {
@@ -158,6 +171,30 @@ describe("DashboardLayout", () => {
     );
     expect(screen.getByRole("button", { name: "Abrir menu" })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Navegação principal" })).toBeInTheDocument();
+    expectHeaderLogoPalette("client");
+  });
+
+  it("renders mobile header logo in provider palette when role is provider", () => {
+    useAuth.mockReturnValue({
+      profile: { id: "p1", role: "provider", full_name: "Provider" },
+      user: null,
+      loadingSession: false,
+      session: null,
+      loading: false,
+      signIn: vi.fn(),
+      signInWithGoogle: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+      refreshProfile: vi.fn(),
+      getRedirectPath: vi.fn(),
+    } as ReturnType<typeof useAuth>);
+    useBreakpointMd.mockReturnValue(false);
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <DashboardLayout />
+      </MemoryRouter>
+    );
+    expectHeaderLogoPalette("provider");
   });
 
   it("renders main with Outlet", () => {

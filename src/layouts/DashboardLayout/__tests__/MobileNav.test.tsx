@@ -13,7 +13,11 @@ function renderMobileNav(
   const menu = getDashboardMenu(role);
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
-      <MobileNav menu={menu} title={title} />
+      <MobileNav
+        menu={menu}
+        title={title}
+        logoVariant={role === "provider" ? "provider" : "client"}
+      />
     </MemoryRouter>
   );
 }
@@ -25,6 +29,15 @@ describe("MobileNav", () => {
     expect(logo).toBeInTheDocument();
     const logoLink = screen.getByRole("link", { name: "Prestway" });
     expect(logoLink.getAttribute("href")).toMatch(/^\/(dashboard)?$/);
+    const paths = logo.querySelectorAll("path");
+    expect(paths[0]).toHaveAttribute("fill", "#2D89F0");
+  });
+
+  it("renders provider logo palette in the top bar", () => {
+    renderMobileNav("provider");
+    const paths = screen.getByRole("img", { name: "Prestway" }).querySelectorAll("path");
+    expect(paths[0]).toHaveAttribute("fill", "#FA8432");
+    expect(paths[1]).toHaveAttribute("fill", "#F97316");
   });
 
   it("renders with default title in sheet when title is not passed", () => {

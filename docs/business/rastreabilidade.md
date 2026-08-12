@@ -13,7 +13,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `docs/business/modulos/README.md` | Índice de módulos, cobertura, lacunas |
 | `src/main.tsx` | Bootstrap assíncrono: `initCapacitorPlugins` → `hydratePersistSessionPreference` → `RouterProvider` |
 | `src/layouts/DashboardLayout/dashboardMenu.ts` | Menus por papel |
-| `src/layouts/DashboardLayout/DashboardLayout.tsx` | Layout autenticado; `ProviderKycGate` + `useProviderKycBlocksNav` + `getDashboardMenu(role)` |
+| `src/layouts/DashboardLayout/DashboardLayout.tsx` | Layout autenticado; `ProviderKycGate` + `useProviderKycBlocksNav` + `getDashboardMenu(role)`; `logoVariant = resolveAudienceTheme(role)` no `PrestwayIcon` desktop e no `MobileTabHeader` |
 | `src/layouts/DashboardLayout/DashboardFakePage.tsx` | Placeholders de seção |
 | `src/features/provider-kyc/` | Gate KYC, wizard de credenciamento, status, API/upload/submit |
 
@@ -24,6 +24,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `src/features/auth/components/routeGuards.tsx` | `ProtectedRoute`, `GuestOnlyRoute` |
 | `src/features/auth/AuthProvider.tsx`, `hooks/useAuth.ts` | Sessão, redirect por papel |
 | `src/features/auth/types/auth.types.ts` | `ProfileRole`, tipos de perfil |
+| `src/features/auth/utils/audienceTheme.ts` | `resolveAudienceTheme` / `syncAudienceTheme` (`html[data-audience]`; paleta do logo no dashboard-shell) |
 | `src/features/auth/api/auth.api.ts` | Operações Supabase Auth |
 | `src/features/auth/api/profile.api.ts` | Perfil, bloqueio de promoção admin |
 | `src/features/auth/hooks/useSignupForm.ts` | reCAPTCHA no cadastro: pré-carga no mount (`preloadRecaptcha`); token no submit |
@@ -290,8 +291,8 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `src/features/provider-kyc/hooks/useProviderKycBlocksNav.ts` | Oculta chrome de nav no `DashboardLayout` (loading + bloqueio KYC) |
 | `src/features/provider-kyc/hooks/useProviderPaymentAccount.ts` | Polling 5s (e-mail pendente) / 30s (documentos enviados ou análise) |
 | `src/features/provider-kyc/hooks/__tests__/useProviderKycBlocksNav.test.tsx` | Loading / ACTIVE / bloqueio / não-provider |
-| `src/layouts/DashboardLayout/MobileTabHeader.tsx` | Prop `hideMenu` (hamburger oculto com KYC bloqueado) |
-| `src/layouts/DashboardLayout/DashboardLayout.tsx` | Integração gate + `hideNavForKyc` (DesktopNav / bottom nav / `pb-20`) |
+| `src/layouts/DashboardLayout/MobileTabHeader.tsx` | Prop `hideMenu` (hamburger oculto com KYC bloqueado); prop `logoVariant` (paleta do mark por audiência) |
+| `src/layouts/DashboardLayout/DashboardLayout.tsx` | Integração gate + `hideNavForKyc` (DesktopNav / bottom nav / `pb-20`); `logoVariant` no header desktop e no tab header |
 | `src/features/provider-kyc/hooks/useProviderKycWizard.ts` | Wizard multi-etapas; prefill; uploads; analytics |
 | `src/features/provider-kyc/hooks/useDispatchKyc.ts` | `payment_submit_provider_kyc` + `dispatch-kyc-email` |
 | `src/features/provider-kyc/api/kyc.api.ts` | Critérios de status; upload Option A; submit com identidade; prefill `provider_profiles_private` |

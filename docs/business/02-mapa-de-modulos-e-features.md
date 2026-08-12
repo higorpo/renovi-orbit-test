@@ -8,7 +8,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 
 | Área | Documento | Rotas / código |
 |------|-----------|----------------|
-| Shell do dashboard e placeholders | [dashboard-shell](./modulos/dashboard-shell/README.md) | `DashboardLayout`, `DashboardFakePage`, `dashboardMenu.ts` (Conversas no menu; calendário e Ganhos **fora** do menu top-level); gate KYC + `useProviderKycBlocksNav` via `provider-kyc` |
+| Shell do dashboard e placeholders | [dashboard-shell](./modulos/dashboard-shell/README.md) | `DashboardLayout`, `DashboardFakePage`, `dashboardMenu.ts` (Conversas no menu; calendário e Ganhos **fora** do menu top-level); gate KYC + `useProviderKycBlocksNav` via `provider-kyc`; logo Prestway no header desktop/`MobileTabHeader` por papel (`resolveAudienceTheme`: cliente/azul, prestador/laranja; sem `inst`) |
 | Página inicial | [app-home](./modulos/app-home/README.md) | `/` → `src/App.tsx` |
 
 ## Tabela mestra

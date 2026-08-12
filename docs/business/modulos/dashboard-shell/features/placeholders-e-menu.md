@@ -4,7 +4,7 @@
 
 - **O que é:** shell do painel autenticado (`DashboardLayout`) com menu por papel, chrome desktop/mobile, embedding do gate KYC do prestador e rotas filhas — parte **reais**, parte **placeholder** (`DashboardFakePage`).
 - **Quem usa:** `client` e `provider` autenticados.
-- **Foco desta doc:** o que o menu mostra por papel; o que é fake vs real; allowlist KYC; rotas fora do menu top-level (calendário, detalhe; Ganhos/Endereços só no hub Configurações).
+- **Foco desta doc:** o que o menu mostra por papel; paleta do logo Prestway no header (por papel); o que é fake vs real; allowlist KYC; rotas fora do menu top-level (calendário, detalhe; Ganhos/Endereços só no hub Configurações).
 
 ## 2. Objetivo de negócio
 
@@ -45,9 +45,9 @@ Dar navegação estável e previsível no painel pós-login, sem misturar regras
 
 | Perfil | Menu | Observação |
 |--------|------|------------|
-| `client` | Ver §7 tabela cliente | Sem jobs / earnings / calendar |
-| `provider` | Ver §7 tabela prestador | Gate KYC substitui conteúdo se ≠ `ACTIVE`; chrome de nav oculto se loading ou ≠ `ACTIVE` |
-| Sem `role` no profile | Tratado como `client` no layout | `profile?.role ?? "client"` |
+| `client` | Ver §7 tabela cliente | Sem jobs / earnings / calendar; logo azul (`PrestwayIcon` variant `client`) |
+| `provider` | Ver §7 tabela prestador | Gate KYC substitui conteúdo se ≠ `ACTIVE`; chrome de nav oculto se loading ou ≠ `ACTIVE`; logo laranja (variant `provider`) |
+| Sem `role` no profile | Tratado como `client` no layout | `profile?.role ?? "client"`; `resolveAudienceTheme` também cai em `client` (azul) para `admin` / null |
 
 ## 5. Fluxo funcional principal
 
@@ -67,8 +67,8 @@ flowchart TD
 
 Passos:
 
-1. Layout resolve `role`, `getDashboardMenu(role)` e `useProviderKycBlocksNav`.
-2. Se `hideNavForKyc`: omite DesktopNav / bottom nav / hamburger; header/logo permanece; sem `pb-20`.
+1. Layout resolve `role`, `getDashboardMenu(role)`, `logoVariant = resolveAudienceTheme(role)` e `useProviderKycBlocksNav`.
+2. Se `hideNavForKyc`: omite DesktopNav / bottom nav / hamburger; header/logo permanece (com a paleta do papel); sem `pb-20`.
 3. Senão: chrome desktop ou mobile conforme breakpoint e `resolveMobileChrome(pathname, location)`.
 4. Conteúdo liberado ou substituído pelo gate; outlet renderiza página real ou `DashboardFakePage` (ou UI KYC).
 
@@ -115,6 +115,8 @@ Passos:
 
 9. **Placeholder sem domínio:** `DashboardFakePage` não consulta pedido/orçamento/pagamento — só UI fixa.
 
+10. **Logo no chrome (header):** o mark Prestway (`layout="full"`) no header desktop e no `MobileTabHeader` segue `resolveAudienceTheme(role)` — cliente (e fallback profile null / `admin`) = paleta azul (`client`); prestador = paleta laranja (`provider`). Não usa a variante institucional mista (`inst`). Prop `logoVariant` no `MobileTabHeader` (default `"client"`); `MobileNav` só repassa. `html[data-audience]` continua o mesmo mapeamento (`syncAudienceTheme` no `AuthProvider`). O `MobileStackHeader` não mostra o mark.
+
 ## 8. Campos e dados
 
 Placeholders **não** possuem formulários. Shell lê apenas `profile` (role). O gate KYC (módulo provider-kyc) lê o estado da conta NetCred para decidir se substitui o conteúdo.
@@ -133,7 +135,7 @@ Nenhuma RPC/RLS própria do shell. Persistência e regras de KYC/contas estão e
 |-----------------------------|--------------|----------------------|
 | Cliente | Menu cliente completo | Sem gate |
 | Prestador `ACTIVE` | Menu prestador completo | Children liberados |
-| Prestador loading conta | **Oculto** (logo permanece) | Spinner “Verificando credenciamento…” |
+| Prestador loading conta | **Oculto** (logo permanece, paleta do papel) | Spinner “Verificando credenciamento…” |
 | Prestador não-`ACTIVE` em `/dashboard/settings*` | **Oculto** | Children (Configurações) |
 | Prestador não-`ACTIVE` fora da allowlist | **Oculto** | Telas de status / formulário KYC |
 
@@ -153,6 +155,7 @@ Sem persistência própria. Chrome mobile e menu são derivados de rota + role e
 | `useServiceDetailModal` + `ServiceDetailSheet` | Detalhe sobre lista |
 | `useOnlineStatus` | Offset de header offline |
 | `useBreakpointMd` | Desktop vs mobile chrome |
+| `resolveAudienceTheme` | Paleta do `PrestwayIcon` no header desktop e no `MobileTabHeader` |
 
 ## 14. Listagens, buscas, filtros, paginação
 
@@ -171,7 +174,7 @@ Não aplicável ao shell/placeholder. Listagens ficam nas features hospedadas.
 
 | Dependência | Tipo |
 |-------------|------|
-| `auth` | Sessão, role, guards |
+| `auth` | Sessão, role, guards; `resolveAudienceTheme` (logo) |
 | `provider-kyc` | Gate de conteúdo + `useProviderKycBlocksNav` (chrome) |
 | `my-services`, `provider-jobs`, `view-services` | Slots / sheet |
 | Features lazy no router (`chats`, `provider-earnings`, `settings`, `provider-calendar`, …) | Conteúdo real das rotas |
@@ -184,6 +187,7 @@ Não aplicável ao shell/placeholder. Listagens ficam nas features hospedadas.
 - Prestador pode digitar URL de `/dashboard/jobs` etc. sem KYC `ACTIVE`: o router deixa passar o guard de role; o **gate substitui** o conteúdo (exceto allowlist); chrome de nav permanece oculto.
 - Matching de ativo no desktop: path `/dashboard` só ativo em igualdade exata; demais itens usam `pathname.startsWith(itemPath)` (`DesktopNav`).
 - Contagem mainItems: `allItems.slice(0, CLIENT_MAIN_COUNT|PROVIDER_MAIN_COUNT)` — cliente: 4 itens (sem overflow); prestador: 5 itens (sem item extra no overflow).
+- Logo do header do dashboard **não** usa `variant="inst"`; paleta = papel via `resolveAudienceTheme` (igual a `html[data-audience]`).
 
 ## 18. Riscos
 
@@ -204,7 +208,8 @@ Não aplicável ao shell/placeholder. Listagens ficam nas features hospedadas.
 | Placeholder | `src/layouts/DashboardLayout/DashboardFakePage.tsx` |
 | Chrome mobile | `src/layouts/DashboardLayout/mobileNavigation.config.ts` |
 | Rotas | `src/router.tsx` (bloco `path: 'dashboard'`) |
-| Gate / allowlist / chrome | `ProviderKycGate.tsx`, `useProviderKycBlocksNav.ts`, `kyc.constants.ts`; `DashboardLayout.tsx`, `MobileTabHeader.tsx` (`hideMenu`) |
+| Gate / allowlist / chrome | `ProviderKycGate.tsx`, `useProviderKycBlocksNav.ts`, `kyc.constants.ts`; `DashboardLayout.tsx`, `MobileTabHeader.tsx` (`hideMenu`, `logoVariant`) |
+| Paleta do logo | `resolveAudienceTheme` em `src/features/auth/utils/audienceTheme.ts`; `PrestwayIcon` em `src/components/brand/PrestwayIcon.tsx` |
 | Banner calendário | `src/features/provider-calendar/components/ProviderCalendarEntryBanner.tsx` |
 | Constante rota calendário | `src/features/provider-calendar/constants/routes.ts` |
 
@@ -222,7 +227,7 @@ Não aplicável ao shell/placeholder. Listagens ficam nas features hospedadas.
 
 | Path / condição | Modo | Bottom nav | Header shell |
 |-----------------|------|------------|--------------|
-| Raízes tab (`/dashboard`, services, chats, jobs, `/dashboard/settings`, …) | `tab-root` | Sim | Logo + hamburger |
+| Raízes tab (`/dashboard`, services, chats, jobs, `/dashboard/settings`, …) | `tab-root` | Sim | Logo (paleta do papel) + hamburger |
 | `/dashboard/services/calendar` | `stack` | Não | ← + título |
 | `/dashboard/settings/:seção` | `stack` | Não | ← + título da seção; back → `/dashboard/settings` |
 | `/dashboard/services/:id` com state sheet | `tab-root` (lista atrás) | Sim | Tab |
@@ -236,7 +241,8 @@ Evidência: `mobileNavigation.config.ts`, `mobileNavigation.types.ts`.
 - [ ] Cliente: bottom nav = Visão geral, Meus Serviços, Conversas, Configurações (4 itens; sem Ajuda).
 - [ ] Prestador ACTIVE: bottom nav = Visão geral, Meus Serviços, Trabalhos, Conversas, Configurações (5 itens; sem Ajuda/overflow extra).
 - [ ] `/dashboard/help` → 404 (rota removida, sem redirect).
-- [ ] Prestador não-ACTIVE (ou loading): menus **ocultos**; header/logo permanece; rotas operacionais mostram UI KYC (exceto conteúdo em `/dashboard/settings*`).
+- [ ] Prestador não-ACTIVE (ou loading): menus **ocultos**; header/logo permanece (paleta laranja do prestador); rotas operacionais mostram UI KYC (exceto conteúdo em `/dashboard/settings*`).
+- [ ] Logo do header: cliente (e profile null / admin) = paleta azul; prestador = paleta laranja; **não** variante institucional mista (`inst`). Desktop e `MobileTabHeader`.
 - [ ] Sem itens Endereços / Ganhos no menu; Ganhos em `/dashboard/settings/earnings`.
 - [ ] `/dashboard/chats` → layout real de conversas.
 - [ ] Calendário acessível pelo banner em Meus Serviços (prestador), não pelo menu.

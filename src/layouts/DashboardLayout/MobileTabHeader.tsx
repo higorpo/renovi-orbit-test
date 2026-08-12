@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, NavLink } from "react-router";
 import { Menu } from "lucide-react";
 import { PrestwayIcon } from "@/components/brand";
+import type { AudienceTheme } from "@/features/auth";
 import {
   Sheet,
   SheetContent,
@@ -17,6 +18,7 @@ interface MobileTabHeaderProps {
   menu: DashboardMenuConfig;
   /** Optional title shown in the sheet header (e.g. "Área do cliente"). */
   title?: string;
+  logoVariant?: AudienceTheme;
   /** When true, header sticks below the offline banner. */
   isOffline?: boolean;
   /** Hide hamburger + sheet (e.g. provider blocked on KYC). */
@@ -26,6 +28,7 @@ interface MobileTabHeaderProps {
 export function MobileTabHeader({
   menu,
   title = "Dashboard",
+  logoVariant = "client",
   isOffline = false,
   hideMenu = false,
 }: MobileTabHeaderProps) {
@@ -82,7 +85,7 @@ export function MobileTabHeader({
       </div>
       <Link to="/dashboard" className="flex flex-1 justify-center">
         <PrestwayIcon
-          variant="inst"
+          variant={logoVariant}
           layout="full"
           aria-label="Prestway"
           className="h-7 w-auto"

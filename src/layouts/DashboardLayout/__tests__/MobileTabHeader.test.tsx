@@ -24,6 +24,25 @@ describe("MobileTabHeader", () => {
     expect(screen.getByRole("link", { name: "Prestway" })).toHaveAttribute("href", "/dashboard");
   });
 
+  it("uses the client logo palette by default", () => {
+    renderHeader();
+    const paths = screen.getByRole("img", { name: "Prestway" }).querySelectorAll("path");
+    expect(paths[0]).toHaveAttribute("fill", "#2D89F0");
+    expect(paths[1]).toHaveAttribute("fill", "#2563EB");
+  });
+
+  it("uses the provider logo palette when logoVariant is provider", () => {
+    const menu = getDashboardMenu("provider" as ProfileRole);
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <MobileTabHeader menu={menu} logoVariant="provider" />
+      </MemoryRouter>
+    );
+    const paths = screen.getByRole("img", { name: "Prestway" }).querySelectorAll("path");
+    expect(paths[0]).toHaveAttribute("fill", "#FA8432");
+    expect(paths[1]).toHaveAttribute("fill", "#F97316");
+  });
+
   it("offsets sticky top when offline banner is present", () => {
     renderHeader({ isOffline: true });
     expect(screen.getByTestId("mobile-tab-header")).toHaveClass("top-11");
