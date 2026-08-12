@@ -89,7 +89,7 @@ describe("useMobileBackNavigation", () => {
     const { result } = renderHook(
       () => useMobileBackNavigation({}),
       {
-        wrapper: wrapper({ pathname: "/dashboard/help" }),
+        wrapper: wrapper({ pathname: "/dashboard/orphan" }),
       },
     );
 

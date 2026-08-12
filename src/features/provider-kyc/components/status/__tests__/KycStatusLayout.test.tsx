@@ -17,6 +17,9 @@ describe("KycStatusLayout", () => {
     expect(screen.getByRole("heading", { name: "Em análise" })).toBeInTheDocument();
     expect(screen.getByText("Aguarde a revisão.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Falar com suporte/i })).toBeInTheDocument();
+    const support = screen.getByRole("link", { name: /Falar com suporte/i });
+    expect(support.getAttribute("href")).not.toContain("/dashboard/help");
+    expect(support.getAttribute("href")).toMatch(/suporte$|^mailto:/);
   });
 
   it("hides support CTA and renders optional action/children", () => {

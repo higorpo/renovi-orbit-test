@@ -41,7 +41,7 @@ describe("MobileTabHeader", () => {
     expect(dialog).toHaveTextContent("Área do cliente");
     expect(screen.getByRole("navigation", { name: "Menu principal" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("link", { name: /Ajuda/ }));
+    fireEvent.click(screen.getByRole("link", { name: /Configurações/ }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
@@ -54,13 +54,13 @@ describe("MobileTabHeader", () => {
   });
 
   it("keeps inactive sheet links without primary highlight", async () => {
-    renderHeader(undefined, "/dashboard/help");
+    renderHeader(undefined, "/dashboard/settings");
     fireEvent.click(screen.getByRole("button", { name: "Abrir menu" }));
     await screen.findByRole("dialog");
     const overview = screen.getByRole("link", { name: /Visão geral/ });
     expect(overview).toHaveClass("text-foreground");
     expect(overview).not.toHaveClass("bg-primary/10");
-    expect(screen.getByRole("link", { name: /Ajuda/ })).toHaveClass("bg-primary/10");
+    expect(screen.getByRole("link", { name: /Configurações/ })).toHaveClass("bg-primary/10");
   });
 
   it("uses default Dashboard sheet title when title prop is omitted", async () => {

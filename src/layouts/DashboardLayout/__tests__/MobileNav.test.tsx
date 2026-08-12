@@ -53,13 +53,13 @@ describe("MobileNav", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders main items in bottom nav (client: first 5)", () => {
+  it("renders main items in bottom nav (client: first 4)", () => {
     renderMobileNav("client");
     expect(screen.getByRole("link", { name: /Visão geral/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Meus Serviços/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Conversas/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Configurações/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Ajuda/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Ajuda/ })).not.toBeInTheDocument();
   });
 
   it("opens sheet when hamburger is clicked and shows all menu items", async () => {
@@ -67,8 +67,9 @@ describe("MobileNav", () => {
     const button = screen.getByRole("button", { name: "Abrir menu" });
     fireEvent.click(button);
     await screen.findByRole("dialog");
-    expect(screen.getByRole("link", { name: /Ajuda/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Configurações/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Visão geral/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Ajuda/ })).not.toBeInTheDocument();
   });
 
   it("renders provider main items in bottom nav", () => {

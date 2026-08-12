@@ -54,13 +54,6 @@ describe("resolveMobileChrome", () => {
     expect(chrome.enableStackTransition).toBe(true);
   });
 
-  it("returns stack chrome for help route", () => {
-    const chrome = resolveMobileChrome("/dashboard/help", location("/dashboard/help"));
-    expect(chrome.mode).toBe("stack");
-    expect(chrome.stackTitle).toBe("Ajuda");
-    expect(chrome.showBottomNav).toBe(false);
-  });
-
   it.each([
     {
       pathname: "/dashboard/services/calendar",

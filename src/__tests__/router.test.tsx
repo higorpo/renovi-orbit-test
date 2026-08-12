@@ -194,10 +194,10 @@ describe("router", () => {
         "/dashboard/jobs",
         "/dashboard/chats",
         "/dashboard/chats/:chatId",
-        "/dashboard/help",
         "/example",
       ]),
     );
+    expect(paths).not.toContain("/dashboard/help");
   });
 
   it("wraps the tree with RootLayout and an error boundary", () => {

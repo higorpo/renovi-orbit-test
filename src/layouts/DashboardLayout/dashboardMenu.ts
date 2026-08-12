@@ -1,7 +1,6 @@
 import {
   Briefcase,
   FileText,
-  HelpCircle,
   LayoutDashboard,
   MessageSquare,
   Settings,
@@ -17,7 +16,7 @@ export interface DashboardMenuItem {
 }
 
 /** Main items shown in mobile bottom nav (first N from allItems). */
-const CLIENT_MAIN_COUNT = 5;
+const CLIENT_MAIN_COUNT = 4;
 const PROVIDER_MAIN_COUNT = 5;
 
 function clientMenuItems(): DashboardMenuItem[] {
@@ -26,7 +25,6 @@ function clientMenuItems(): DashboardMenuItem[] {
     { path: "/dashboard/services", label: "Meus Serviços", icon: FileText },
     { path: "/dashboard/chats", label: "Conversas", icon: MessageSquare },
     { path: ROUTE_SETTINGS, label: "Configurações", icon: Settings },
-    { path: "/dashboard/help", label: "Ajuda", icon: HelpCircle },
   ];
 }
 
@@ -37,7 +35,6 @@ function providerMenuItems(): DashboardMenuItem[] {
     { path: "/dashboard/jobs", label: "Trabalhos", icon: Briefcase },
     { path: "/dashboard/chats", label: "Conversas", icon: MessageSquare },
     { path: ROUTE_SETTINGS, label: "Configurações", icon: Settings },
-    { path: "/dashboard/help", label: "Ajuda", icon: HelpCircle },
   ];
 }
 

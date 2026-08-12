@@ -244,13 +244,13 @@ describe("DashboardLayout", () => {
     expect(screen.getByRole("main")).toHaveClass("overflow-hidden");
   });
 
-  it("renders stack header on mobile help route", () => {
+  it("renders stack header on mobile calendar route", () => {
     useBreakpointMd.mockReturnValue(false);
     render(
-      <MemoryRouter initialEntries={["/dashboard/help"]}>
+      <MemoryRouter initialEntries={["/dashboard/services/calendar"]}>
         <Routes>
           <Route path="/dashboard/*" element={<DashboardLayout />}>
-            <Route path="help" element={null} />
+            <Route path="services/calendar" element={null} />
           </Route>
         </Routes>
       </MemoryRouter>,
@@ -258,7 +258,7 @@ describe("DashboardLayout", () => {
 
     expect(screen.queryByRole("button", { name: "Abrir menu" })).toBeNull();
     expect(screen.getByRole("button", { name: "Voltar" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Ajuda" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Calendário" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Navegação principal" })).toBeNull();
     expect(screen.getByRole("main")).not.toHaveClass("pb-20");
   });
@@ -301,16 +301,16 @@ describe("DashboardLayout", () => {
   it("wraps outlet in MobileStackTransition on stack routes", () => {
     useBreakpointMd.mockReturnValue(false);
     render(
-      <MemoryRouter initialEntries={["/dashboard/help"]}>
+      <MemoryRouter initialEntries={["/dashboard/services/calendar"]}>
         <Routes>
           <Route path="/dashboard/*" element={<DashboardLayout />}>
-            <Route path="help" element={<p>Help page</p>} />
+            <Route path="services/calendar" element={<p>Calendar page</p>} />
           </Route>
         </Routes>
       </MemoryRouter>,
     );
 
     expect(screen.getByTestId("mobile-stack-transition")).toBeInTheDocument();
-    expect(screen.getByText("Help page")).toBeInTheDocument();
+    expect(screen.getByText("Calendar page")).toBeInTheDocument();
   });
 });

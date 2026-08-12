@@ -263,7 +263,6 @@ export const router = createBrowserRouter([
               { path: 'session', element: <AccountSessionPage /> },
             ],
           },
-          { path: 'help', element: <DashboardFakePage title="Ajuda" /> },
           {
             path: 'jobs',
             element: (

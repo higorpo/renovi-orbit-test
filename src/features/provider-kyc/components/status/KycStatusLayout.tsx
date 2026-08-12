@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PROVIDER_KYC_SUPPORT_URL } from "../../constants/kyc.constants";
+import {
+  PROVIDER_KYC_HELP_MAILTO,
+  PROVIDER_KYC_SUPPORT_URL,
+} from "../../constants/kyc.constants";
 import { cn } from "@/lib/utils";
 
 export type KycStatusLayoutProps = {
@@ -28,7 +31,7 @@ export function KycStatusLayout({
   className,
   children,
 }: KycStatusLayoutProps) {
-  const supportHref = PROVIDER_KYC_SUPPORT_URL || "/dashboard/help";
+  const supportHref = PROVIDER_KYC_SUPPORT_URL ?? PROVIDER_KYC_HELP_MAILTO;
 
   return (
     <div

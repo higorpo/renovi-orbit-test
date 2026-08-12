@@ -102,7 +102,7 @@ describe("DesktopNav", () => {
     expect(screen.getByRole("link", { name: /Visão geral/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Meus Serviços/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Configurações/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Ajuda/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Ajuda/ })).not.toBeInTheDocument();
   });
 
   it("renders visible links and overflow menu when space is limited", async () => {
@@ -111,14 +111,14 @@ describe("DesktopNav", () => {
     renderDesktopNav(menu.allItems);
     expect(screen.getByRole("link", { name: /Visão geral/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Meus Serviços/ })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Ajuda/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Configurações/ })).not.toBeInTheDocument();
 
     const moreButton = screen.getByRole("button", { name: /Mais opções de navegação/i });
     fireEvent.pointerDown(moreButton, { button: 0, ctrl: 0 });
     fireEvent.click(moreButton);
     const menuPanel = await screen.findByRole("menu");
+    expect(within(menuPanel).getByRole("menuitem", { name: /Conversas/i })).toBeInTheDocument();
     expect(within(menuPanel).getByRole("menuitem", { name: /Configurações/i })).toBeInTheDocument();
-    expect(within(menuPanel).getByRole("menuitem", { name: /Ajuda/i })).toBeInTheDocument();
   });
 
   it("applies custom className to nav", () => {
@@ -184,13 +184,13 @@ describe("DesktopNav", () => {
   it("marks overflow trigger active when current route is in overflow", async () => {
     computeDesktopNavVisibleCountMock.mockReturnValue(2);
     const menu = getDashboardMenu("client" as ProfileRole);
-    renderDesktopNav(menu.allItems, "/dashboard/help");
+    renderDesktopNav(menu.allItems, "/dashboard/settings");
     const moreButton = screen.getByRole("button", { name: /Mais opções de navegação/i });
     expect(moreButton).toHaveClass("text-foreground");
     fireEvent.pointerDown(moreButton, { button: 0, ctrl: 0 });
     fireEvent.click(moreButton);
     const menuPanel = await screen.findByRole("menu");
-    expect(within(menuPanel).getByRole("menuitem", { name: /Ajuda/i })).toHaveClass("bg-accent");
+    expect(within(menuPanel).getByRole("menuitem", { name: /Configurações/i })).toHaveClass("bg-accent");
   });
 
   it("applies inverted styles for dark header context", () => {
@@ -251,13 +251,13 @@ describe("DesktopNav", () => {
   it("applies inverted overflow trigger styles when active route is overflowed", async () => {
     computeDesktopNavVisibleCountMock.mockReturnValue(2);
     const menu = getDashboardMenu("client" as ProfileRole);
-    renderDesktopNav(menu.allItems, "/dashboard/help", { inverted: true });
+    renderDesktopNav(menu.allItems, "/dashboard/settings", { inverted: true });
     const moreButton = screen.getByRole("button", { name: /Mais opções de navegação/i });
     expect(moreButton).toHaveClass("text-white");
     fireEvent.pointerDown(moreButton, { button: 0, ctrl: 0 });
     fireEvent.click(moreButton);
     const menuPanel = await screen.findByRole("menu");
-    expect(within(menuPanel).getByRole("menuitem", { name: /Ajuda/i })).toHaveClass("bg-accent");
+    expect(within(menuPanel).getByRole("menuitem", { name: /Configurações/i })).toHaveClass("bg-accent");
   });
 
   it("keeps inverted inactive overflow trigger when active route is visible", () => {

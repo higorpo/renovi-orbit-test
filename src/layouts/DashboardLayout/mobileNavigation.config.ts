@@ -30,7 +30,6 @@ const MOBILE_STACK_ROUTES: StackRouteRule[] = [
     stackTitle: "Calendário",
     backFallback: "/dashboard/services",
   },
-  { pattern: /^\/dashboard\/help$/, stackTitle: "Ajuda", backFallback: "/dashboard" },
 ];
 
 function createStackConfig(stackTitle: string, backFallback: string): MobileChromeConfig {

@@ -3,11 +3,11 @@ import { getDashboardMenu } from "../dashboardMenu";
 import type { ProfileRole } from "@/features/auth";
 
 describe("getDashboardMenu", () => {
-  it("returns client menu with 5 main items and 5 all items", () => {
+  it("returns client menu with 4 main items and 4 all items", () => {
     const result = getDashboardMenu("client" as ProfileRole);
-    expect(result.mainItems).toHaveLength(5);
-    expect(result.allItems).toHaveLength(5);
-    expect(result.mainItems).toEqual(result.allItems.slice(0, 5));
+    expect(result.mainItems).toHaveLength(4);
+    expect(result.allItems).toHaveLength(4);
+    expect(result.mainItems).toEqual(result.allItems.slice(0, 4));
   });
 
   it("returns client allItems with expected paths and labels", () => {
@@ -19,13 +19,12 @@ describe("getDashboardMenu", () => {
       "/dashboard/services",
       "/dashboard/chats",
       "/dashboard/settings",
-      "/dashboard/help",
     ]);
     expect(labels).toContain("Visão geral");
     expect(labels).toContain("Meus Serviços");
     expect(labels).toContain("Conversas");
     expect(labels).toContain("Configurações");
-    expect(labels).toContain("Ajuda");
+    expect(labels).not.toContain("Ajuda");
     expect(labels).not.toContain("Endereços");
   });
 
@@ -38,10 +37,10 @@ describe("getDashboardMenu", () => {
     });
   });
 
-  it("returns provider menu with 5 main items and 6 all items", () => {
+  it("returns provider menu with 5 main items and 5 all items", () => {
     const result = getDashboardMenu("provider" as ProfileRole);
     expect(result.mainItems).toHaveLength(5);
-    expect(result.allItems).toHaveLength(6);
+    expect(result.allItems).toHaveLength(5);
     expect(result.mainItems).toEqual(result.allItems.slice(0, 5));
   });
 
@@ -55,14 +54,13 @@ describe("getDashboardMenu", () => {
       "/dashboard/jobs",
       "/dashboard/chats",
       "/dashboard/settings",
-      "/dashboard/help",
     ]);
     expect(labels).toContain("Visão geral");
     expect(labels).toContain("Meus Serviços");
     expect(labels).toContain("Trabalhos");
     expect(labels).toContain("Conversas");
     expect(labels).toContain("Configurações");
-    expect(labels).toContain("Ajuda");
+    expect(labels).not.toContain("Ajuda");
     expect(labels).not.toContain("Ganhos");
   });
 
