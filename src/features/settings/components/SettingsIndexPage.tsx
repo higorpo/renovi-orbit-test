@@ -27,12 +27,6 @@ export function SettingsIndexPage() {
   return (
     <div className="bg-canvas-soft min-h-full">
       <div className="container max-w-lg px-4 py-6">
-        <header className="mb-6 space-y-1">
-          <h1 className="font-display text-display-md font-bold tracking-tight text-ink">
-            Configurações
-          </h1>
-          <p className="text-sm text-body">Gerencie sua conta e preferências</p>
-        </header>
         <div className="mb-5">
           <MobileAccountSummary role={role} />
         </div>
