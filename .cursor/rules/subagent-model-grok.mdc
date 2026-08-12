@@ -9,7 +9,7 @@ Ao lançar qualquer subagente via ferramenta **Task**, o modelo **deve** ser **G
 
 ## Default (obrigatório)
 
-- Sempre passar `model: "cursor-grok-4.5-high"` em chamadas **Task**.
+- Sempre passar `model: "cursor-grok-4.6-high"` em chamadas **Task**.
 - Não omitir `model` “para herdar o do parent” — deixe o default explícito.
 - Em hipótese alguma usar Sonnet, Fable, Opus, Composer, Gemini, GPT ou outros, **salvo** se o **prompt do usuário** pedir outro modelo de forma explícita.
 
@@ -21,7 +21,7 @@ Só use outro slug de `model` quando o usuário **especificar no prompt** (ex.: 
 
 ```
 # ✅ GOOD — default do projeto
-Task({ model: "cursor-grok-4.5-high", subagent_type: "explore", ... })
+Task({ model: "cursor-grok-4.6-high", subagent_type: "explore", ... })
 
 # ❌ BAD — Sonnet/Fable sem pedido explícito do usuário
 Task({ model: "claude-sonnet-5-thinking-high", ... })

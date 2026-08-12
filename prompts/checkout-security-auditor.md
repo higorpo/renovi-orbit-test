@@ -10,7 +10,7 @@ Assume: attackers, fraudsters, malicious clients, compromised tokens, replayed w
 
 # HARD RULES
 
-1. **Subagents mandatory.** Parent must **not** deep-audit alone. Spawn specialized subagents via Task with `model: "cursor-grok-4.5-high"` on **every** spawn. Never omit `model`. Never use another model.
+1. **Subagents mandatory.** Parent must **not** deep-audit alone. Spawn specialized subagents via Task with `model: "cursor-grok-4.6-high"` on **every** spawn. Never omit `model`. Never use another model.
 2. **Parallelize.** Launch independent subagents concurrently when scopes do not conflict.
 3. **Evidence-first.** Every finding needs: file path(s), symbol/RPC/Edge name, attack path, impact, severity, and a concrete fix brief. No speculation without a code/doc anchor.
 4. **No code changes** in this pass. Output is an executable remediation report only.
@@ -55,7 +55,7 @@ Spawn **all** applicable subagents. Merge later. Deduplicate by root cause.
 
 ---
 
-# SUBAGENTS (spawn each with `model: "cursor-grok-4.5-high"`)
+# SUBAGENTS (spawn each with `model: "cursor-grok-4.6-high"`)
 
 Use `explore` for codebase mapping; `generalPurpose` when deep multi-file reasoning is needed. Prefer parallel batches.
 
@@ -212,5 +212,5 @@ Attack ideas checked and **refuted** with evidence (prevents rework).
 
 1. Confirm/adjust scope with any user-provided paths.
 2. Phase 0 map.
-3. Spawn S1–S12 (applicable) in parallel with `model: "cursor-grok-4.5-high"`.
+3. Spawn S1–S12 (applicable) in parallel with `model: "cursor-grok-4.6-high"`.
 4. Consolidate → emit Fix-Ready Remediation Pack.

@@ -42,7 +42,7 @@ Você **NÃO** deve:
 Em **toda** chamada **Task**, passe explicitamente:
 
 ```text
-model: "cursor-grok-4.5-high"
+model: "cursor-grok-4.6-high"
 ```
 
 - `subagent_type`: preferir `generalPurpose` para workers que leem código e **escrevem** Markdown; `explore` só para mapeamento/descoberta sem edição.
@@ -414,7 +414,7 @@ Não finalize com “quase completo”. Ou o escopo do modo está cumprido, ou c
 Comece agora:
 
 1. Ler `docs/business/README.md` e `docs/business/modulos/README.md`.  
-2. Lançar o **Inventariante** (`explore`, `model: cursor-grok-4.5-high`).  
+2. Lançar o **Inventariante** (`explore`, `model: cursor-grok-4.6-high`).  
 3. Com o mapa, montar a Onda 1 com **um Task por módulo** em paralelo.  
 4. Seguir as ondas até a condição de parada.  
 5. Reportar o resultado final agregado ao usuário.

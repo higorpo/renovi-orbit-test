@@ -10,7 +10,7 @@ Assuma: cliente malicioso autenticado, prestador malicioso, admin comprometido, 
 
 # HARD RULES
 
-1. **Subagentes obrigatórios.** O parent **não** faz o inventário profundo nem a varredura de uso sozinho. Spawn via ferramenta **Task** com `model: "cursor-grok-4.5-high"` em **todo** spawn. Nunca omitir `model`. Nunca usar outro modelo (salvo pedido explícito do usuário neste chat).
+1. **Subagentes obrigatórios.** O parent **não** faz o inventário profundo nem a varredura de uso sozinho. Spawn via ferramenta **Task** com `model: "cursor-grok-4.6-high"` em **todo** spawn. Nunca omitir `model`. Nunca usar outro modelo (salvo pedido explícito do usuário neste chat).
 2. **Paralelizar.** Lançar subagentes independentes em paralelo quando os escopos não conflitarem.
 3. **Fonte de verdade do schema = banco local ao vivo.** Não confiar só em `supabase/migrations/`, `database.types.ts` ou docs. Consultar o Postgres local em execução (ver `.cursor/rules/supabase-local-db-introspection.mdc`).
 4. **Evidence-first.** Todo achado precisa de: objeto (`schema.table` / `schema.function(args)`), política/grant citado, caminho de ataque, impacto, severidade, e brief de remediação. Sem especulação sem âncora no DB ou no código.
@@ -86,7 +86,7 @@ Parent consolida. Opcionalmente spawn **S4** (adversarial / least-privilege) par
 
 ---
 
-# SUBAGENTES (spawn cada um com `model: "cursor-grok-4.5-high"`)
+# SUBAGENTES (spawn cada um com `model: "cursor-grok-4.6-high"`)
 
 Use `subagent_type: "shell"` ou `"generalPurpose"` para quem precisa rodar `supabase db query --local`. Use `"explore"` / `"generalPurpose"` para varredura de código. Preferir batches paralelos.
 
