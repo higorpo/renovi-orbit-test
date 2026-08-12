@@ -244,6 +244,11 @@ export class SettingsPage {
     return this.page.locator("input[placeholder='000.000.000-00']").first();
   }
 
+  async gotoProfessionalProfile() {
+    await this.page.goto("/dashboard/settings/professional-profile");
+    await this.getOfferedServicesSection().waitFor({ state: "visible", timeout: 20_000 });
+  }
+
   getOfferedServicesSection() {
     return this.page.getByText("Serviços oferecidos").first();
   }
@@ -269,7 +274,7 @@ export class SettingsPage {
   }
 
   getServiceAreaLabel() {
-    return this.page.getByText("Cidades e bairros de atuação").first();
+    return this.page.getByText("Área de atuação").first();
   }
 
   getAdicionarCidadeButton() {
@@ -277,11 +282,11 @@ export class SettingsPage {
   }
 
   getVisibilityPublicLabel() {
-    return this.page.locator("label").filter({ hasText: "Público —" });
+    return this.page.getByRole("radio", { name: /Público/ });
   }
 
   getVisibilityRestrictedLabel() {
-    return this.page.locator("label").filter({ hasText: "Restrito —" });
+    return this.page.getByRole("radio", { name: /Restrito/ });
   }
 
   /** Opens new tab; summary card uses a link, this is the button inside Perfil público. */
@@ -293,7 +298,7 @@ export class SettingsPage {
    * Second "Copiar link do perfil" on the page (aside summary is first in DOM).
    */
   getPublicProfileCopiarLinkButton() {
-    return this.page.getByRole("button", { name: "Copiar link do perfil" }).nth(1);
+    return this.page.getByRole("button", { name: "Copiar link do perfil" }).last();
   }
 
   getPortfolioSection() {

@@ -102,51 +102,78 @@ function EntityTypeSkeleton() {
   );
 }
 
-/** Skeleton for OfferedServicesSection (a grid of checkboxes). */
+/** Skeleton for OfferedServicesSection (search + chips). */
 function OfferedServicesSkeleton() {
   return (
     <Card>
       <CardHeader className="pb-3 sm:pb-0">
         <div className="flex items-center gap-2">
-          <Skeleton className="h-7 w-7 rounded-md shrink-0" />
+          <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
           <Skeleton className="h-5 w-40" />
         </div>
       </CardHeader>
-      <CardContent className="!pt-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <Skeleton className="h-4 w-4 rounded" />
-              <Skeleton className="h-4 w-32" />
-            </div>
-          ))}
+      <CardContent className="!pt-4 space-y-3">
+        <Skeleton className="h-11 w-full rounded-md" />
+        <div className="flex gap-2">
+          <Skeleton className="h-8 w-28 rounded-full" />
+          <Skeleton className="h-8 w-36 rounded-full" />
         </div>
       </CardContent>
     </Card>
   );
 }
 
-/** Skeleton for PublicProfileSettingsSection (name + bio + area + visibility). */
+/** Skeleton for PublicProfileSettingsSection (name + bio + visibility tiles). */
 function PublicProfileSkeleton() {
   return (
     <Card>
       <CardHeader className="pb-3 sm:pb-0">
         <div className="flex items-center gap-2">
-          <Skeleton className="h-7 w-7 rounded-md shrink-0" />
+          <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
           <Skeleton className="h-5 w-28" />
         </div>
       </CardHeader>
       <CardContent className="!pt-4 space-y-4">
         <SkeletonField />
         <SkeletonTextareaField />
-        <SkeletonField />
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-36" />
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Skeleton className="h-[4.5rem] flex-1 rounded-md" />
-            <Skeleton className="h-[4.5rem] flex-1 rounded-md" />
-          </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Skeleton className="h-36 w-full rounded-2xl" />
+          <Skeleton className="h-36 w-full rounded-2xl" />
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ServiceAreaSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="pb-3 sm:pb-0">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
+          <Skeleton className="h-5 w-32" />
+        </div>
+      </CardHeader>
+      <CardContent className="!pt-4 space-y-3">
+        <Skeleton className="h-9 w-40 rounded-full" />
+        <Skeleton className="h-24 w-full rounded-2xl" />
+      </CardContent>
+    </Card>
+  );
+}
+
+function PortfolioSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="pb-3 sm:pb-0">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
+          <Skeleton className="h-5 w-24" />
+        </div>
+      </CardHeader>
+      <CardContent className="!pt-4 space-y-3">
+        <Skeleton className="h-[4.75rem] w-full rounded-2xl" />
+        <Skeleton className="h-[4.75rem] w-full rounded-2xl" />
       </CardContent>
     </Card>
   );
@@ -170,6 +197,19 @@ export function ProviderFormSkeleton() {
       <PublicProfileSkeleton />
       {/* Auto-save status */}
       <Skeleton className="h-4 w-52" />
+    </div>
+  );
+}
+
+/** Skeleton for Perfil profissional (services, public profile, area, portfolio). */
+export function ProfessionalProfileFormSkeleton() {
+  return (
+    <div className="space-y-5">
+      <OfferedServicesSkeleton />
+      <PublicProfileSkeleton />
+      <ServiceAreaSkeleton />
+      <Skeleton className="h-4 w-52" />
+      <PortfolioSkeleton />
     </div>
   );
 }

@@ -17,31 +17,28 @@ const TINY_PNG = path.join(__dirname, "../fixtures/tiny.png");
 test.describe("My Account — provider", () => {
   test.describe.configure({ mode: "serial" });
 
-  function visibilityOptionLabel(page: import("@playwright/test").Page, target: "public" | "restricted") {
+  function visibilityRadio(page: import("@playwright/test").Page, target: "public" | "restricted") {
     return target === "public"
-      ? page.getByText(
-          "Público — qualquer pessoa pode ver e o perfil pode ser indexado por buscadores."
-        )
-      : page.getByText("Restrito — apenas clientes logados podem ver.");
+      ? page.getByRole("radio", { name: /Público/ })
+      : page.getByRole("radio", { name: /Restrito/ });
   }
 
   async function ensureVisibilityAndSave(page: import("@playwright/test").Page, target: "public" | "restricted") {
-    const input = page.locator(`input[name="profile_visibility"][value="${target}"]`);
-    const oppositeTarget = target === "public" ? "restricted" : "public";
-    const oppositeLabel = visibilityOptionLabel(page, oppositeTarget);
-    const targetLabel = visibilityOptionLabel(page, target);
+    const acc = new SettingsPage(page);
+    await acc.gotoProfessionalProfile();
+    const targetRadio = visibilityRadio(page, target);
+    const oppositeRadio = visibilityRadio(page, target === "public" ? "restricted" : "public");
 
-    // Radios use sr-only inputs; click visible copy so labels/mobile header do not block the hit target.
-    if (await input.isChecked()) {
-      await oppositeLabel.scrollIntoViewIfNeeded();
-      await oppositeLabel.click();
+    if ((await targetRadio.getAttribute("aria-checked")) === "true") {
+      await oppositeRadio.scrollIntoViewIfNeeded();
+      await oppositeRadio.click();
       await expect(page.getByText("Dados atualizados com sucesso.", { exact: true }).first()).toBeVisible({
         timeout: 12_000,
       });
     }
 
-    await targetLabel.scrollIntoViewIfNeeded();
-    await targetLabel.click();
+    await targetRadio.scrollIntoViewIfNeeded();
+    await targetRadio.click();
     await expect(page.getByText("Dados atualizados com sucesso.", { exact: true }).first()).toBeVisible({
       timeout: 12_000,
     });
@@ -75,8 +72,10 @@ test.describe("My Account — provider", () => {
   }) => {
     const acc = new SettingsPage(page);
     const t = 25_000;
+    await acc.gotoLegalIdentity();
     await expect(acc.getEntityTypeSectionTitle()).toBeVisible({ timeout: t });
     await expect(acc.getLegalSectionTitle()).toBeVisible({ timeout: t });
+    await acc.gotoProfessionalProfile();
     await expect(acc.getOfferedServicesSection()).toBeVisible({ timeout: t });
     await expect(acc.getPublicProfileSection()).toBeVisible({ timeout: t });
     await expect(acc.getPortfolioSection()).toBeVisible({ timeout: t });
@@ -254,6 +253,7 @@ test.describe("My Account — provider", () => {
   test("public profile: display name and bio persist", async ({ page }) => {
     test.setTimeout(45_000);
     const acc = new SettingsPage(page);
+    await acc.gotoProfessionalProfile();
     const tag = Date.now().toString().slice(-5);
     await acc.getDisplayNameInput().fill(`E2E Pro ${tag}`);
     await acc.getBioTextarea().fill(`Bio E2E linha única ${tag}.`);
@@ -272,6 +272,7 @@ test.describe("My Account — provider", () => {
 
   test("service area: open add-city flow", async ({ page }) => {
     const acc = new SettingsPage(page);
+    await acc.gotoProfessionalProfile();
     await expect(acc.getServiceAreaLabel()).toBeVisible();
     await acc.getAdicionarCidadeButton().click();
     await expect(page.getByPlaceholder("Digite o nome da cidade...")).toBeVisible({
@@ -282,6 +283,7 @@ test.describe("My Account — provider", () => {
 
   test("offered services: search shows list or empty state", async ({ page }) => {
     const acc = new SettingsPage(page);
+    await acc.gotoProfessionalProfile();
     await acc.getBuscarServicosInput().click();
     await acc.getBuscarServicosInput().fill("a");
     await page.waitForTimeout(600);
@@ -296,6 +298,7 @@ test.describe("My Account — provider", () => {
   test("offered services: add first search result then remove via badge", async ({ page }) => {
     test.setTimeout(45_000);
     const acc = new SettingsPage(page);
+    await acc.gotoProfessionalProfile();
     await acc.getBuscarServicosInput().click();
     await acc.getBuscarServicosInput().fill("a");
     await page.waitForTimeout(800);
@@ -314,6 +317,7 @@ test.describe("My Account — provider", () => {
 
   test("portfolio: add disabled when title is empty or whitespace", async ({ page }) => {
     const acc = new SettingsPage(page);
+    await acc.gotoProfessionalProfile();
     await acc.getAdicionarTrabalhoButton().scrollIntoViewIfNeeded();
     await acc.getAdicionarTrabalhoButton().click();
     await expect(acc.getPortfolioDialogTitle()).toBeVisible();
@@ -325,6 +329,7 @@ test.describe("My Account — provider", () => {
 
   test("portfolio: Fechar button closes add dialog without saving", async ({ page }) => {
     const acc = new SettingsPage(page);
+    await acc.gotoProfessionalProfile();
     await acc.getAdicionarTrabalhoButton().scrollIntoViewIfNeeded();
     await acc.getAdicionarTrabalhoButton().click();
     await expect(acc.getPortfolioDialogTitle()).toBeVisible();
@@ -337,6 +342,7 @@ test.describe("My Account — provider", () => {
   test("portfolio: create, edit title/description, then delete item", async ({ page }) => {
     test.setTimeout(120_000);
     const acc = new SettingsPage(page);
+    await acc.gotoProfessionalProfile();
     const baseTitle = `E2E Chain ${Date.now()}`;
     const editedTitle = `${baseTitle} editado`;
 
@@ -402,6 +408,7 @@ test.describe("My Account — provider", () => {
 
   test("public profile: copy link shows toast", async ({ page }) => {
     const acc = new SettingsPage(page);
+    await acc.gotoProfessionalProfile();
     await acc.getPublicProfileCopiarLinkButton().scrollIntoViewIfNeeded();
     await acc.getPublicProfileCopiarLinkButton().click();
     await expect(

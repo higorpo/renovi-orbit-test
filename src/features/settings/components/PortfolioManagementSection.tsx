@@ -37,43 +37,37 @@ import {
   getPortfolioImageSignedUrl,
 } from "../api/providerProfile.api";
 
-function PortfolioItemThumbnails({ paths }: { paths: string[] }) {
-  const [urls, setUrls] = useState<string[]>([]);
+function PortfolioCover({ paths }: { paths: string[] }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const firstPath = paths[0];
   useEffect(() => {
-    if (paths.length === 0) {
-      setUrls([]);
+    if (!firstPath) {
+      setUrl(null);
       return;
     }
     let cancelled = false;
-    Promise.all(paths.map((path) => getPortfolioImageSignedUrl(path))).then(
-      (resolved) => {
-        if (!cancelled) setUrls(resolved.filter(Boolean));
-      }
-    );
+    void getPortfolioImageSignedUrl(firstPath).then((resolved) => {
+      if (!cancelled) setUrl(resolved || null);
+    });
     return () => {
       cancelled = true;
     };
-  }, [paths]);
-  if (urls.length === 0) return null;
+  }, [firstPath]);
+
   return (
-    <div className="flex gap-1.5 mt-2 flex-wrap">
-      {urls.slice(0, 5).map((url, index) => (
-        <div
-          key={`${url}-${index}`}
-          className="h-12 w-12 shrink-0 overflow-hidden rounded border bg-muted"
-        >
-          <img
-            src={url}
-            alt=""
-            className="h-full w-full object-cover"
-          />
-        </div>
-      ))}
-      {paths.length > 5 && (
-        <span className="text-xs text-muted-foreground self-center">
-          +{paths.length - 5}
+    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-primary-soft text-ink">
+      {url ? (
+        <img src={url} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center" aria-hidden>
+          <ImageIcon className="h-5 w-5" strokeWidth={1.75} />
         </span>
       )}
+      {paths.length > 1 ? (
+        <span className="absolute bottom-1 right-1 rounded-md bg-ink/80 px-1 text-[10px] font-semibold text-white">
+          +{paths.length - 1}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -191,75 +185,70 @@ function SortablePortfolioItem({
     transition,
   };
 
-  const hasExtraContent =
-    Boolean(item.description?.trim()) ||
-    Boolean(item.execution_date) ||
-    Boolean(item.image_paths?.length);
+  const extraCount = (item.image_paths?.length ?? 0) > 1 ? item.image_paths!.length - 1 : 0;
 
   return (
-    <li
-      ref={setNodeRef}
-      style={style}
-      className={`flex gap-2 p-3 border rounded-md bg-background ${
-        hasExtraContent ? "items-start" : "items-center"
-      } ${isDragging ? "opacity-50 shadow-lg z-10" : ""}`}
-    >
-      <button
-        type="button"
-        className="cursor-grab active:cursor-grabbing shrink-0 mt-0.5 touch-none text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-        aria-label="Reordenar item"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
-      <div className="min-w-0 flex-1">
-        <p className="font-medium truncate">{item.title}</p>
-        {item.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
-            {item.description}
-          </p>
-        )}
-        {item.execution_date && (
-          <p className="text-xs text-muted-foreground mt-1">
-            {new Date(item.execution_date).toLocaleDateString("pt-BR")}
-          </p>
-        )}
-        {item.image_paths && item.image_paths.length > 0 && (
-          <PortfolioItemThumbnails paths={item.image_paths} />
-        )}
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        {showEditButton && (
-          <Button
+    <li ref={setNodeRef} style={style} className={isDragging ? "z-10 opacity-50" : undefined}>
+      <article className="rounded-2xl border border-border bg-canvas p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <button
             type="button"
-            variant="ghost"
-            size="icon"
-            className="group hover:text-white"
-            onClick={() => onEdit(item)}
-            disabled={disabled}
-            aria-label={`Editar ${item.title}`}
-            title="Editar"
+            className="inline-flex h-11 w-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-canvas-soft hover:text-ink active:cursor-grabbing"
+            aria-label="Reordenar item"
+            {...attributes}
+            {...listeners}
           >
-            <Pencil className="h-4 w-4 group-hover:text-white" />
-          </Button>
-        )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="group hover:text-white"
-          onClick={() => onDelete(item.id)}
-          disabled={disabled || isDeleting}
-          aria-label={`Excluir ${item.title}`}
-        >
-          {deletingId === item.id ? (
-            <Loader2 className="h-4 w-4 animate-spin group-hover:text-white" />
-          ) : (
-            <Trash2 className="h-4 w-4 text-destructive group-hover:text-white" />
-          )}
-        </Button>
-      </div>
+            <GripVertical className="h-4 w-4" />
+          </button>
+          <PortfolioCover paths={item.image_paths ?? []} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-display text-[15px] font-semibold tracking-tight text-ink">
+              {item.title}
+            </p>
+            {item.description ? (
+              <p className="mt-0.5 line-clamp-2 text-sm text-body">{item.description}</p>
+            ) : null}
+            <p className="mt-1 text-caption text-muted-foreground">
+              {item.execution_date
+                ? new Date(item.execution_date).toLocaleDateString("pt-BR")
+                : extraCount > 0
+                  ? `${extraCount + 1} fotos`
+                  : "No perfil público"}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-0.5">
+            {showEditButton ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-11 w-11 rounded-full text-body hover:bg-canvas-soft hover:text-ink"
+                onClick={() => onEdit(item)}
+                disabled={disabled}
+                aria-label={`Editar ${item.title}`}
+                title="Editar"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-11 w-11 rounded-full text-body hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => onDelete(item.id)}
+              disabled={disabled || isDeleting}
+              aria-label={`Excluir ${item.title}`}
+            >
+              {deletingId === item.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </article>
     </li>
   );
 }
@@ -424,33 +413,51 @@ export function PortfolioManagementSection({
   return (
     <Card className="rounded-2xl border-border shadow-sm">
       <CardHeader className="pb-3 sm:pb-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <SettingsCardHeader
-            title="Portfólio"
-            icon={ImageIcon}
-            description="Trabalhos realizados no seu perfil público"
-          />
+        <SettingsCardHeader
+          title="Portfólio"
+          icon={ImageIcon}
+          description="Trabalhos realizados no seu perfil público"
+        />
+      </CardHeader>
+      <CardContent className="space-y-4 pt-0 sm:pt-0">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-caption text-muted-foreground">
+            {orderedItems.length === 0
+              ? "Nenhum item"
+              : orderedItems.length === 1
+                ? "1 trabalho"
+                : `${orderedItems.length} trabalhos`}
+          </p>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="rounded-full"
+            className="min-h-11 rounded-full sm:min-h-9"
             onClick={() => {
               setEditingItem(null);
               setAddOpen(true);
             }}
             disabled={disabled}
           >
-            <Plus className="h-4 w-4 mr-2" aria-hidden />
+            <Plus className="h-4 w-4" aria-hidden />
             Adicionar trabalho
           </Button>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4 pt-0 sm:pt-0">
         {orderedItems.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border bg-canvas-soft py-10 text-center text-sm text-body">
-            Nenhum item no portfólio. Clique em &quot;Adicionar trabalho&quot; para começar.
-          </p>
+          <div className="flex flex-col items-center rounded-2xl border border-dashed border-border bg-canvas-soft px-6 py-12 text-center">
+            <div
+              className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-ink"
+              aria-hidden
+            >
+              <ImageIcon className="h-6 w-6" strokeWidth={1.75} />
+            </div>
+            <p className="font-display text-base font-semibold tracking-tight text-ink">
+              Nenhum item no portfólio
+            </p>
+            <p className="mt-1 max-w-xs text-sm leading-relaxed text-body">
+              Mostre trabalhos realizados para os clientes no seu perfil público.
+            </p>
+          </div>
         ) : onReorderItems ? (
           <DndContext
             sensors={sensors}
@@ -479,67 +486,60 @@ export function PortfolioManagementSection({
             </SortableContext>
           </DndContext>
         ) : (
-          <ul className="space-y-3">
-            {orderedItems.map((item) => {
-              const hasExtraContent =
-                Boolean(item.description?.trim()) ||
-                Boolean(item.execution_date) ||
-                Boolean(item.image_paths?.length);
-              return (
-                <li
-                  key={item.id}
-                  className={`flex justify-between gap-2 p-3 border rounded-md ${hasExtraContent ? "items-start" : "items-center"}`}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium truncate">{item.title}</p>
-                    {item.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
-                        {item.description}
+          <ul className="m-0 list-none space-y-3 p-0">
+            {orderedItems.map((item) => (
+              <li key={item.id}>
+                <article className="rounded-2xl border border-border bg-canvas p-4 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <PortfolioCover paths={item.image_paths ?? []} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-display text-[15px] font-semibold tracking-tight text-ink">
+                        {item.title}
                       </p>
-                    )}
-                    {item.execution_date && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(item.execution_date).toLocaleDateString("pt-BR")}
-                      </p>
-                    )}
-                    {item.image_paths && item.image_paths.length > 0 && (
-                      <PortfolioItemThumbnails paths={item.image_paths} />
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {onUpdateItem ? (
+                      {item.description ? (
+                        <p className="mt-0.5 line-clamp-2 text-sm text-body">{item.description}</p>
+                      ) : null}
+                      {item.execution_date ? (
+                        <p className="mt-1 text-caption text-muted-foreground">
+                          {new Date(item.execution_date).toLocaleDateString("pt-BR")}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      {onUpdateItem ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-11 w-11 rounded-full text-body hover:bg-canvas-soft hover:text-ink"
+                          onClick={() => setEditingItem(item)}
+                          disabled={disabled}
+                          aria-label={`Editar ${item.title}`}
+                          title="Editar"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      ) : null}
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="group hover:text-white"
-                        onClick={() => setEditingItem(item)}
-                        disabled={disabled}
-                        aria-label={`Editar ${item.title}`}
-                        title="Editar"
+                        className="h-11 w-11 rounded-full text-body hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => handleDelete(item.id)}
+                        disabled={disabled || isDeleting}
+                        aria-label={`Excluir ${item.title}`}
                       >
-                        <Pencil className="h-4 w-4 group-hover:text-white" />
+                        {deletingId === item.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
                       </Button>
-                    ) : null}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="group hover:text-white"
-                      onClick={() => handleDelete(item.id)}
-                      disabled={disabled || isDeleting}
-                      aria-label={`Excluir ${item.title}`}
-                    >
-                      {deletingId === item.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin group-hover:text-white" />
-                      ) : (
-                        <Trash2 className="h-4 w-4 text-destructive group-hover:text-white" />
-                      )}
-                    </Button>
+                    </div>
                   </div>
-                </li>
-              );
-            })}
+                </article>
+              </li>
+            ))}
           </ul>
         )}
       </CardContent>

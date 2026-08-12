@@ -243,7 +243,7 @@ describe("PortfolioManagementSection", () => {
     );
 
     await vi.waitFor(() => {
-      expect(screen.getByText("+1")).toBeInTheDocument();
+      expect(screen.getByText("+5")).toBeInTheDocument();
     });
   });
 
@@ -1111,7 +1111,7 @@ describe("PortfolioManagementSection", () => {
     expect(getSigned).not.toHaveBeenCalled();
   });
 
-  it("uses the compact centered layout for a title-only static item", () => {
+  it("uses a consistent card layout for a title-only static item", () => {
     const item = {
       id: "compact",
       provider_id: "p1",
@@ -1137,7 +1137,8 @@ describe("PortfolioManagementSection", () => {
       />
     );
 
-    expect(container.querySelector("li.items-center")).toBeInTheDocument();
+    expect(screen.getByText("Somente título")).toBeInTheDocument();
+    expect(container.querySelector("article.rounded-2xl")).toBeInTheDocument();
     expect(container.querySelector("li.items-start")).not.toBeInTheDocument();
   });
 

@@ -3,7 +3,8 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { UseFormReturn } from "react-hook-form";
 import { FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { SettingsCardHeader } from "./SettingsCardHeader";
 import {
   Popover,
   PopoverContent,
@@ -23,7 +24,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Check, Loader2, Pencil, Plus, X } from "lucide-react";
+import { Check, Loader2, MapPin, Pencil, Plus, X } from "lucide-react";
 import {
   searchCities,
   listNeighborhoodsByCity,
@@ -35,6 +36,8 @@ import type { ProviderAccountFormData } from "../types/providerAccountForm.valid
 export interface ServiceAreaFieldProps {
   form: UseFormReturn<ProviderAccountFormData>;
   disabled?: boolean;
+  /** Hide the field label when a parent card already titles the section. */
+  hideLabel?: boolean;
 }
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -53,7 +56,7 @@ function groupByCity<T extends { city_id: string; city_name: string; state_abbre
   return map;
 }
 
-export function ServiceAreaField({ form, disabled }: ServiceAreaFieldProps) {
+export function ServiceAreaField({ form, disabled, hideLabel }: ServiceAreaFieldProps) {
   const neighborhoodIds = form.watch("service_area_neighborhood_ids") ?? [];
   const isDesktop = useBreakpointMd();
 
@@ -320,6 +323,74 @@ export function ServiceAreaField({ form, disabled }: ServiceAreaFieldProps) {
     </div>
   );
 
+  const editingGroup = editingCityId ? groupedByCity.get(editingCityId) : null;
+  const editCityContent = (
+    <div>
+      <div className="p-3">
+        <p className="font-display text-[15px] font-semibold tracking-tight text-ink">
+          {editingGroup
+            ? `${editingGroup.cityName}${editingGroup.stateAbbr ? `, ${editingGroup.stateAbbr}` : ""}`
+            : "Bairros"}
+        </p>
+        <p className="pt-2 text-sm text-body">
+          Selecione os bairros em que você atende nesta cidade.
+        </p>
+      </div>
+      <Command className="rounded-t-none border-t">
+        <CommandInput placeholder="Buscar bairro..." />
+        <CommandList className="max-h-[200px]">
+          <CommandEmpty>
+            {neighborhoodsForEditQuery.isLoading ? (
+              <span className="flex items-center justify-center gap-2 py-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Carregando...
+              </span>
+            ) : (
+              "Nenhum bairro encontrado."
+            )}
+          </CommandEmpty>
+          <CommandGroup>
+            {neighborhoodOptionsForEdit.map((opt) => {
+              const isSelected = editNeighborhoodIds.includes(opt.value);
+              return (
+                <CommandItem
+                  key={opt.value}
+                  value={opt.label}
+                  onSelect={() => toggleNeighborhoodForEdit(opt.value)}
+                  className="cursor-pointer"
+                >
+                  <Check
+                    className={`mr-2 h-4 w-4 shrink-0 ${
+                      isSelected ? "opacity-100" : "opacity-0"
+                    }`}
+                  />
+                  {opt.label}
+                </CommandItem>
+              );
+            })}
+          </CommandGroup>
+        </CommandList>
+      </Command>
+      <div className="flex gap-2 px-3 pb-3 pt-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="flex-1"
+          onClick={() => {
+            setEditingCityId(null);
+            setEditNeighborhoodIds([]);
+          }}
+        >
+          Cancelar
+        </Button>
+        <Button type="button" size="sm" className="flex-1" onClick={saveEditCity}>
+          Salvar
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       <FormField
@@ -327,11 +398,16 @@ export function ServiceAreaField({ form, disabled }: ServiceAreaFieldProps) {
         name="service_area_neighborhood_ids"
         render={() => (
           <FormItem>
-            <FormLabel>Cidades e bairros de atuação</FormLabel>
+            {hideLabel ? null : (
+              <>
+                <FormLabel>Cidades e bairros de atuação</FormLabel>
+                <p className="text-sm leading-relaxed text-body">
+                  Adicione as cidades e os bairros em que você atende. Você pode atuar em mais de uma
+                  cidade.
+                </p>
+              </>
+            )}
             <div className="space-y-3">
-              <p className="text-xs text-muted-foreground">
-                Adicione as cidades e os bairros em que você atende. Você pode atuar em mais de uma cidade.
-              </p>
 
               {isDesktop ? (
                 <Popover
@@ -351,7 +427,7 @@ export function ServiceAreaField({ form, disabled }: ServiceAreaFieldProps) {
                       variant="outline"
                       size="sm"
                       disabled={disabled}
-                      className="gap-2"
+                      className="min-h-11 gap-2 rounded-full sm:min-h-9"
                     >
                       <Plus className="h-4 w-4" />
                       Adicionar cidade
@@ -368,7 +444,7 @@ export function ServiceAreaField({ form, disabled }: ServiceAreaFieldProps) {
                     variant="outline"
                     size="sm"
                     disabled={disabled}
-                    className="gap-2"
+                    className="min-h-11 gap-2 rounded-full sm:min-h-9"
                     onClick={() => setAddPopoverOpen(true)}
                   >
                     <Plus className="h-4 w-4" />
@@ -404,150 +480,161 @@ export function ServiceAreaField({ form, disabled }: ServiceAreaFieldProps) {
                 </>
               )}
 
-              {neighborhoodIds.length > 0 && (
-                <div className="space-y-3 pt-2">
-                  {Array.from(groupedByCity.entries()).map(([cityId, { cityName, stateAbbr, items }]) => (
-                      <div key={cityId} className="rounded-md border p-3 space-y-2">
-                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <span className="text-sm font-medium">
-                            {cityName}
-                            {stateAbbr ? `, ${stateAbbr}` : ""}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <Popover
-                              open={editingCityId === cityId}
-                              onOpenChange={(open) => {
-                                if (!open) {
-                                  setEditingCityId(null);
-                                  setEditNeighborhoodIds([]);
-                                }
-                              }}
+              {neighborhoodIds.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-border bg-canvas-soft px-4 py-8 text-center">
+                  <p className="text-sm leading-relaxed text-body">
+                    Nenhuma cidade adicionada. Inclua onde você atende para aparecer nas buscas da
+                    região.
+                  </p>
+                </div>
+              ) : (
+                <ul className="m-0 list-none space-y-3 p-0 pt-1">
+                  {Array.from(groupedByCity.entries()).map(
+                    ([cityId, { cityName, stateAbbr, items }]) => (
+                      <li key={cityId}>
+                        <article className="rounded-2xl border border-border bg-canvas p-4 shadow-sm">
+                          <div className="flex items-start gap-3">
+                            <div
+                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-ink"
+                              aria-hidden
                             >
-                              <PopoverTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 text-xs gap-1"
-                                  disabled={disabled}
-                                  onClick={() => openEditCity(cityId)}
-                                >
-                                  <Pencil className="h-3 w-3" />
-                                  Alterar bairros
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-80 min-w-[280px] p-0" align="start">
-                                <div>
-                                  <div className="p-3">
-                                    <p className="text-sm font-medium">
-                                      {cityName}
-                                      {stateAbbr ? `, ${stateAbbr}` : ""}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground pt-2">
-                                      Selecione os bairros em que você atende nesta cidade.
-                                    </p>
-                                  </div>
-                                  <Command className="border-t rounded-t-none">
-                                    <CommandInput placeholder="Buscar bairro..." />
-                                    <CommandList className="max-h-[200px]">
-                                      <CommandEmpty>
-                                        {neighborhoodsForEditQuery.isLoading ? (
-                                          <span className="flex items-center gap-2 py-2 justify-center">
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                            Carregando...
-                                          </span>
-                                        ) : (
-                                          "Nenhum bairro encontrado."
-                                        )}
-                                      </CommandEmpty>
-                                      <CommandGroup>
-                                        {neighborhoodOptionsForEdit.map((opt) => {
-                                          const isSelected = editNeighborhoodIds.includes(opt.value);
-                                          return (
-                                            <CommandItem
-                                              key={opt.value}
-                                              value={opt.label}
-                                              onSelect={() => toggleNeighborhoodForEdit(opt.value)}
-                                              className="cursor-pointer"
-                                            >
-                                              <Check
-                                                className={`mr-2 h-4 w-4 shrink-0 ${
-                                                  isSelected ? "opacity-100" : "opacity-0"
-                                                }`}
-                                              />
-                                              {opt.label}
-                                            </CommandItem>
-                                          );
-                                        })}
-                                      </CommandGroup>
-                                    </CommandList>
-                                  </Command>
-                                  <div className="flex gap-2 px-3 pb-3">
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      className="flex-1"
-                                      onClick={() => {
-                                        setEditingCityId(null);
-                                        setEditNeighborhoodIds([]);
+                              <MapPin className="h-5 w-5" strokeWidth={1.75} />
+                            </div>
+                            <div className="min-w-0 flex-1 space-y-3">
+                              <div className="flex flex-wrap items-start justify-between gap-2">
+                                <p className="font-display text-[15px] font-semibold tracking-tight text-ink">
+                                  {cityName}
+                                  {stateAbbr ? `, ${stateAbbr}` : ""}
+                                </p>
+                                <div className="flex flex-wrap items-center gap-1">
+                                  {isDesktop ? (
+                                    <Popover
+                                      open={editingCityId === cityId}
+                                      onOpenChange={(open) => {
+                                        if (!open) {
+                                          setEditingCityId(null);
+                                          setEditNeighborhoodIds([]);
+                                        }
                                       }}
                                     >
-                                      Cancelar
-                                    </Button>
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-9 gap-1 rounded-full text-sm"
+                                          disabled={disabled}
+                                          onClick={() => openEditCity(cityId)}
+                                        >
+                                          <Pencil className="h-3.5 w-3.5" />
+                                          Alterar bairros
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent
+                                        className="w-80 min-w-[280px] p-0"
+                                        align="start"
+                                      >
+                                        {editingCityId === cityId ? editCityContent : null}
+                                      </PopoverContent>
+                                    </Popover>
+                                  ) : (
                                     <Button
                                       type="button"
+                                      variant="ghost"
                                       size="sm"
-                                      className="flex-1"
-                                      onClick={saveEditCity}
+                                      className="h-9 gap-1 rounded-full text-sm"
+                                      disabled={disabled}
+                                      onClick={() => openEditCity(cityId)}
                                     >
-                                      Salvar
+                                      <Pencil className="h-3.5 w-3.5" />
+                                      Alterar bairros
                                     </Button>
-                                  </div>
+                                  )}
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-9 rounded-full text-sm text-body hover:text-destructive"
+                                    disabled={disabled}
+                                    onClick={() => removeAllInCity(cityId)}
+                                  >
+                                    Remover todos
+                                  </Button>
                                 </div>
-                              </PopoverContent>
-                            </Popover>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs"
-                              disabled={disabled}
-                              onClick={() => removeAllInCity(cityId)}
-                            >
-                              Remover todos
-                            </Button>
+                              </div>
+                              <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+                                {items.map((n) => (
+                                  <li key={n.id}>
+                                    <span className="inline-flex min-h-8 items-center gap-1 rounded-full border border-border bg-canvas-soft pl-2.5 pr-1 text-sm font-medium text-ink">
+                                      {n.name}
+                                      <button
+                                        type="button"
+                                        onClick={() => !disabled && removeNeighborhood(n.id)}
+                                        disabled={disabled}
+                                        className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-body transition-colors hover:bg-canvas hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                        aria-label={`Remover ${n.name}`}
+                                      >
+                                        <X className="h-3.5 w-3.5" />
+                                      </button>
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {items.map((n) => (
-                            <Badge
-                              key={n.id}
-                              variant="secondary"
-                              className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium"
-                            >
-                              {n.name}
-                              <button
-                                type="button"
-                                onClick={() => !disabled && removeNeighborhood(n.id)}
-                                disabled={disabled}
-                                className="inline-flex size-5 shrink-0 items-center justify-center rounded-full -mr-0.5 text-secondary-foreground hover:bg-muted-foreground/15 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-secondary"
-                                aria-label={`Remover ${n.name}`}
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                </div>
+                        </article>
+                      </li>
+                    ),
+                  )}
+                </ul>
               )}
             </div>
             <FormMessage />
           </FormItem>
         )}
       />
+      {!isDesktop ? (
+        <Drawer
+          open={editingCityId != null}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingCityId(null);
+              setEditNeighborhoodIds([]);
+            }
+          }}
+          shouldScaleBackground={false}
+          handleOnly
+        >
+          <DrawerContent
+            aria-describedby={undefined}
+            className="flex max-h-[85vh] flex-col gap-0 rounded-t-2xl p-0"
+          >
+            <DrawerHeader className="shrink-0 border-b px-4 pb-3 pt-1 text-left">
+              <DrawerTitle>Alterar bairros</DrawerTitle>
+            </DrawerHeader>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain touch-pan-y pb-[max(1rem,env(safe-area-inset-bottom))]">
+              {editCityContent}
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : null}
     </div>
+  );
+}
+
+export function ServiceAreaSection({ form, disabled }: Omit<ServiceAreaFieldProps, "hideLabel">) {
+  return (
+    <Card className="rounded-2xl border-border shadow-sm">
+      <CardHeader className="pb-3 sm:pb-3">
+        <SettingsCardHeader
+          title="Área de atuação"
+          icon={MapPin}
+          description="Cidades e bairros em que você atende. Você pode atuar em mais de uma cidade."
+        />
+      </CardHeader>
+      <CardContent className="pt-0 sm:pt-0">
+        <ServiceAreaField form={form} disabled={disabled} hideLabel />
+      </CardContent>
+    </Card>
   );
 }

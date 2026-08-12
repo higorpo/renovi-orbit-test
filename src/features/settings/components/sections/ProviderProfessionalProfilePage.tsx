@@ -2,9 +2,10 @@ import { Form } from "@/components/ui/form";
 import { useProviderSettingsForm } from "../../hooks/useProviderSettingsForm";
 import { SettingsRoleGate } from "../SettingsRoleGate";
 import { AccountErrorState } from "../AccountErrorState";
-import { ProviderFormSkeleton } from "../AccountFormSkeletons";
+import { ProfessionalProfileFormSkeleton } from "../AccountFormSkeletons";
 import { OfferedServicesSection } from "../OfferedServicesSection";
 import { PublicProfileSettingsSection } from "../PublicProfileSettingsSection";
+import { ServiceAreaSection } from "../ServiceAreaField";
 import { PortfolioManagementSection } from "../PortfolioManagementSection";
 import { SettingsSectionHeader } from "../SettingsSectionHeader";
 import { SettingsSectionShell, SettingsAutosaveHint } from "../SettingsSectionShell";
@@ -45,34 +46,40 @@ export function ProviderProfessionalProfilePage() {
         />
 
         {profileLoading ? (
-          <ProviderFormSkeleton />
+          <ProfessionalProfileFormSkeleton />
         ) : (
-          <Form {...form}>
-            <div className="space-y-5">
-              <OfferedServicesSection
-                selectedServiceIds={offeredServiceIds}
-                onSelectedChange={setOfferedServiceIds}
-                setServiceIdsAsync={setServiceIds}
-                isUpdating={isUpdatingServices}
-              />
-              <PublicProfileSettingsSection form={form} profileSlug={publicData?.slug ?? null} />
-              <SettingsAutosaveHint isSaving={isUpdating} />
-            </div>
-          </Form>
-        )}
+          <>
+            <Form {...form}>
+              <div className="space-y-5">
+                <OfferedServicesSection
+                  selectedServiceIds={offeredServiceIds}
+                  onSelectedChange={setOfferedServiceIds}
+                  setServiceIdsAsync={setServiceIds}
+                  isUpdating={isUpdatingServices}
+                />
+                <PublicProfileSettingsSection
+                  form={form}
+                  profileSlug={publicData?.slug ?? null}
+                />
+                <ServiceAreaSection form={form} />
+                <SettingsAutosaveHint isSaving={isUpdating} />
+              </div>
+            </Form>
 
-        <PortfolioManagementSection
-          items={portfolioItems}
-          onCreateItem={(params) => createItemWithImages({ ...params, visibility: "public" })}
-          onUpdateItem={(itemId, params) =>
-            updateItemWithImages(itemId, { ...params, visibility: "public" })
-          }
-          onDeleteItem={deleteItem}
-          onReorderItems={reorderItems}
-          isCreating={isCreatingPortfolio}
-          isUpdating={isUpdatingPortfolio}
-          isDeleting={isDeletingPortfolio}
-        />
+            <PortfolioManagementSection
+              items={portfolioItems}
+              onCreateItem={(params) => createItemWithImages({ ...params, visibility: "public" })}
+              onUpdateItem={(itemId, params) =>
+                updateItemWithImages(itemId, { ...params, visibility: "public" })
+              }
+              onDeleteItem={deleteItem}
+              onReorderItems={reorderItems}
+              isCreating={isCreatingPortfolio}
+              isUpdating={isUpdatingPortfolio}
+              isDeleting={isDeletingPortfolio}
+            />
+          </>
+        )}
       </SettingsSectionShell>
     </SettingsRoleGate>
   );

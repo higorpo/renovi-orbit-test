@@ -6,10 +6,6 @@ import { PublicProfileSettingsSection } from "../PublicProfileSettingsSection";
 import type { ProviderAccountFormData } from "../../types/providerAccountForm.validation";
 import { toast } from "sonner";
 
-vi.mock("../ServiceAreaField", () => ({
-  ServiceAreaField: () => <div data-testid="service-area-field">Service area</div>,
-}));
-
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
@@ -65,8 +61,8 @@ describe("PublicProfileSettingsSection", () => {
 
   it("renders visibility options", () => {
     render(<Wrapper profileSlug={null} />);
-    expect(screen.getByText(/Público — qualquer pessoa/)).toBeInTheDocument();
-    expect(screen.getByText(/Restrito — apenas clientes/)).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Público/ })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Restrito/ })).toBeInTheDocument();
   });
 
   it("renders Visualizar perfil and Copiar link when profileSlug is set", () => {
@@ -98,9 +94,10 @@ describe("PublicProfileSettingsSection", () => {
     );
   });
 
-  it("renders ServiceAreaField", () => {
+  it("does not embed service area in the public profile card", () => {
     render(<Wrapper profileSlug={null} />);
-    expect(screen.getByTestId("service-area-field")).toBeInTheDocument();
+    expect(screen.queryByText(/Cidades e bairros de atuação/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Adicionar cidade/ })).not.toBeInTheDocument();
   });
 
   it("opens public profile URL in a new tab when Visualizar perfil is clicked", () => {
@@ -114,29 +111,19 @@ describe("PublicProfileSettingsSection", () => {
     openSpy.mockRestore();
   });
 
-  it("switches visibility to public when the public radio is selected", () => {
+  it("switches visibility to public when the public option is selected", () => {
     render(<Wrapper profileSlug={null} />);
-    const publicRadio = screen
-      .getAllByRole("radio")
-      .find((el) => (el as HTMLInputElement).value === "public");
-    expect(publicRadio).toBeDefined();
-    fireEvent.click(publicRadio!);
-    expect(publicRadio).toBeChecked();
+    const publicRadio = screen.getByRole("radio", { name: /Público/ });
+    fireEvent.click(publicRadio);
+    expect(publicRadio).toHaveAttribute("aria-checked", "true");
   });
 
-  it("switches visibility to restricted when the restricted radio is selected", () => {
+  it("switches visibility to restricted when the restricted option is selected", () => {
     render(<Wrapper profileSlug={null} />);
-    const publicRadio = screen
-      .getAllByRole("radio")
-      .find((el) => (el as HTMLInputElement).value === "public");
-    fireEvent.click(publicRadio!);
-
-    const restrictedRadio = screen
-      .getAllByRole("radio")
-      .find((el) => (el as HTMLInputElement).value === "restricted");
-    expect(restrictedRadio).toBeDefined();
-    fireEvent.click(restrictedRadio!);
-    expect(restrictedRadio).toBeChecked();
+    fireEvent.click(screen.getByRole("radio", { name: /Público/ }));
+    const restrictedRadio = screen.getByRole("radio", { name: /Restrito/ });
+    fireEvent.click(restrictedRadio);
+    expect(restrictedRadio).toHaveAttribute("aria-checked", "true");
   });
 
   it("shows toast error when clipboard write fails on copy", async () => {

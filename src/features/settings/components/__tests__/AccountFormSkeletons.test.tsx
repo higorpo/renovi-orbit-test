@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
-import { ClientFormSkeleton, ProviderFormSkeleton, LegalIdentityFormSkeleton } from "../AccountFormSkeletons";
+import { ClientFormSkeleton, ProviderFormSkeleton, LegalIdentityFormSkeleton, ProfessionalProfileFormSkeleton } from "../AccountFormSkeletons";
 
 describe("AccountFormSkeletons", () => {
   it("renders ClientFormSkeleton with skeleton placeholders", () => {
@@ -18,6 +18,11 @@ describe("AccountFormSkeletons", () => {
 
   it("renders LegalIdentityFormSkeleton with tile placeholders", () => {
     const { container } = render(<LegalIdentityFormSkeleton />);
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+  });
+
+  it("renders ProfessionalProfileFormSkeleton with section placeholders", () => {
+    const { container } = render(<ProfessionalProfileFormSkeleton />);
     expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
   });
 });

@@ -117,7 +117,7 @@ Coisas para fazer next
 
 
 
-- Permitir cadastrar empresas, usar nome da empresa ao inves do nome do responsável
+- Permitir cadastrar empresas, usar nome da empresa ao inves do nome do responsável... na verdade é melhor usar o "Nome profissional" pro perfil público.
 - Alterar upload de foto de perfil na tela de configurações para usar capacitor e permitir fazer upload direto da camera do celular
 
 - Adicionar página nas configurações para o prestador ver as informações fornecidas no onboarding (documentos)
