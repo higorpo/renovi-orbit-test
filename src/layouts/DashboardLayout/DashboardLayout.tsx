@@ -78,8 +78,8 @@ export function DashboardLayout() {
 
       <main
         className={cn(
-          "flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden",
-          mobileChrome.mainOverflowHidden ? "overflow-hidden" : "overflow-y-auto",
+          "flex min-h-0 min-w-0 flex-1 flex-col",
+          mobileChrome.mainOverflowHidden ? "overflow-hidden" : "overflow-x-clip overflow-y-auto",
           showBottomNav && "pb-20",
           mobileChrome.enableStackTransition && "relative overflow-hidden",
         )}

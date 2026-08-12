@@ -36,14 +36,13 @@ export function SettingsLayout() {
     return (
       <div className="w-full grow bg-canvas-soft">
         <div className="container px-4 py-8 lg:py-10">
-          <div className="flex gap-10 lg:gap-14">
-            <aside className="w-60 shrink-0 self-start lg:w-64">
-              <div className="sticky top-20">
-                <h1 className="mb-5 font-display text-display-md font-bold tracking-tight text-ink">
-                  Configurações
-                </h1>
-                <SettingsNavList items={items} variant="sidebar" />
-              </div>
+          <div className="flex items-start gap-10 lg:gap-14">
+            {/* Stick within dashboard <main> scrollport (header is outside main). */}
+            <aside className="sticky top-6 z-10 w-60 shrink-0 lg:w-64">
+              <h1 className="mb-5 font-display text-display-md font-bold tracking-tight text-ink">
+                Configurações
+              </h1>
+              <SettingsNavList items={items} variant="sidebar" />
             </aside>
             <div className="min-w-0 flex-1">
               <div className="rounded-2xl border border-border bg-canvas p-6 shadow-sm lg:p-8">
