@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import type { DragEndEvent } from "@dnd-kit/core";
+import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { PortfolioManagementSection } from "../PortfolioManagementSection";
 
 vi.mock("@/hooks/useBreakpoint", () => ({
   useBreakpointMd: vi.fn(() => true),
 }));
+
+const useBreakpointMdMock = vi.mocked(useBreakpointMd);
 
 vi.mock("../../api/providerProfile.api", () => ({
   getPortfolioImageSignedUrl: vi.fn().mockResolvedValue("https://signed.url/img"),
@@ -65,6 +68,7 @@ describe("PortfolioManagementSection", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useBreakpointMdMock.mockReturnValue(true);
     portfolioDndHandlers.onDragStart = undefined;
     portfolioDndHandlers.onDragEnd = undefined;
     sortableState.isDragging = false;
@@ -101,6 +105,28 @@ describe("PortfolioManagementSection", () => {
     );
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByLabelText(/Título/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fechar" })).toBeInTheDocument();
+  });
+
+  it("opens a bottom sheet on mobile when Adicionar trabalho is clicked", () => {
+    useBreakpointMdMock.mockReturnValue(false);
+    render(
+      <PortfolioManagementSection
+        items={[]}
+        onCreateItem={onCreateItem}
+        onDeleteItem={onDeleteItem}
+        isCreating={false}
+        isDeleting={false}
+      />
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /Adicionar trabalho/ })
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Adicionar trabalho ao portfólio" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fechar" })).toBeInTheDocument();
   });
 
   it("renders existing items", () => {
@@ -1299,7 +1325,7 @@ describe("PortfolioManagementSection", () => {
     fireEvent.click(screen.getByRole("button", { name: /Editar Editável/ }));
     const dialog = await screen.findByRole("dialog");
     expect(dialog.querySelector(".animate-spin")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Cancelar/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Cancelar/ })).toBeDisabled();
   });
 
   it("keeps thumbnail placeholders when signed URLs are unavailable", async () => {

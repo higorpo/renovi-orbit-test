@@ -20,18 +20,25 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SettingsCardHeader } from "./SettingsCardHeader";
 import {
-  Dialog,
-  DialogClose,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { ShellDialogContent } from "@/components/ui/shell-dialog";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import {
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, ImageIcon, Trash2, Loader2, Paperclip, X, Pencil, GripVertical } from "lucide-react";
-import { useMobileDialogViewport } from "@/hooks/useMobileDialogViewport";
+import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import {
   type ProviderPortfolioItem,
   getPortfolioImageSignedUrl,
@@ -282,8 +289,8 @@ export function PortfolioManagementSection({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
+  const isDesktop = useBreakpointMd();
   const dialogOpen = addOpen || editingItem !== null;
-  const { contentRef, scheduleSync } = useMobileDialogViewport(dialogOpen);
 
   // Sync ordered items from server when not actively dragging
   useEffect(() => {
@@ -409,6 +416,121 @@ export function PortfolioManagementSection({
 
   const isWorking = isCreating || isUpdating || isSubmitting;
   const isEditMode = editingItem !== null;
+  const overlayTitle = isEditMode ? "Editar trabalho" : "Adicionar trabalho ao portfólio";
+
+  const handleOverlayOpenChange = (next: boolean) => {
+    if (!next && !isWorking) {
+      handleCloseDialog(false);
+    }
+  };
+
+  const formContent = (
+    <div className="space-y-4">
+      <div>
+        <Label htmlFor="portfolio-title">Título</Label>
+        <Input
+          id="portfolio-title"
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          placeholder="Ex.: Instalação elétrica residencial"
+          disabled={disabled}
+        />
+      </div>
+      <div>
+        <Label htmlFor="portfolio-desc">Descrição (opcional)</Label>
+        <Textarea
+          id="portfolio-desc"
+          value={newDescription}
+          onChange={(e) => setNewDescription(e.target.value)}
+          placeholder="Descreva o trabalho realizado..."
+          rows={3}
+          disabled={disabled}
+          className="max-sm:resize-none"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="portfolio-images">Imagens do trabalho</Label>
+        {isEditMode && keptExistingPaths.length > 0 && (
+          <ExistingImagesEditable
+            paths={keptExistingPaths}
+            onRemove={removeExistingImage}
+            disabled={disabled || isWorking}
+          />
+        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled || isWorking}
+          >
+            <Paperclip className="mr-2 h-4 w-4" />
+            {isEditMode ? "Anexar mais imagens" : "Anexar imagens"}
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            JPEG, PNG, WebP, HEIC ou HEIF. Até 5 MB cada.
+          </span>
+        </div>
+        <input
+          ref={fileInputRef}
+          id="portfolio-images"
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+          multiple
+          className="hidden"
+          onChange={(e) => handleFileSelection(e.target.files)}
+        />
+        {selectedFiles.length > 0 && (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {selectedFiles.map((file, index) => (
+              <div key={`${file.name}-${file.size}-${index}`} className="relative overflow-hidden rounded-md border">
+                <img
+                  src={previewUrls[index]}
+                  alt={file.name}
+                  className="aspect-square w-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeSelectedFile(index)}
+                  className="absolute right-1 top-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-background/90 text-foreground shadow-sm transition hover:bg-muted"
+                  aria-label={`Remover imagem ${file.name}`}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const footerContent = (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => handleCloseDialog(false)}
+        disabled={isWorking}
+      >
+        Cancelar
+      </Button>
+      <Button
+        type="button"
+        onClick={isEditMode ? handleSaveEdit : handleAdd}
+        disabled={!newTitle.trim() || isWorking}
+      >
+        {isWorking ? (
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+        ) : isEditMode ? (
+          "Salvar"
+        ) : (
+          "Adicionar"
+        )}
+      </Button>
+    </>
+  );
 
   return (
     <Card className="rounded-2xl border-border shadow-sm">
@@ -544,124 +666,64 @@ export function PortfolioManagementSection({
         )}
       </CardContent>
 
-      <Dialog open={dialogOpen} onOpenChange={handleCloseDialog}>
-        <ShellDialogContent ref={contentRef} size="sm">
-          <DialogHeader className="shrink-0 space-y-0 border-b px-4 py-3 pr-0 text-left sm:border-b-0 sm:px-0 sm:py-0">
-            <div className="flex items-center justify-between gap-3">
-              <DialogTitle className="text-base sm:text-lg">
-                {isEditMode ? "Editar trabalho" : "Adicionar trabalho ao portfólio"}
-              </DialogTitle>
-              <DialogClose asChild>
-                <button
-                  type="button"
-                  aria-label="Fechar"
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  <X className="h-4 w-4" aria-hidden />
-                </button>
-              </DialogClose>
+      {isDesktop ? (
+        <Sheet open={dialogOpen} onOpenChange={handleOverlayOpenChange}>
+          <SheetContent
+            side="right"
+            className="flex w-full flex-col gap-0 border-l p-0 sm:max-w-lg md:max-w-xl"
+            aria-describedby={undefined}
+          >
+            <SheetHeader className="shrink-0 space-y-0 border-b px-6 py-4 pr-14 text-left">
+              <SheetTitle className="font-display text-lg font-semibold tracking-tight text-ink">
+                {overlayTitle}
+              </SheetTitle>
+            </SheetHeader>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-6 py-5">
+              {formContent}
             </div>
-          </DialogHeader>
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 touch-pan-y overscroll-y-contain [-webkit-overflow-scrolling:touch] sm:px-0 sm:py-4">
-            <div>
-              <Label htmlFor="portfolio-title">Título</Label>
-              <Input
-                id="portfolio-title"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="Ex.: Instalação elétrica residencial"
-                disabled={disabled}
-                onFocus={scheduleSync}
-              />
-            </div>
-            <div>
-              <Label htmlFor="portfolio-desc">Descrição (opcional)</Label>
-              <Textarea
-                id="portfolio-desc"
-                value={newDescription}
-                onChange={(e) => setNewDescription(e.target.value)}
-                placeholder="Descreva o trabalho realizado..."
-                rows={3}
-                disabled={disabled}
-                className="max-sm:resize-none"
-                onFocus={scheduleSync}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="portfolio-images">Imagens do trabalho</Label>
-              {isEditMode && keptExistingPaths.length > 0 && (
-                <ExistingImagesEditable
-                  paths={keptExistingPaths}
-                  onRemove={removeExistingImage}
-                  disabled={disabled || isWorking}
-                />
-              )}
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={disabled || isWorking}
-                >
-                  <Paperclip className="mr-2 h-4 w-4" />
-                  {isEditMode ? "Anexar mais imagens" : "Anexar imagens"}
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  JPEG, PNG, WebP, HEIC ou HEIF. Até 5 MB cada.
-                </span>
+            <SheetFooter className="shrink-0 flex-row justify-end gap-2 space-x-0 border-t bg-canvas px-6 py-4">
+              {footerContent}
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Drawer
+          open={dialogOpen}
+          onOpenChange={handleOverlayOpenChange}
+          shouldScaleBackground={false}
+          handleOnly
+          dismissible={!isWorking}
+        >
+          <DrawerContent
+            className="flex max-h-[90vh] flex-col gap-0 rounded-t-2xl p-0"
+            aria-describedby={undefined}
+          >
+            <DrawerHeader className="shrink-0 space-y-0 border-b px-4 pb-3 pt-1 text-left">
+              <div className="flex items-center justify-between gap-3">
+                <DrawerTitle className="text-base font-semibold sm:text-lg">
+                  {overlayTitle}
+                </DrawerTitle>
+                <DrawerClose asChild>
+                  <button
+                    type="button"
+                    aria-label="Fechar"
+                    disabled={isWorking}
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-background text-foreground opacity-80 transition-all hover:bg-muted hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    <X className="h-4 w-4" aria-hidden />
+                  </button>
+                </DrawerClose>
               </div>
-              <input
-                ref={fileInputRef}
-                id="portfolio-images"
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-                multiple
-                className="hidden"
-                onChange={(e) => handleFileSelection(e.target.files)}
-              />
-              {selectedFiles.length > 0 && (
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {selectedFiles.map((file, index) => (
-                    <div key={`${file.name}-${file.size}-${index}`} className="relative overflow-hidden rounded-md border">
-                      <img
-                        src={previewUrls[index]}
-                        alt={file.name}
-                        className="aspect-square w-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeSelectedFile(index)}
-                        className="absolute right-1 top-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-background/90 text-foreground shadow-sm transition hover:bg-muted"
-                        aria-label={`Remover imagem ${file.name}`}
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+            </DrawerHeader>
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 touch-pan-y overscroll-y-contain">
+              {formContent}
             </div>
-          </div>
-          <DialogFooter className="relative z-10 shrink-0 flex-row gap-2 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pb-0 sm:shadow-none sm:backdrop-blur-none sm:supports-[backdrop-filter]:bg-transparent [&>button]:flex-1 sm:[&>button]:flex-none">
-            <Button variant="outline" onClick={() => handleCloseDialog(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={isEditMode ? handleSaveEdit : handleAdd}
-              disabled={!newTitle.trim() || isWorking}
-            >
-              {isWorking ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : isEditMode ? (
-                "Salvar"
-              ) : (
-                "Adicionar"
-              )}
-            </Button>
-          </DialogFooter>
-        </ShellDialogContent>
-      </Dialog>
+            <DrawerFooter className="relative z-10 shrink-0 w-full flex-row gap-2 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md">
+              <div className="flex w-full gap-2 [&>button]:flex-1">{footerContent}</div>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      )}
     </Card>
   );
 }
