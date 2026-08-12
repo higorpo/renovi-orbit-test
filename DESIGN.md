@@ -399,6 +399,7 @@ The problem involves entry into the client's home, protected payment, and servic
 | `{typography.title}` | 20px | 600 | Card titles, provider name |
 | `{typography.body}` | 16px | 400 | Running text, form values |
 | `{typography.caption}` | 14px | 400 | Meta, timestamps |
+| `{typography.label}` | 14px | 500 | Form field labels (`Label` / `FormLabel`) |
 | `{typography.rating-display}` | 48px | 700 | Provider rating peak signal |
 | `{typography.button-md}` / `button-sm` | 16 / 14 | 600 | CTAs |
 | `{typography.badge}` | 11px | 600 | Status / premium chips |
@@ -408,6 +409,7 @@ The problem involves entry into the client's home, protected payment, and servic
 
 - Display is strong enough to carry credibility without construction imagery.
 - Body stays at 400 — clarity over typographic muscle.
+- Form labels stay at **500** (`font-medium`, `{typography.label}`). Inter must include 500 in the font load so medium is not synthesized.
 - UI copy is **simple, human, and direct** — no bureaucratic fluff, no contractor jargon.
 - Peak typographic trust moment: rating display on provider profiles.
 
@@ -415,7 +417,7 @@ The problem involves entry into the client's home, protected payment, and servic
 
 ```html
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
 ```
 
 ---

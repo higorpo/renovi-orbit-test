@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import {
   FormControl,
@@ -28,20 +28,31 @@ function FieldGroup({
   description?: string;
   children: ReactNode;
 }) {
+  const headingId = useId();
+  const descriptionId = useId();
+
   return (
-    <fieldset className="space-y-4">
-      <legend className="w-full space-y-1">
-        <span className="block font-display text-[15px] font-semibold tracking-tight text-ink">
+    <div
+      role="group"
+      aria-labelledby={headingId}
+      aria-describedby={description ? descriptionId : undefined}
+      className="space-y-4 text-card-foreground"
+    >
+      <div className="space-y-1">
+        <h3
+          id={headingId}
+          className="font-display text-[15px] font-semibold tracking-tight text-ink"
+        >
           {legend}
-        </span>
+        </h3>
         {description ? (
-          <span className="block text-sm font-normal leading-relaxed text-body">
+          <p id={descriptionId} className="text-sm leading-relaxed text-body">
             {description}
-          </span>
+          </p>
         ) : null}
-      </legend>
+      </div>
       {children}
-    </fieldset>
+    </div>
   );
 }
 
@@ -51,7 +62,7 @@ export function LegalIdentitySection({
   disabled,
 }: LegalIdentitySectionProps) {
   return (
-    <div className="rounded-2xl border border-border bg-canvas p-4 shadow-sm sm:p-5">
+    <div className="rounded-2xl border border-border bg-canvas p-4 text-card-foreground shadow-sm sm:p-5">
       {entityType === "pf" ? (
         <FieldGroup
           legend="Documento"

@@ -60,8 +60,9 @@ describe("LegalIdentitySection", () => {
     expect(screen.getByLabelText(/CNPJ/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Razão social/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Nome fantasia/)).toBeInTheDocument();
-    expect(screen.getByText("Empresa")).toBeInTheDocument();
-    expect(screen.getByText("Representante legal")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Empresa" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Representante legal" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Contato comercial" })).toBeInTheDocument();
     expect(screen.getByLabelText(/^Nome completo$/)).toBeInTheDocument();
     expect(screen.getByLabelText(/^CPF$/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Telefone ou e-mail/)).toBeInTheDocument();
