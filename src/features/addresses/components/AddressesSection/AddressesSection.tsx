@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { MapPin, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ClientAddressWithRelations } from "../../types/addresses.types";
 import { useAddressesList } from "../../hooks/useAddressesList";
@@ -11,17 +9,11 @@ import { AddressCard } from "../AddressCard/AddressCard";
 import { AddressFormDialog } from "../AddressFormDialog/AddressFormDialog";
 import { DeleteAddressDialog } from "../DeleteAddressDialog/DeleteAddressDialog";
 
-export interface AddressesSectionProps {
-  /** Optional card header class (e.g. for settings compact style). */
-  cardHeaderClassName?: string;
-  /** Optional section title size. */
-  titleSize?: "default" | "compact";
-}
-
-export function AddressesSection({
-  cardHeaderClassName = "pb-1.5 sm:pb-2",
-  titleSize = "compact",
-}: AddressesSectionProps) {
+/**
+ * Address list for the settings hub. Page title lives in SettingsSectionHeader /
+ * mobile stack chrome — this section only renders the list + actions.
+ */
+export function AddressesSection() {
   const { addresses, isLoading, error, refetch } = useAddressesList();
   const { setDefault, isSettingDefault } = useSetDefaultAddress();
   const { deleteAddress: deleteAddressMutation, isDeleting: isDeletingAddress } =
@@ -64,99 +56,8 @@ export function AddressesSection({
     refetch();
   };
 
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader className={cardHeaderClassName}>
-          <SectionTitleWithIcon
-            title="Endereços"
-            icon={MapPin}
-            iconGradient="from-amber-500 to-orange-500"
-            size={titleSize}
-            className="!mb-0"
-          />
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <Skeleton className="h-20 w-full" />
-            <Skeleton className="h-20 w-full" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card>
-        <CardHeader className={cardHeaderClassName}>
-          <SectionTitleWithIcon
-            title="Endereços"
-            icon={MapPin}
-            iconGradient="from-amber-500 to-orange-500"
-            size={titleSize}
-            className="!mb-0"
-          />
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-destructive">Não foi possível carregar os endereços.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
+  const dialogs = (
     <>
-      <Card>
-        <CardHeader className={cardHeaderClassName}>
-          <SectionTitleWithIcon
-            title="Endereços"
-            icon={MapPin}
-            iconGradient="from-amber-500 to-orange-500"
-            subtitle="Gerencie seus endereços de atendimento."
-            size={titleSize}
-            className="!mb-0"
-          />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleAddAddress}
-            aria-label="Adicionar endereço"
-          >
-            <Plus className="h-4 w-4" aria-hidden />
-            Adicionar endereço
-          </Button>
-          {addresses.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Nenhum endereço cadastrado. Adicione um para usar em seus pedidos.
-            </p>
-          ) : (
-            <ul className="space-y-3 list-none p-0 m-0">
-              {addresses.map((addr) => (
-                <li key={addr.id}>
-                  <AddressCard
-                    address={addr}
-                    onEdit={(id) => {
-                      const a = addresses.find((x) => x.id === id);
-                      if (a) handleEditAddress(a);
-                    }}
-                    onDelete={(id) => {
-                      const a = addresses.find((x) => x.id === id);
-                      if (a) handleDeleteAddressClick(a);
-                    }}
-                    onSetDefault={setDefault}
-                    isDeleting={isDeletingAddress}
-                    isSettingDefault={isSettingDefault}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-
       <AddressFormDialog
         open={addEditDialogOpen}
         mode={addEditMode}
@@ -167,7 +68,6 @@ export function AddressesSection({
         }}
         onSuccess={handleAddEditSuccess}
       />
-
       <DeleteAddressDialog
         open={deleteDialogOpen}
         address={deleteAddress}
@@ -177,6 +77,98 @@ export function AddressesSection({
         }}
         onConfirm={handleDeleteConfirm}
       />
+    </>
+  );
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3" aria-busy="true" aria-label="Carregando endereços">
+        <Skeleton className="h-10 w-44 rounded-full" />
+        <Skeleton className="h-[5.5rem] w-full rounded-2xl" />
+        <Skeleton className="h-[5.5rem] w-full rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-destructive/20 bg-destructive/5 px-4 py-5">
+        <p className="text-sm text-destructive">Não foi possível carregar os endereços.</p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-3 rounded-full"
+          onClick={() => refetch()}
+        >
+          Tentar novamente
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-caption text-muted-foreground">
+            {addresses.length === 0
+              ? "Nenhum cadastrado"
+              : addresses.length === 1
+                ? "1 endereço"
+                : `${addresses.length} endereços`}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            onClick={handleAddAddress}
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            Adicionar endereço
+          </Button>
+        </div>
+
+        {addresses.length === 0 ? (
+          <div className="flex flex-col items-center rounded-2xl border border-dashed border-border bg-canvas-soft px-6 py-12 text-center">
+            <div
+              className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-soft text-primary"
+              aria-hidden
+            >
+              <MapPin className="h-6 w-6" strokeWidth={1.75} />
+            </div>
+            <p className="font-display text-base font-semibold tracking-tight text-ink">
+              Nenhum endereço ainda
+            </p>
+            <p className="mt-1 max-w-xs text-sm leading-relaxed text-body">
+              Adicione um local para usar nos seus pedidos de serviço.
+            </p>
+          </div>
+        ) : (
+          <ul className="m-0 list-none space-y-3 p-0">
+            {addresses.map((addr) => (
+              <li key={addr.id}>
+                <AddressCard
+                  address={addr}
+                  onEdit={(id) => {
+                    const a = addresses.find((x) => x.id === id);
+                    if (a) handleEditAddress(a);
+                  }}
+                  onDelete={(id) => {
+                    const a = addresses.find((x) => x.id === id);
+                    if (a) handleDeleteAddressClick(a);
+                  }}
+                  onSetDefault={setDefault}
+                  isDeleting={isDeletingAddress}
+                  isSettingDefault={isSettingDefault}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      {dialogs}
     </>
   );
 }

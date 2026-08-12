@@ -1,7 +1,7 @@
-import { Pencil, Trash2, Star } from "lucide-react";
+import { MapPin, Pencil, Trash2, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { ClientAddressWithRelations } from "../../types/addresses.types";
 
 export interface AddressCardProps {
@@ -43,63 +43,80 @@ export function AddressCard({
   const cityStateStr = cityState(address);
 
   return (
-    <Card>
-      <CardContent className="pt-4">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            {address.label && (
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-medium">{address.label}</span>
-                {isDefault && (
-                  <Badge variant="secondary" className="text-xs">
-                    Padrão
-                  </Badge>
-                )}
-              </div>
-            )}
-            {!address.label && isDefault && (
-              <Badge variant="secondary" className="mb-1 text-xs">Padrão</Badge>
-            )}
-            <p className="text-sm text-muted-foreground">{line}</p>
-            {cityStateStr && (
-              <p className="text-sm text-muted-foreground">{cityStateStr}</p>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2 shrink-0">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onEdit(address.id)}
-              aria-label="Editar endereço"
-            >
-              <Pencil className="h-4 w-4" aria-hidden />
-            </Button>
-            {!isDefault && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => onSetDefault(address.id)}
-                disabled={isSettingDefault}
-                aria-label="Definir como padrão"
-              >
-                <Star className="h-4 w-4" aria-hidden />
-              </Button>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onDelete(address.id)}
-              disabled={isDeleting}
-              aria-label="Excluir endereço"
-            >
-              <Trash2 className="h-4 w-4" aria-hidden />
-            </Button>
-          </div>
+    <article
+      className={cn(
+        "rounded-2xl border border-border bg-canvas p-4 shadow-sm transition-colors duration-150",
+        "sm:p-5",
+        isDefault && "border-ink/15 bg-canvas-soft",
+      )}
+    >
+      <div className="flex items-start gap-3 sm:gap-4">
+        <div
+          className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary"
+          aria-hidden
+        >
+          <MapPin className="h-5 w-5" strokeWidth={1.75} />
         </div>
-      </CardContent>
-    </Card>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            {address.label ? (
+              <h3 className="font-display text-[15px] font-semibold tracking-tight text-ink">
+                {address.label}
+              </h3>
+            ) : null}
+            {isDefault ? (
+              <Badge
+                variant="secondary"
+                className="rounded-full border-0 bg-ink px-2 py-0.5 text-[11px] font-medium text-primary-foreground"
+              >
+                Padrão
+              </Badge>
+            ) : null}
+          </div>
+          <p className="mt-1 text-sm leading-relaxed text-body">{line}</p>
+          {cityStateStr ? (
+            <p className="mt-0.5 text-sm text-muted-foreground">{cityStateStr}</p>
+          ) : null}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full text-body hover:bg-primary-soft hover:text-ink"
+            onClick={() => onEdit(address.id)}
+            aria-label="Editar endereço"
+          >
+            <Pencil className="h-4 w-4" aria-hidden />
+          </Button>
+          {!isDefault ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full text-body hover:bg-primary-soft hover:text-ink"
+              onClick={() => onSetDefault(address.id)}
+              disabled={isSettingDefault}
+              aria-label="Definir como padrão"
+            >
+              <Star className="h-4 w-4" aria-hidden />
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full text-body hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => onDelete(address.id)}
+            disabled={isDeleting}
+            aria-label="Excluir endereço"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden />
+          </Button>
+        </div>
+      </div>
+    </article>
   );
 }

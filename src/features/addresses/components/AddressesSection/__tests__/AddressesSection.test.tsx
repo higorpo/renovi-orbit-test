@@ -117,8 +117,8 @@ describe("AddressesSection", () => {
       refetch,
     });
     render(<AddressesSection />);
-    expect(screen.getByText("Endereços")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Adicionar endereço/ })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Carregando endereços")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Adicionar/ })).not.toBeInTheDocument();
   });
 
   it("renders error message when error is set", () => {
@@ -130,13 +130,13 @@ describe("AddressesSection", () => {
     });
     render(<AddressesSection />);
     expect(screen.getByText("Não foi possível carregar os endereços.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Tentar novamente/ })).toBeInTheDocument();
   });
 
   it("renders empty state and Adicionar endereço button when no addresses", () => {
     render(<AddressesSection />);
-    expect(screen.getByText("Endereços")).toBeInTheDocument();
+    expect(screen.getByText("Nenhum endereço ainda")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Adicionar endereço/ })).toBeInTheDocument();
-    expect(screen.getByText(/Nenhum endereço cadastrado/)).toBeInTheDocument();
   });
 
   it("renders address cards when addresses exist", () => {
@@ -172,11 +172,6 @@ describe("AddressesSection", () => {
     expect(screen.getByTestId("delete-address-dialog")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Confirm delete/ }));
     expect(deleteAddressMutation).toHaveBeenCalledWith("addr-1");
-  });
-
-  it("accepts custom cardHeaderClassName and titleSize", () => {
-    render(<AddressesSection cardHeaderClassName="custom-header" titleSize="default" />);
-    expect(screen.getByText("Endereços")).toBeInTheDocument();
   });
 
   it("opens edit dialog with selected address", () => {
