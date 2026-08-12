@@ -64,8 +64,9 @@ export function AccountSummaryCard({
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-2xl border border-border bg-canvas shadow-sm",
-        isStack ? "p-5" : "p-5 sm:p-6",
+        isStack
+          ? "px-1 py-2"
+          : "overflow-hidden rounded-2xl border border-border bg-canvas p-5 shadow-sm sm:p-6",
       )}
     >
       <div
@@ -185,7 +186,13 @@ export function AccountSummaryCard({
 export function AccountSummaryCardSkeleton({ layout = "band" }: { layout?: "band" | "stack" }) {
   const isStack = layout === "stack";
   return (
-    <section className="overflow-hidden rounded-2xl border border-border bg-canvas p-5 shadow-sm sm:p-6">
+    <section
+      className={cn(
+        isStack
+          ? "px-1 py-2"
+          : "overflow-hidden rounded-2xl border border-border bg-canvas p-5 shadow-sm sm:p-6",
+      )}
+    >
       <div
         className={cn(
           "flex gap-4 sm:gap-5",

@@ -191,12 +191,14 @@ describe("AccountSummaryCard", () => {
     expect(screen.queryByRole("button", { name: /Alterar foto/ })).not.toBeInTheDocument();
   });
 
-  it("shows Remover when onPhotoRemove and url is set without profileImagePath", () => {
-    useProfileImageUrl.mockReturnValue({ url: "https://img.example/photo.jpg", isLoading: false });
-    render(
-      <AccountSummaryCard fullName="Maria" onPhotoRemove={vi.fn()} />
+  it("renders flush on the page floor in stack layout", () => {
+    const { container } = render(
+      <AccountSummaryCard layout="stack" fullName="Maria Silva" />,
     );
-    expect(screen.getByRole("button", { name: /Remover foto/ })).toBeInTheDocument();
+    const section = container.querySelector("section");
+    expect(section?.className).not.toMatch(/bg-canvas/);
+    expect(section?.className).not.toMatch(/border-border/);
+    expect(section?.className).not.toMatch(/shadow-sm/);
   });
 });
 
