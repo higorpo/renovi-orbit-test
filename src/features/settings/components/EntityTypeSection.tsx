@@ -1,6 +1,17 @@
+import { useState } from "react";
 import { Check, User, Building2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export type EntityType = "pf" | "pj";
 
@@ -14,6 +25,21 @@ const PF_DESCRIPTION =
   "Para profissionais autônomos que prestam serviço em nome próprio.";
 const PJ_DESCRIPTION =
   "Para empresas ou profissionais que atuam com CNPJ e dados empresariais.";
+
+function entityTypeChangeCopy(next: EntityType): { title: string; description: string } {
+  if (next === "pj") {
+    return {
+      title: "Trocar para pessoa jurídica?",
+      description:
+        "Os documentos do cadastro passam a ser os da empresa (CNPJ, razão social e representante legal).",
+    };
+  }
+  return {
+    title: "Trocar para pessoa física?",
+    description:
+      "Os documentos do cadastro passam a ser os de pessoa física (CPF). Os dados da empresa deixam de ser o documento principal.",
+  };
+}
 
 interface EntityTypeOptionProps {
   selected: boolean;
@@ -87,6 +113,20 @@ export function EntityTypeSection({
   onChange,
   disabled,
 }: EntityTypeSectionProps) {
+  const [pendingType, setPendingType] = useState<EntityType | null>(null);
+  const copy = pendingType ? entityTypeChangeCopy(pendingType) : null;
+
+  const requestChange = (next: EntityType) => {
+    if (disabled || next === value) return;
+    setPendingType(next);
+  };
+
+  const confirmChange = () => {
+    const next = pendingType;
+    setPendingType(null);
+    if (next) onChange(next);
+  };
+
   return (
     <section className="space-y-3" aria-labelledby="entity-type-heading">
       <div className="space-y-1">
@@ -112,7 +152,7 @@ export function EntityTypeSection({
           icon={User}
           title="Pessoa física"
           description={PF_DESCRIPTION}
-          onSelect={() => onChange("pf")}
+          onSelect={() => requestChange("pf")}
         />
         <EntityTypeOption
           selected={value === "pj"}
@@ -120,7 +160,7 @@ export function EntityTypeSection({
           icon={Building2}
           title="Pessoa jurídica"
           description={PJ_DESCRIPTION}
-          onSelect={() => onChange("pj")}
+          onSelect={() => requestChange("pj")}
         />
       </div>
 
@@ -128,6 +168,24 @@ export function EntityTypeSection({
         A Prestway não fornece assessoria jurídica ou contábil. Em caso de dúvida, consulte
         um contador ou advogado.
       </p>
+
+      <AlertDialog
+        open={pendingType != null}
+        onOpenChange={(open) => {
+          if (!open) setPendingType(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{copy?.title}</AlertDialogTitle>
+            <AlertDialogDescription>{copy?.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmChange}>Trocar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }

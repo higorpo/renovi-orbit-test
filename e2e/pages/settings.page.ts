@@ -185,12 +185,37 @@ export class SettingsPage {
     return this.page.getByText("Tipo de entidade").first();
   }
 
+  async gotoLegalIdentity() {
+    await this.page.goto("/dashboard/settings/legal-identity");
+    await this.getEntityTypeSectionTitle().waitFor({ state: "visible", timeout: 20_000 });
+    await this.getPessoaFisicaButton().waitFor({ state: "visible", timeout: 20_000 });
+  }
+
   getPessoaFisicaButton() {
     return this.page.getByRole("radio", { name: /Pessoa física/ });
   }
 
   getPessoaJuridicaButton() {
     return this.page.getByRole("radio", { name: /Pessoa jurídica/ });
+  }
+
+  getEntityTypeChangeDialog() {
+    return this.page.getByRole("alertdialog");
+  }
+
+  async confirmEntityTypeChange() {
+    const dialog = this.getEntityTypeChangeDialog();
+    await dialog.waitFor({ state: "visible", timeout: 10_000 });
+    await dialog.getByRole("button", { name: "Trocar" }).click();
+  }
+
+  /** Clicks PF/PJ and confirms the switch dialog when the type actually changes. */
+  async selectEntityType(next: "pf" | "pj") {
+    const radio = next === "pf" ? this.getPessoaFisicaButton() : this.getPessoaJuridicaButton();
+    const alreadySelected = await radio.getAttribute("aria-checked");
+    await radio.click();
+    if (alreadySelected === "true") return;
+    await this.confirmEntityTypeChange();
   }
 
   getLegalSectionTitle() {

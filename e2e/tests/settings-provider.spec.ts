@@ -144,7 +144,8 @@ test.describe("My Account — provider", () => {
   test("edge: PJ with invalid CNPJ shows validation toast", async ({ page }) => {
     test.setTimeout(45_000);
     const acc = new SettingsPage(page);
-    await acc.getPessoaJuridicaButton().click();
+    await acc.gotoLegalIdentity();
+    await acc.selectEntityType("pj");
     await acc.getRazaoSocialInput().fill("E2E Razão Social");
     await acc.getCnpjInput().fill("11.111.111/1111-11");
     await page.waitForTimeout(2500);
@@ -156,7 +157,8 @@ test.describe("My Account — provider", () => {
   test("edge: PJ invalid legal representative CPF shows validation toast", async ({ page }) => {
     test.setTimeout(45_000);
     const acc = new SettingsPage(page);
-    await acc.getPessoaJuridicaButton().click();
+    await acc.gotoLegalIdentity();
+    await acc.selectEntityType("pj");
     await acc.getCnpjInput().fill("11.222.333/0001-81");
     await acc.getRazaoSocialInput().fill("E2E Prestador LTDA");
     await acc.getLegalRepresentativeCpfInput().fill("111.111.111-11");
@@ -189,7 +191,8 @@ test.describe("My Account — provider", () => {
   test("edge: commercial contact over 120 chars shows validation toast", async ({ page }) => {
     test.setTimeout(45_000);
     const acc = new SettingsPage(page);
-    await acc.getPessoaJuridicaButton().click();
+    await acc.gotoLegalIdentity();
+    await acc.selectEntityType("pj");
     await acc.getCnpjInput().fill("11.222.333/0001-81");
     await acc.getRazaoSocialInput().fill("E2E Prestador LTDA");
     await acc.getCommercialContactInput().fill("c".repeat(121));
@@ -202,7 +205,8 @@ test.describe("My Account — provider", () => {
   test("edge: PF invalid CPF in legal section shows validation toast", async ({ page }) => {
     test.setTimeout(45_000);
     const acc = new SettingsPage(page);
-    await acc.getPessoaFisicaButton().click();
+    await acc.gotoLegalIdentity();
+    await acc.selectEntityType("pf");
     await acc.getLegalCpfInput().fill("111.111.111-11");
     await page.waitForTimeout(2500);
     await expect(
@@ -215,7 +219,8 @@ test.describe("My Account — provider", () => {
   }) => {
     test.setTimeout(45_000);
     const acc = new SettingsPage(page);
-    await acc.getPessoaJuridicaButton().click();
+    await acc.gotoLegalIdentity();
+    await acc.selectEntityType("pj");
     await acc.getCnpjInput().fill("");
     await acc.getRazaoSocialInput().fill("");
     await acc.getProviderContatoPhoneInput().fill("(21) 97777-6655");
@@ -228,7 +233,8 @@ test.describe("My Account — provider", () => {
   test("auto-save: PJ with valid CNPJ and corporate name persists", async ({ page }) => {
     test.setTimeout(45_000);
     const acc = new SettingsPage(page);
-    await acc.getPessoaJuridicaButton().click();
+    await acc.gotoLegalIdentity();
+    await acc.selectEntityType("pj");
     await acc.getCnpjInput().fill("11.222.333/0001-81");
     // Unique suffix so the field is always dirty vs server (avoids missing toast).
     const razao = `E2E Prestador LTDA ${Date.now().toString().slice(-6)}`;
@@ -239,7 +245,8 @@ test.describe("My Account — provider", () => {
   test("PF: valid CPF in legal section saves", async ({ page }) => {
     test.setTimeout(45_000);
     const acc = new SettingsPage(page);
-    await acc.getPessoaFisicaButton().click();
+    await acc.gotoLegalIdentity();
+    await acc.selectEntityType("pf");
     await acc.getLegalCpfInput().fill("529.982.247-25");
     await expect(acc.getDadosAtualizadosToast()).toBeVisible({ timeout: 12_000 });
   });
@@ -410,11 +417,25 @@ test.describe("My Account — provider", () => {
 
   test("entity type shows PF/PJ choice and legal disclaimer", async ({ page }) => {
     const acc = new SettingsPage(page);
-    await page.goto("/dashboard/settings/legal-identity");
-    await expect(acc.getEntityTypeSectionTitle()).toBeVisible({ timeout: 20_000 });
+    await acc.gotoLegalIdentity();
     await expect(acc.getPessoaFisicaButton()).toBeVisible();
     await expect(acc.getPessoaJuridicaButton()).toBeVisible();
     await expect(page.getByText(/A Prestway não fornece assessoria jurídica/)).toBeVisible();
+  });
+
+  test("entity type switch asks for confirmation and cancel keeps current type", async ({
+    page,
+  }) => {
+    const acc = new SettingsPage(page);
+    await acc.gotoLegalIdentity();
+    const pf = acc.getPessoaFisicaButton();
+    const pj = acc.getPessoaJuridicaButton();
+    const pfSelected = (await pf.getAttribute("aria-checked")) === "true";
+    await (pfSelected ? pj : pf).click();
+    await expect(acc.getEntityTypeChangeDialog()).toBeVisible();
+    await acc.getEntityTypeChangeDialog().getByRole("button", { name: "Cancelar" }).click();
+    await expect(acc.getEntityTypeChangeDialog()).toBeHidden();
+    await expect(pfSelected ? pf : pj).toHaveAttribute("aria-checked", "true");
   });
 
   test("does not show fatal error state when session is valid", async ({ page }) => {
@@ -427,7 +448,8 @@ test.describe("My Account — provider", () => {
   }) => {
     test.setTimeout(45_000);
     const acc = new SettingsPage(page);
-    await acc.getPessoaJuridicaButton().click();
+    await acc.gotoLegalIdentity();
+    await acc.selectEntityType("pj");
     await acc.getCnpjInput().fill("11.222.333/0001-81");
     await acc.getRazaoSocialInput().fill("E2E Prestador LTDA");
     const tag = Date.now().toString().slice(-5);

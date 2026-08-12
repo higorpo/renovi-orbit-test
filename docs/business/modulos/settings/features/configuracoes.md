@@ -86,7 +86,7 @@ flowchart TD
 
 1. Abre hub → mesma lógica mobile/desktop.
 2. **Informações pessoais** (`personal-info`): nome, e-mail (somente leitura) e telefone — **sem CPF** (`DadosPessoaisSection` com `showCpf={false}`; header: “Nome, foto e telefone de contato”). Auto-save com debounce 2000 ms.
-3. **Identidade legal** (`legal-identity`): header “Identidade legal” / “Como você atua na Prestway e os documentos do cadastro”. `EntityTypeSection`: escolha PF/PJ em `radiogroup` (tiles com `aria-checked` e check no canto; sem card aninhado; sem botão/dialog “Preciso de ajuda para escolher”); disclaimer visível abaixo: “A Prestway não fornece assessoria jurídica ou contábil…”. `LegalIdentitySection`: um painel — PF: grupo “Documento” + CPF (`cpf`); PJ: “Empresa” (CNPJ, razão social, nome fantasia), “Representante legal” (nome completo, CPF do representante — `legal_representative_cpf`, não o campo `cpf` de PF), “Contato comercial” (telefone ou e-mail). Loading: `LegalIdentityFormSkeleton`. Auto-save via `useProviderSettingsForm` (debounce/grupos dirty inalterados). Sem mudança de persistência/API.
+3. **Identidade legal** (`legal-identity`): header “Identidade legal” / “Como você atua na Prestway e os documentos do cadastro”. `EntityTypeSection`: escolha PF/PJ em `radiogroup` (tiles com `aria-checked` e check no canto; sem card aninhado; **sem** botão/dialog “Preciso de ajuda para escolher”); a troca **não** aplica imediatamente — ao clicar no tipo **diferente** do `entity_type` atual, abre `AlertDialog` (`alertdialog`) **antes** de `onChange`/auto-save (padrão `LogoutConfirmDialog`, não bottom sheet). Copy PJ: título “Trocar para pessoa jurídica?”; descrição: documentos do cadastro passam a ser os da empresa (CNPJ, razão social e representante legal). Copy PF: título “Trocar para pessoa física?”; descrição: documentos passam a ser os de pessoa física (CPF); dados da empresa deixam de ser o documento principal. Botões: **Cancelar** (fecha, não chama `onChange`, seleção permanece) | **Trocar** (`onChange` com o tipo pendente → `ProviderLegalIdentityPage` faz `form.setValue("entity_type", v, { shouldDirty: true })` e o auto-save existente segue). Clicar no tipo já selecionado ou com `disabled`: não abre dialog / não chama `onChange`. **Não** limpa os campos da outra entidade. Disclaimer visível abaixo: “A Prestway não fornece assessoria jurídica ou contábil…”. `LegalIdentitySection`: um painel — PF: grupo “Documento” + CPF (`cpf`); PJ: “Empresa” (CNPJ, razão social, nome fantasia), “Representante legal” (nome completo, CPF do representante — `legal_representative_cpf`, não o campo `cpf` de PF), “Contato comercial” (telefone ou e-mail). Loading: `LegalIdentityFormSkeleton`. Auto-save via `useProviderSettingsForm` (debounce/grupos dirty inalterados). Sem mudança de persistência/API.
 4. Perfil profissional → debounce 2000 ms e mutações por grupos dirty onde aplicável.
 5. Recebimentos (captura); Ganhos (liquidação bancária — feature externa hospedada).
 6. Privacidade; Jurídico (termos + política + **Contrato de uso da plataforma**); Conta (DPO); ou **Sair da conta** no rodapé da nav.
@@ -106,6 +106,7 @@ flowchart TD
 | Foto inválida no seletor | Validação retorna e **encerra sem toast** (`AccountSummaryCard`) |
 | Exclusão | Dialog informa mailto DPO — **não** chama delete API |
 | Papel errado na seção | `SettingsRoleGate` redireciona / bloqueia conforme implementação |
+| Troca PF↔PJ em Identidade legal | `AlertDialog` de confirmação **antes** de `onChange`; Cancelar mantém seleção; Trocar aplica e auto-save segue; tipo já selecionado / `disabled` não abre; **não** limpa campos da outra entidade; **não** é o dialog antigo de ajuda |
 
 ## 7. Regras de negócio (numeradas)
 
@@ -128,7 +129,7 @@ flowchart TD
 17. Seção Jurídico (`/dashboard/settings/legal`): header “Jurídico” / “Documentos oficiais da Prestway”; `LegalDocumentsSection` (`aria-label="Documentos jurídicos"`). Links (mesmo padrão do cadastro; `null` se `VITE_MAIN_SITE_URL` ausente): Termos de uso → `TERMS_OF_USE_URL` (`…/juridico/termos-de-uso`); Política de privacidade → `PRIVACY_POLICY_URL`; **só prestador** (`showProviderContract` via `profile.role === "provider"`): Contrato de uso da plataforma → `PROVIDER_PLATFORM_CONTRACT_URL` (`…/juridico/adesao-prestador`, mesmo path do “Contrato de Adesão” no signup). **Não** lista política de comissões nem adesão-cliente. Sem `SettingsRoleGate`, sem persistência/API/migration. Privacidade permanece com DPO / exportar / atalho da política — Jurídico não a substitui.
 18. Fase 1: shell de navegação; sem redesign row-by-row dos formulários.
 19. Prestador — Informações pessoais: `DadosPessoaisSection` com `showCpf={false}` (sem campo CPF na UI). Cliente — mesma seção com default `showCpf={true}` (CPF em Dados pessoais).
-20. Prestador — Identidade legal (`ProviderLegalIdentityPage`): PF/PJ via tiles `radiogroup` (`EntityTypeSection`); documentos em um painel (`LegalIdentitySection`) — PF: grupo Documento/`cpf`; PJ: grupos Empresa / Representante legal / Contato comercial (`legal_representative_cpf`, não o campo `cpf` de PF). Sem dialog de ajuda de tipo de entidade. Skeleton dedicado `LegalIdentityFormSkeleton`. Persistência/API inalteradas.
+20. Prestador — Identidade legal (`ProviderLegalIdentityPage`): PF/PJ via tiles `radiogroup` (`EntityTypeSection`); troca para tipo diferente exige confirmação em `AlertDialog` (Cancelar / Trocar) **antes** de `onChange` + auto-save (`setValue` dirty); tipo já selecionado ou `disabled` não abre dialog; **não** limpa campos da outra entidade; **sem** dialog “Preciso de ajuda para escolher”. Documentos em um painel (`LegalIdentitySection`) — PF: grupo Documento/`cpf`; PJ: grupos Empresa / Representante legal / Contato comercial (`legal_representative_cpf`, não o campo `cpf` de PF). Skeleton dedicado `LegalIdentityFormSkeleton`. Persistência/API inalteradas.
 
 ## 8. Campos e dados
 
@@ -240,7 +241,7 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - Hidratação do form: `hydratedProfileIdRef` evita reset contínuo após primeiro load do `profile.id` (fluxos de formulário reutilizados).
 - Prestador: telefone fora de `DadosPessoaisSection` (card Contato dedicado) em personal-info.
 - Prestador: CPF **não** aparece em Informações pessoais — `ProviderPersonalInfoPage` passa `showCpf={false}` a `DadosPessoaisSection` (default da prop é `true`). Cliente em `ClientPersonalInfoPage` não passa a prop → CPF permanece em Dados pessoais.
-- Prestador: edição de documento fiscal/cadastral em Identidade legal (`LegalIdentitySection`, um painel): PF → grupo “Documento” + `cpf`; PJ → grupos “Empresa”, “Representante legal”, “Contato comercial” (`legal_representative_cpf` e demais campos PJ), sem exibir o campo `cpf` de PF. Tipo de entidade: tiles `radiogroup` + disclaimer jurídico; sem botão/dialog “Preciso de ajuda para escolher”.
+- Prestador: edição de documento fiscal/cadastral em Identidade legal (`LegalIdentitySection`, um painel): PF → grupo “Documento” + `cpf`; PJ → grupos “Empresa”, “Representante legal”, “Contato comercial” (`legal_representative_cpf` e demais campos PJ), sem exibir o campo `cpf` de PF. Tipo de entidade: tiles `radiogroup` + disclaimer jurídico; **sem** botão/dialog “Preciso de ajuda para escolher”. Troca PF↔PJ: `AlertDialog` de confirmação **antes** de `onChange` (não aplica imediatamente; Cancelar mantém seleção; Trocar dispara auto-save; **não** limpa campos da outra entidade; padrão `LogoutConfirmDialog`, não bottom sheet).
 - Cliente não vê `PaymentHistorySection` com role provider e vice-versa.
 - Zona de perigo copy fala em remoção irreversível, mas ação real é pedido por e-mail.
 - Toasts de sucesso de foto: “Foto atualizada com sucesso.” / “Foto removida.” (`useProfilePhotoMutation`).
@@ -299,7 +300,7 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 |-------|-------------------|
 | Índice (mobile) | Summary (+ link/copiar perfil) + nav list |
 | personal-info | Header “Informações pessoais” / “Nome, foto e telefone de contato”; Summary (só desktop); `DadosPessoaisSection` com `showCpf={false}` (nome, e-mail) + card Contato (telefone) — **sem CPF** |
-| legal-identity | Header “Identidade legal” / “Como você atua na Prestway e os documentos do cadastro”; `EntityTypeSection` (tiles PF/PJ `radiogroup` + check; disclaimer assessoria jurídica/contábil; **sem** dialog “Preciso de ajuda para escolher”); `LegalIdentitySection` (um painel — ≠ Jurídico): PF → grupo “Documento” + CPF (`cpf`); PJ → “Empresa” (CNPJ, razão social, nome fantasia), “Representante legal” (nome completo, CPF), “Contato comercial” (telefone ou e-mail); loading `LegalIdentityFormSkeleton`; auto-save `useProviderSettingsForm` |
+| legal-identity | Header “Identidade legal” / “Como você atua na Prestway e os documentos do cadastro”; `EntityTypeSection` (tiles PF/PJ `radiogroup` + check; disclaimer assessoria jurídica/contábil; **sem** dialog “Preciso de ajuda para escolher”; troca para tipo diferente → `AlertDialog` “Trocar para pessoa jurídica?” / “Trocar para pessoa física?” com **Cancelar** / **Trocar** **antes** de `onChange`/auto-save; tipo já selecionado ou `disabled` não abre; **não** limpa campos da outra entidade); `LegalIdentitySection` (um painel — ≠ Jurídico): PF → grupo “Documento” + CPF (`cpf`); PJ → “Empresa” (CNPJ, razão social, nome fantasia), “Representante legal” (nome completo, CPF), “Contato comercial” (telefone ou e-mail); loading `LegalIdentityFormSkeleton`; auto-save `useProviderSettingsForm` |
 | professional-profile | Ofertados + perfil público/área + portfólio |
 | receivables | `PaymentHistorySection role="provider"` |
 | earnings | `SettingsSectionHeader` + `EarningsPage` (header interno oculto no host) |
@@ -323,6 +324,7 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 | Textos DPO / 15 dias úteis | Privacy + DangerZone |
 | Termos / política / contrato “… em breve.” | `LegalDocumentsSection` (e atalho em Privacidade) quando URL `null` |
 | Confirmação logout (“Sair da conta”) | `LogoutConfirmDialog` (via `SettingsNavList`) |
+| “Trocar para pessoa jurídica?” / “Trocar para pessoa física?” (+ Cancelar / Trocar) | `EntityTypeSection` (`AlertDialog` de confirmação de troca PF↔PJ) |
 
 ## Anexo C — Checklist QA
 
@@ -333,6 +335,7 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - [ ] E-mail disabled; CPF/CNPJ máscaras
 - [ ] Prestador: personal-info **sem** CPF; CPF (PF) ou CNPJ + CPF do representante (PJ) só em legal-identity
 - [ ] Identidade legal: header “Identidade legal” / “Como você atua…”; tiles PF/PJ (`radiogroup` / `aria-checked`); disclaimer “A Prestway não fornece assessoria jurídica ou contábil…”; **sem** botão/dialog “Preciso de ajuda para escolher”
+- [ ] Identidade legal — troca PF↔PJ: clicar tipo diferente abre `AlertDialog` **antes** de salvar; Cancelar fecha sem `onChange`; Trocar aplica e auto-save segue; tipo já selecionado / `disabled` não abre; campos da outra entidade **não** são limpos
 - [ ] Identidade legal PF: grupo “Documento” + CPF; PJ: grupos “Empresa”, “Representante legal”, “Contato comercial” (telefone ou e-mail) no mesmo painel
 - [ ] Identidade legal loading: `LegalIdentityFormSkeleton` (não skeleton monolítico de todas as seções do prestador)
 - [ ] Cliente: CPF permanece em Dados pessoais (personal-info)
@@ -360,4 +363,4 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - **UX Conta / logout:** **Conta** na lista principal (após Jurídico, ícone `UserCog`); **Sair da conta** no rodapé da nav (`LogoutConfirmDialog` → `signOut`, sem rota); `AccountSessionPage` só `DangerZoneSection`; `LogoutSection` removida.
 - **Seção Jurídico (`legal`):** `AccountLegalPage` + `LegalDocumentsSection`; nav `SHARED_TAIL` Privacidade → Jurídico → Conta; rota `/dashboard/settings/legal`; links site jurídico (termos, política; prestador + contrato `adesao-prestador`); Privacidade não substituída; sem persistência/API.
 - **CPF prestador fora de personal-info:** `DadosPessoaisSection` ganha prop `showCpf` (default `true`); `ProviderPersonalInfoPage` usa `showCpf={false}`; cliente inalterado. Prestador edita CPF em `legal-identity` (`LegalIdentitySection`: PF → `cpf`; PJ → CNPJ + `legal_representative_cpf`).
-- **UI Identidade legal (redesign, sem mudança de API):** `ProviderLegalIdentityPage` — `EntityTypeSection` em tiles `radiogroup` + disclaimer jurídico (sem dialog de ajuda); `LegalIdentitySection` em um painel com grupos PF/PJ; skeleton `LegalIdentityFormSkeleton`; auto-save `useProviderSettingsForm` inalterado.
+- **UI Identidade legal (redesign, sem mudança de API):** `ProviderLegalIdentityPage` — `EntityTypeSection` em tiles `radiogroup` + disclaimer jurídico (**sem** dialog de ajuda); confirmação de troca PF↔PJ via `AlertDialog` (Cancelar / Trocar) **antes** de `onChange`/auto-save; **não** limpa campos da outra entidade; `LegalIdentitySection` em um painel com grupos PF/PJ; skeleton `LegalIdentityFormSkeleton`; auto-save `useProviderSettingsForm` inalterado.
