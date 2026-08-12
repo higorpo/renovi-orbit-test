@@ -25,7 +25,7 @@ export function SettingsIndexPage() {
   }
 
   return (
-    <div className="bg-canvas-soft min-h-full">
+    <div className="min-h-full bg-canvas-soft">
       <div className="container max-w-lg px-4 py-6">
         <div className="mb-5">
           <MobileAccountSummary role={role} />

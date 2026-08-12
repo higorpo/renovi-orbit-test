@@ -12,6 +12,8 @@ import { SettingsNavList } from "./SettingsNavList";
  * Uses `grow` (not `min-h-full` / `flex-1`) so the floor fills the dashboard
  * scrollport when content is short and expands with content when tall —
  * background stays owned by this feature, not DashboardLayout.
+ * Mobile adds 5rem to min-height to cover DashboardLayout `main` `pb-20`
+ * (space reserved for the fixed bottom nav).
  */
 export function SettingsLayout() {
   const isDesktop = useBreakpointMd();
@@ -56,7 +58,7 @@ export function SettingsLayout() {
   }
 
   return (
-    <div className="min-w-0 w-full grow bg-canvas">
+    <div className="min-h-[calc(100%+5rem)] min-w-0 w-full grow bg-canvas-soft">
       <Outlet />
     </div>
   );
